@@ -1,10 +1,11 @@
 import type { Response } from 'express';
 import { Injectable } from '@nestjs/common';
 // import * as bcrypt from 'bcrypt';
-import { User, UserService } from 'src/user/user.service';
+import { UserService } from 'src/user/user.service';
 import { JwtService } from '@nestjs/jwt';
 import { LoginDto } from './dto/auth.dto';
 import { ConfigService } from '@nestjs/config';
+import { User } from 'src/generated/prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -20,7 +21,7 @@ export class AuthService {
   ): Promise<
     { status: true; payload: User } | { status: false; message: string }
   > {
-    const user = await this.userService.findByEmail(email);
+    const user = await this.userService.user({ email });
     // if (user && (await bcrypt.compare(password, user.password))) {
     if (user && password === user.password) {
       return { status: true, payload: user }; // Password matches
