@@ -27,6 +27,13 @@ JWT_ACCESS_SECRET=change-me-access
 JWT_REFRESH_SECRET=change-me-refresh
 JWT_ACCESS_EXPIRES_IN_MINUTES=15
 JWT_REFRESH_EXPIRES_IN_DAYS=7
+
+POSTGRES_USER=zvonok_admin
+POSTGRES_PASSWORD=zvonok_password
+POSTGRES_DB=zvonok
+
+PGADMIN_DEFAULT_EMAIL=admin@example.com
+PGADMIN_DEFAULT_PASSWORD=admin
 ```
 
 ## Database
@@ -34,8 +41,22 @@ JWT_REFRESH_EXPIRES_IN_DAYS=7
 Start Postgres (Docker option):
 
 ```bash
-docker compose -f apps/server/docker-compose.yml up -d
+docker compose -f apps/server/docker-compose.yml --env-file apps/server/.env.development up -d
 ```
+
+pgAdmin UI:
+
+- URL: `http://localhost:5050`
+- Email: value of `PGADMIN_DEFAULT_EMAIL` in `apps/server/.env.development`
+- Password: value of `PGADMIN_DEFAULT_PASSWORD` in `apps/server/.env.development`
+
+Connect to Postgres in pgAdmin using:
+
+- Host: `postgres`
+- Port: `5432`
+- Database: value of `POSTGRES_DB` in `apps/server/.env.development`
+- Username: value of `POSTGRES_USER` in `apps/server/.env.development`
+- Password: value of `POSTGRES_PASSWORD` in `apps/server/.env.development`
 
 Run migrations and generate client:
 
