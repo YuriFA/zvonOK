@@ -1,59 +1,99 @@
-import type { Response } from 'express';
-import { Injectable } from '@nestjs/common';
-// import * as bcrypt from 'bcrypt';
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { UserService } from 'src/user/user.service';
+import { LoginUserDto } from './dto/login-user.dto';
+import { RegisterUserDto } from './dto/register-user.dto';
+import { PasswordHelper } from './helpers/password.helper';
 import { JwtService } from '@nestjs/jwt';
-import { LoginDto } from './dto/auth.dto';
+import { TokenHelper } from './helpers/token.helper';
 import { ConfigService } from '@nestjs/config';
+import { JwtPayloadDto } from './dto/jwt-payload.dto';
 import { User } from 'src/generated/prisma/client';
 
 @Injectable()
 export class AuthService {
-  constructor(
-    private configService: ConfigService,
-    private readonly userService: UserService,
-    private jwtService: JwtService,
-  ) {}
+  private tokenHelper: TokenHelper;
 
-  async validateUser(
-    email: string,
-    password: string,
-  ): Promise<
-    { status: true; payload: User } | { status: false; message: string }
-  > {
-    const user = await this.userService.user({ email });
-    // if (user && (await bcrypt.compare(password, user.password))) {
-    if (user && password === user.password) {
-      return { status: true, payload: user }; // Password matches
-    } else {
-      return { status: false, message: 'Invalid email or password!' };
-    }
+  constructor(
+    private readonly userService: UserService,
+    jwtService: JwtService,
+    configService: ConfigService,
+  ) {
+    this.tokenHelper = new TokenHelper(jwtService, configService);
   }
 
-  async login(loginDto: LoginDto, res: Response) {
-    const validationResult = await this.validateUser(
-      loginDto.email,
-      loginDto.password,
-    );
-
-    if (validationResult.status === false) {
-      res.status(401).send(validationResult.message);
-      return;
+  async registerUser(dto: RegisterUserDto) {
+    const exists = await this.userService.user({ email: dto.email });
+    if (exists) {
+      throw new BadRequestException('User already exists');
     }
 
-    const payload = {
-      sub: validationResult.payload.id,
-      name: validationResult.payload.username,
-      email: validationResult.payload.email,
-    };
-    const access_token = await this.jwtService.signAsync(payload, {
-      expiresIn: this.configService.get<`${number}h`>('JWT_EXPIRES_IN'),
-      secret: this.configService.get<string>('JWT_SECRET'),
+    const passwordHash = await PasswordHelper.hash(dto.password);
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, ...newUserData } = dto;
+
+    const user = await this.userService.createUser({
+      ...newUserData,
+      passwordHash,
     });
-    res.cookie('access_token', access_token, {
-      httpOnly: true,
-      secure: true,
+
+    return this.issueTokens(user);
+  }
+
+  async loginUser(loginDto: LoginUserDto) {
+    const user = await this.userService.user({ email: loginDto.email });
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const valid = await PasswordHelper.compare(
+      loginDto.password,
+      user.passwordHash,
+    );
+
+    if (!valid) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    return this.issueTokens(user);
+  }
+
+  async logout(user: JwtPayloadDto) {
+    await this.userService.updateRefreshTokenHash(user.id, null);
+  }
+
+  async refreshToken(user: JwtPayloadDto) {
+    const accessToken = this.tokenHelper.generateAccessToken(user);
+    const refreshToken = this.tokenHelper.generateRefreshToken(user);
+
+    await this.userService.updateRefreshTokenHash(
+      user.id,
+      await PasswordHelper.hash(refreshToken),
+    );
+
+    return { accessToken, refreshToken };
+  }
+
+  private async issueTokens(user: User) {
+    const accessToken = this.tokenHelper.generateAccessToken({
+      id: user.id,
+      email: user.email,
     });
-    res.send('Login Successful!');
+    const refreshToken = this.tokenHelper.generateRefreshToken({
+      id: user.id,
+      email: user.email,
+    });
+
+    await this.userService.updateRefreshTokenHash(
+      user.id,
+      await PasswordHelper.hash(refreshToken),
+    );
+
+    return { accessToken, refreshToken };
   }
 }

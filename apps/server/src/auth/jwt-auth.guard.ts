@@ -1,49 +1,23 @@
-import {
-  CanActivate,
-  ExecutionContext,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { JwtService } from '@nestjs/jwt';
-import { Request } from 'express';
-import { User } from 'src/generated/prisma/client';
+import { AuthGuard } from '@nestjs/passport';
 
 @Injectable()
-export class AuthGuard implements CanActivate {
-  constructor(
-    private configService: ConfigService,
-    private jwtService: JwtService,
-    private reflector: Reflector,
-  ) {}
+export class JwtAuthGuard extends AuthGuard('jwt') {
+  constructor(private reflector: Reflector) {
+    super();
+  }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const skipGuard = this.reflector.get<boolean>(
+    const skipGuard = this.reflector.getAllAndOverride<boolean>(
       'skipAuthGuard',
-      context.getHandler(),
+      [context.getHandler(), context.getClass()],
     );
 
     if (skipGuard) {
       return true;
     }
 
-    const request: Request = context.switchToHttp().getRequest();
-    const token = request.cookies?.access_token as string;
-
-    if (!token) {
-      throw new UnauthorizedException();
-    }
-
-    try {
-      const payload = await this.jwtService.verifyAsync<User>(token, {
-        secret: this.configService.get<string>('JWT_SECRET'),
-      });
-      request['user'] = payload;
-    } catch {
-      throw new UnauthorizedException();
-    }
-
-    return true;
+    return super.canActivate(context) as boolean;
   }
 }
