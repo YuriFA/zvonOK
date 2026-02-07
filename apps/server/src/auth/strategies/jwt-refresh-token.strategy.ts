@@ -21,10 +21,11 @@ export class JwtRefreshTokenStrategy extends PassportStrategy(
   Strategy,
   'jwt-refresh-token',
 ) {
+  private readonly logger = new Logger(JwtRefreshTokenStrategy.name);
+
   constructor(
     private readonly configService: ConfigService,
     private readonly userService: UserService,
-    private readonly logger: Logger,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([

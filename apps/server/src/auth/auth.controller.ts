@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
@@ -17,12 +18,14 @@ import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { User } from 'src/user/decorators/user.decorator';
 import { JwtPayloadDto } from './dto/jwt-payload.dto';
 import { JwtRefreshAuthGuard } from './jwt-refresh-auth.guard';
+import { UserService } from 'src/user/user.service';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
+    private readonly userService: UserService,
   ) {}
 
   @ApiResponse({
@@ -38,6 +41,27 @@ export class AuthController {
     const tokens = await this.authService.registerUser(dto);
     this.setCookies(res, tokens);
     return { success: true, tokens };
+  }
+
+  @ApiOperation({ summary: 'Get current user' })
+  @Get('me')
+  async getMe(@User() user: JwtPayloadDto) {
+    const userEntity = await this.userService.user({
+      id: user.id,
+    });
+
+    if (!userEntity) {
+      throw new Error('User not found');
+    }
+
+    // Return only safe fields (exclude passwordHash, refreshTokenHash)
+    return {
+      id: userEntity.id,
+      email: userEntity.email,
+      username: userEntity.username,
+      createdAt: userEntity.createdAt,
+      updatedAt: userEntity.updatedAt,
+    };
   }
 
   @ApiOperation({ summary: 'Login user' })
