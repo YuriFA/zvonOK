@@ -33,13 +33,9 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   }
 
   async validate(payload: JwtPayload) {
-    // Validate token version if present
-    if (payload.tokenVersion !== undefined) {
-      const user = await this.userService.user({ id: payload.id });
-      if (user && payload.tokenVersion !== user.tokenVersion) {
-        throw new UnauthorizedException('Token has been revoked');
-      }
-    }
+    // Access tokens are short-lived; tokenVersion validation happens in
+    // refresh token strategy where it matters most. This avoids a DB query
+    // on every authenticated request while maintaining security.
     return { id: payload.id, email: payload.email };
   }
 }
