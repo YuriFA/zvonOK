@@ -1,13 +1,13 @@
 # WebRTC Chat Client
 
-React 19 + Vite frontend with WebRTC video chat and Agora RTM signalling.
+React 19 + Vite frontend with WebRTC video chat and Socket.io signalling.
 
 ## Quick Start
 
 ```bash
 # Configure env
 cp .env.example .env.local
-# Edit .env.local: add AGORA_APP_ID
+# Edit .env.local: add VITE_SOCKET_URL
 
 # Run dev server
 pnpm dev
@@ -30,13 +30,13 @@ Client: http://localhost:5173
 - **UI:** Radix UI primitives (Shadcn) in `src/components/ui/`
 - **Styling:** Tailwind CSS v4 with CSS variables
 - **Forms:** React Hook Form + Zod validation
-- **WebRTC:** Agora RTM SDK for signalling + native WebRTC for P2P
+- **WebRTC:** Socket.io for signalling + native WebRTC for P2P
 
 ### WebRTC Flow
 
-1. Login to Agora RTM -> Join channel
-2. On `MemberJoined` -> create `RTCPeerConnection`
-3. Exchange Offer/Answer/ICE candidates via Agora RTM
+1. Connect to Socket.io server
+2. Join room -> create `RTCPeerConnection` on participant joined
+3. Exchange Offer/Answer/ICE candidates via Socket.io
 4. Use MediaStream API for video/audio
 
 ## Project Structure
@@ -54,7 +54,7 @@ src/
 ## Environment Variables
 
 ```bash
-VITE_AGORA_APP_ID=your-agora-app-id  # Get from https://console.agora.io
+VITE_SOCKET_URL=http://localhost:3000
 ```
 
 ## Tech Stack
@@ -66,4 +66,4 @@ VITE_AGORA_APP_ID=your-agora-app-id  # Get from https://console.agora.io
 | TypeScript | 5.8.3 | Typing |
 | React Router | 7.9.1 | Routing |
 | Tailwind CSS | 4.1.13 | Styling |
-| Agora RTM SDK | 1.5.1 | WebRTC signalling |
+| Socket.io Client | - | WebRTC signalling |

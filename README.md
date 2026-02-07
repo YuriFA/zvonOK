@@ -8,7 +8,7 @@ A modern WebRTC video chat application built as a monorepo with NestJS backend a
 - **Secure Authentication** — JWT with refresh token rotation and reuse detection
 - **Modern Stack** — React 19, NestJS, TypeScript, Tailwind CSS
 - **Database** — PostgreSQL with Prisma ORM
-- **Signalling** — Agora RTM SDK for WebRTC signalling
+- **Signalling** — Socket.io for WebRTC signalling
 
 ## Tech Stack
 
@@ -24,7 +24,7 @@ A modern WebRTC video chat application built as a monorepo with NestJS backend a
 - **Styling**: Tailwind CSS v4
 - **Routing**: React Router v7
 - **UI Components**: Radix UI primitives
-- **WebRTC**: Agora RTM SDK + native WebRTC API
+- **WebRTC**: Socket.io + native WebRTC API
 
 ## Quick Start
 
@@ -76,10 +76,8 @@ JWT_REFRESH_EXPIRES_IN_DAYS=7
 ### Client (`.env.local`)
 
 ```env
-AGORA_APP_ID=your-agora-app-id
+VITE_SOCKET_URL=http://localhost:3000
 ```
-
-> **Note**: Sign up at [agora.io](https://agora.io) to get your App ID.
 
 ## Available Commands
 
