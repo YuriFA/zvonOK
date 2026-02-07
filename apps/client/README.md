@@ -1,69 +1,69 @@
-# React + TypeScript + Vite
+# WebRTC Chat Client
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19 + Vite frontend with WebRTC video chat and Agora RTM signalling.
 
-Currently, two official plugins are available:
+## Quick Start
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+```bash
+# Configure env
+cp .env.example .env.local
+# Edit .env.local: add AGORA_APP_ID
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Run dev server
+pnpm dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Client: http://localhost:5173
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Commands
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+| Command | Description |
+|---------|-------------|
+| `pnpm dev` | Vite dev server with HMR |
+| `pnpm build` | TypeScript check + production build |
+| `pnpm lint` | ESLint check |
+| `pnpm preview` | Preview production build |
+
+## Architecture
+
+- **Routing:** React Router v7 (file-based in `src/routes/`)
+- **UI:** Radix UI primitives (Shadcn) in `src/components/ui/`
+- **Styling:** Tailwind CSS v4 with CSS variables
+- **Forms:** React Hook Form + Zod validation
+- **WebRTC:** Agora RTM SDK for signalling + native WebRTC for P2P
+
+### WebRTC Flow
+
+1. Login to Agora RTM -> Join channel
+2. On `MemberJoined` -> create `RTCPeerConnection`
+3. Exchange Offer/Answer/ICE candidates via Agora RTM
+4. Use MediaStream API for video/audio
+
+## Project Structure
+
 ```
+src/
+├── main.tsx          # Entry point, React Router setup
+├── routes/           # File-based routing (lobby.tsx, room.tsx)
+├── components/ui/    # Radix UI components (button.tsx, input.tsx)
+└── lib/
+    ├── config.ts     # WebRTC config (STUN servers, constraints)
+    └── utils.ts      # Utilities (cn helper)
+```
+
+## Environment Variables
+
+```bash
+VITE_AGORA_APP_ID=your-agora-app-id  # Get from https://console.agora.io
+```
+
+## Tech Stack
+
+| Tech | Version | Purpose |
+|------|---------|---------|
+| React | 19.1.1 | UI framework |
+| Vite | 7.1.6 | Build tool + dev server |
+| TypeScript | 5.8.3 | Typing |
+| React Router | 7.9.1 | Routing |
+| Tailwind CSS | 4.1.13 | Styling |
+| Agora RTM SDK | 1.5.1 | WebRTC signalling |

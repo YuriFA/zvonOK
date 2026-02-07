@@ -1,6 +1,6 @@
 # WebRTC Chat Server
 
-NestJS backend for authentication and upcoming room/signalling APIs.
+NestJS backend with JWT authentication and PostgreSQL via Prisma ORM.
 
 ## Requirements
 
@@ -8,103 +8,125 @@ NestJS backend for authentication and upcoming room/signalling APIs.
 - pnpm
 - PostgreSQL 16+
 
-## Quick start
+## Quick Start
 
 ```bash
-pnpm install
-pnpm -C apps/server start:dev
+# Start database (PostgreSQL + pgAdmin)
+pnpm bd:dev
+
+# Apply migrations
+pnpm migrate:dev
+
+# Run dev server
+pnpm start:dev
 ```
+
+Server: http://localhost:3000
+Swagger: http://localhost:3000/swagger
+
+## Commands
+
+| Category | Command | Description |
+|----------|---------|-------------|
+| **Dev** | `pnpm start:dev` | Watch mode (primary) |
+| | `pnpm start` | Production run |
+| | `pnpm start:debug` | Debug mode |
+| **Build** | `pnpm build` | Compile to dist/ |
+| | `pnpm lint` | ESLint check |
+| | `pnpm format` | Prettier format |
+| **Test** | `pnpm test` | Unit tests |
+| | `pnpm test:e2e` | E2E tests |
+| | `pnpm test:cov` | With coverage |
+| **DB** | `pnpm migrate:dev` | Apply Prisma migrations |
+| | `pnpm bd:dev` | Start PostgreSQL via Docker |
+
+## Architecture
+
+- **AuthModule** - JWT authentication with Passport.js
+  - Local strategy (email/password)
+  - JWT access tokens (15min) + refresh tokens (7 days) in HTTP-only cookies
+  - Refresh token rotation with reuse detection (SHA256 hashing)
+- **UserModule** - User CRUD via Prisma
+- **Database:** PostgreSQL with Prisma ORM
+
+### Auth Flow
+
+```
+POST /auth/register  -> Create user, set cookies
+POST /auth/login     -> Validate credentials, set cookies
+POST /auth/refresh   -> Rotate refresh token, set new cookies
+POST /auth/logout    -> Clear cookies, remove refresh hash
+```
+
+**Security features:**
+- Account lockout after 5 failed attempts (15min)
+- Refresh token reuse detection invalidates all tokens
+- `timingSafeEqual` for token comparison
 
 ## Environment
 
-Create `apps/server/.env.development` (do not commit) with:
+Create `.env.development`:
 
-```env
+```bash
 PORT=3000
-DATABASE_URL="postgresql://webrtc:webrtc@localhost:5432/webrtc_chat?schema=public"
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/webrtc"
 
-JWT_ACCESS_SECRET=change-me-access
-JWT_REFRESH_SECRET=change-me-refresh
+JWT_ACCESS_SECRET=your-access-secret
+JWT_REFRESH_SECRET=your-refresh-secret
 JWT_ACCESS_EXPIRES_IN_MINUTES=15
 JWT_REFRESH_EXPIRES_IN_DAYS=7
-
-POSTGRES_USER=zvonok_admin
-POSTGRES_PASSWORD=zvonok_password
-POSTGRES_DB=zvonok
-
-PGADMIN_DEFAULT_EMAIL=admin@example.com
-PGADMIN_DEFAULT_PASSWORD=admin
 ```
 
-## Database
+## Database Schema
 
-Start Postgres (Docker option):
+```prisma
+model User {
+  id                   String    @id @default(uuid())
+  email                String    @unique
+  username             String    @unique
+  passwordHash         String
+  refreshTokenHash     String?
 
-```bash
-docker compose -f apps/server/docker-compose.yml --env-file apps/server/.env.development up -d
+  failedLoginAttempts  Int       @default(0)
+  lockedUntil          DateTime?
+  tokenVersion         Int       @default(0)
+
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+}
 ```
 
-pgAdmin UI:
+## Project Structure
 
-- URL: `http://localhost:5050`
-- Email: value of `PGADMIN_DEFAULT_EMAIL` in `apps/server/.env.development`
-- Password: value of `PGADMIN_DEFAULT_PASSWORD` in `apps/server/.env.development`
-
-Connect to Postgres in pgAdmin using:
-
-- Host: `postgres`
-- Port: `5432`
-- Database: value of `POSTGRES_DB` in `apps/server/.env.development`
-- Username: value of `POSTGRES_USER` in `apps/server/.env.development`
-- Password: value of `POSTGRES_PASSWORD` in `apps/server/.env.development`
-
-Run migrations and generate client:
-
-```bash
-pnpm -C apps/server migrate:dev
-pnpm -C apps/server prisma generate
+```
+src/
+├── auth/                      # AuthModule
+│   ├── auth.controller.ts     # /auth endpoints
+│   ├── auth.service.ts        # Business logic
+│   ├── helpers/               # PasswordHelper, TokenHelper, RefreshTokenHelper
+│   ├── strategies/            # Passport strategies
+│   ├── jwt-auth.guard.ts      # Protected route guard
+│   ├── skip-auth.guard.ts     # Public route decorator
+│   └── dto/                   # DTOs (register, login, jwt-payload)
+├── user/                      # UserModule (Prisma)
+│   ├── user.service.ts
+│   └── decorators/            # @CurrentUser() decorator
+└── generated/prisma/          # Generated Prisma client
 ```
 
-## Auth flow
+## API Endpoints
 
-- `POST /auth/register` — creates user, sets access/refresh cookies
-- `POST /auth/login` — validates credentials, sets cookies, returns access token
-- `POST /auth/refresh-token` — rotates refresh token, sets cookies, returns access token
-- `POST /auth/logout` — clears cookies and refresh hash
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/auth/register` | Register new user |
+| POST | `/auth/login` | Login with email/password |
+| POST | `/auth/refresh` | Refresh tokens |
+| POST | `/auth/logout` | Logout (clear refresh token) |
 
-Access tokens are accepted from `Authorization: Bearer <token>` or `access_token` cookie.
-Refresh tokens are httpOnly cookies; on reuse detection the session is invalidated and the API
-returns `401` with `code: REFRESH_REUSE_DETECTED`.
+Full docs: `/swagger` when server is running.
 
-## Local auth check
-
-Run the auth verification script:
+## Auth Check Script
 
 ```bash
-apps/server/scripts/auth-check.sh
-```
-
-Optional overrides:
-
-```bash
-BASE_URL=http://localhost:3000 \
-WAIT_ACCESS_EXPIRY_SECONDS=70 \
-apps/server/scripts/auth-check.sh
-```
-
-## Tests
-
-```bash
-pnpm -C apps/server test
-pnpm -C apps/server test:e2e
-```
-
-## Useful commands
-
-```bash
-pnpm -C apps/server start
-pnpm -C apps/server start:dev
-pnpm -C apps/server lint
-pnpm -C apps/server format
-pnpm -C apps/server prisma studio
+./scripts/auth-check.sh  # Integration test for auth flow
 ```
