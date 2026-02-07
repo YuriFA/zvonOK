@@ -1,9 +1,12 @@
-import { IsString, IsUUID } from 'class-validator';
+import { IsString, IsNumber } from 'class-validator';
 
 export class JwtPayloadDto {
-  @IsUUID()
+  @IsString()
   id: string;
 
   @IsString()
   email: string;
+
+  @IsNumber()
+  tokenVersion?: number;
 }

@@ -1,7 +1,10 @@
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { JwtPayloadDto } from '../dto/jwt-payload.dto';
+import { randomUUID } from 'node:crypto';
 
+@Injectable()
 export class TokenHelper {
   constructor(
     private readonly jwt: JwtService,
@@ -19,6 +22,7 @@ export class TokenHelper {
     return this.jwt.sign(payload, {
       expiresIn: `${Number(this.config.get<number>('JWT_REFRESH_EXPIRES_IN_DAYS'))}d`,
       secret: this.config.get<string>('JWT_REFRESH_SECRET'),
+      jwtid: randomUUID(),
     });
   }
 }

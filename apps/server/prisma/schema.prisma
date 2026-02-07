@@ -15,11 +15,14 @@ datasource db {
 }
 
 model User {
-  id               String   @id @default(cuid())
-  email            String   @unique
-  username         String   @unique
-  passwordHash     String
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  refreshTokenHash String?
+  id                  String   @id @default(cuid())
+  email               String   @unique
+  username            String   @unique
+  passwordHash        String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  refreshTokenHash    String?
+  failedLoginAttempts Int      @default(0)
+  lockedUntil         DateTime?
+  tokenVersion        Int      @default(0)
 }

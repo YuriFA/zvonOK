@@ -4,11 +4,13 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { UserService } from 'src/user/user.service';
-import { PasswordHelper } from '../helpers/password.helper';
+import { RefreshTokenHelper } from '../helpers/refresh-token.helper';
 
 interface JwtPayload {
   id: string;
   email: string;
+  jti?: string;
+  tokenVersion?: number;
 }
 
 const cookieExtractor = (req: Request) => {
@@ -38,6 +40,9 @@ export class JwtRefreshTokenStrategy extends PassportStrategy(
   }
 
   async validate(req: Request, payload: JwtPayload) {
+    if (!payload?.jti) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
     const cookieToken = req?.cookies?.['refresh_token'] as string | undefined;
     const authHeader = req?.headers?.authorization;
     const headerToken = authHeader?.startsWith('Bearer ')
@@ -55,7 +60,18 @@ export class JwtRefreshTokenStrategy extends PassportStrategy(
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    const isRefreshTokenValid = await PasswordHelper.compare(
+    // Validate token version
+    if (payload.tokenVersion !== undefined && payload.tokenVersion !== user.tokenVersion) {
+      this.logger.warn('Invalid token version', {
+        userId: user.id,
+        email: user.email,
+        tokenVersion: payload.tokenVersion,
+        currentTokenVersion: user.tokenVersion,
+      });
+      throw new UnauthorizedException('Token has been revoked');
+    }
+
+    const isRefreshTokenValid = RefreshTokenHelper.compare(
       refreshToken,
       user.refreshTokenHash,
     );
@@ -72,6 +88,6 @@ export class JwtRefreshTokenStrategy extends PassportStrategy(
       });
     }
 
-    return { id: user.id, email: user.email };
+    return { id: user.id, email: user.email, tokenVersion: user.tokenVersion };
   }
 }

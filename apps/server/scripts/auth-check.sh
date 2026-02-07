@@ -49,7 +49,8 @@ login_response=$(curl -sS -i -X POST "$BASE_URL/auth/login" \
   -c "$COOKIE_JAR" \
   -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}")
 
-access_token=$(echo "$login_response" | awk 'BEGIN{p=0} /^\r?$/{p=1;next} p==1{print}' | jq -r '.accessToken')
+login_body=$(echo "$login_response" | awk 'BEGIN{p=0} /^\r?$/{p=1;next} p==1{print}')
+access_token=$(echo "$login_body" | jq -r '.accessToken // .tokens.accessToken')
 
 if [[ -z "$access_token" || "$access_token" == "null" ]]; then
   echo "Failed to extract accessToken from login response" >&2
@@ -92,11 +93,28 @@ if ! echo "$refresh_cookie_response" | grep -qi "Set-Cookie: refresh_token=.*Htt
   exit 1
 fi
 
-echo "\n[4/9] Refresh with Bearer"
-refresh_bearer_response=$(curl -sS -i -X POST "$BASE_URL/auth/refresh-token" \
-  -H "Authorization: Bearer $access_token")
+new_refresh_token=$(awk '/\trefresh_token\t/ {print $7}' "$COOKIE_JAR" | tail -n 1)
+if [[ -z "$new_refresh_token" ]]; then
+  echo "Failed to read refreshed refresh_token from cookie jar" >&2
+  exit 1
+fi
 
-echo "$refresh_bearer_response" | sed -n '1,5p'
+if [[ "$new_refresh_token" == "$old_refresh_token" ]]; then
+  echo "Refresh token did not rotate" >&2
+  exit 1
+fi
+
+echo "\n[4/9] Refresh with Bearer"
+refresh_token=$(awk '/\trefresh_token\t/ {print $7}' "$COOKIE_JAR" | tail -n 1)
+if [[ -z "$refresh_token" ]]; then
+  echo "Failed to read refresh_token from cookie jar" >&2
+  exit 1
+fi
+
+refresh_bearer_response=$(curl -sS -i -X POST "$BASE_URL/auth/refresh-token" \
+  -H "Authorization: Bearer $refresh_token")
+
+echo "$refresh_bearer_response" | sed -n '1,8p'
 
 echo "\n[5/9] Refresh reuse detection (should be 401)"
 reuse_response=$(curl -sS -i -X POST "$BASE_URL/auth/refresh-token" \
@@ -104,10 +122,13 @@ reuse_response=$(curl -sS -i -X POST "$BASE_URL/auth/refresh-token" \
 reuse_status=$(echo "$reuse_response" | head -n 1)
 echo "$reuse_status"
 
-if echo "$reuse_status" | grep -q "401" && echo "$reuse_response" | grep -q "REFRESH_REUSE_DETECTED"; then
+reuse_body=$(echo "$reuse_response" | awk 'BEGIN{p=0} /^\r?$/{p=1;next} p==1{print}')
+
+if echo "$reuse_status" | grep -q "401" && echo "$reuse_body" | grep -q "REFRESH_REUSE_DETECTED"; then
   echo "Reuse detection OK"
 else
   echo "Expected 401 REFRESH_REUSE_DETECTED, got: $reuse_status" >&2
+  echo "$reuse_body" >&2
   exit 1
 fi
 

@@ -7,6 +7,7 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { LoginUserDto } from './dto/login-user.dto';
 import { AuthService } from './auth.service';
 import type { Response } from 'express';
@@ -30,6 +31,7 @@ export class AuthController {
     description: 'It will return a new user object.',
   })
   @SkipAuthGuard()
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('register')
   async register(
     @Body() dto: RegisterUserDto,
@@ -43,6 +45,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Login user' })
   @HttpCode(HttpStatus.OK)
   @SkipAuthGuard()
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('login')
   async login(
     @Body() loginDto: LoginUserDto,
@@ -55,6 +58,7 @@ export class AuthController {
 
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Refresh token' })
+  @SkipAuthGuard()
   @UseGuards(JwtRefreshAuthGuard)
   @Post('refresh-token')
   async refreshToken(
@@ -81,8 +85,8 @@ export class AuthController {
   }
 
   private clearCookies = (res: Response) => {
-    res.clearCookie('access_token', { path: '/' });
-    res.clearCookie('refresh_token', { path: '/' });
+    res.clearCookie('access_token', { path: '/', maxAge: 0 });
+    res.clearCookie('refresh_token', { path: '/', maxAge: 0 });
   };
 
   private setCookies(
