@@ -5,6 +5,9 @@ import { RouterProvider } from "react-router/dom";
 
 import { Room } from "./routes/room.tsx";
 import { Lobby } from "./routes/lobby.tsx";
+import { LoginPage } from "./routes/login.tsx";
+import { RegisterPage } from "./routes/register.tsx";
+import { AuthProvider } from "./features/auth/contexts/auth.context.tsx";
 
 import "./index.css";
 
@@ -15,11 +18,21 @@ const router = createBrowserRouter([
     Component: Lobby,
   },
   {
+    path: "/login",
+    Component: LoginPage,
+  },
+  {
+    path: "/register",
+    Component: RegisterPage,
+  },
+  {
     path: "/room/:room",
     Component: Room,
   },
 ]);
 
 createRoot(document.getElementById("root")!).render(
-  <RouterProvider router={router} />,
+  <AuthProvider>
+    <RouterProvider router={router} />
+  </AuthProvider>,
 );

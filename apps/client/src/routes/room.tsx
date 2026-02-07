@@ -16,6 +16,7 @@ import AgoraRTM, {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { constraints, servers } from "@/lib/config";
+import { useAuth } from "@/features/auth/contexts/auth.context";
 
 const APP_ID = import.meta.env.AGORA_APP_ID;
 const UID = String(Math.floor(Math.random() * 10000));
@@ -24,6 +25,29 @@ const TOKEN = undefined;
 export const Room = () => {
   const { room } = useParams();
   const navigate = useNavigate();
+  const { isAuthenticated, isLoading } = useAuth();
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      navigate('/login', {
+        state: { redirect: `/room/${room}` },
+      });
+    }
+  }, [isAuthenticated, isLoading, navigate, room]);
+
+  // Show loading or nothing while checking auth
+  if (isLoading) {
+    return (
+      <div className="flex min-h-svh items-center justify-center">
+        <div className="text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null; // Will redirect
+  }
   const client = useRef<RtmClient>(null);
   const channel = useRef<RtmChannel>(null);
   const localStream = useRef<MediaStream>(null);
