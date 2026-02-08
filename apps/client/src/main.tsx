@@ -7,6 +7,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { Lobby } from "./routes/lobby.tsx";
 import { LoginPage } from "./routes/login.tsx";
 import { RegisterPage } from "./routes/register.tsx";
+import { RoomLobbyPage } from "./routes/room-lobby.tsx";
 import { RoomPage } from "./routes/room.tsx";
 import { AuthProvider } from "./features/auth/contexts/auth.context.tsx";
 import { queryClient } from "./lib/react-query/query-client";
@@ -26,6 +27,10 @@ const router = createBrowserRouter([
   {
     path: "/register",
     Component: RegisterPage,
+  },
+  {
+    path: "/room/:slug/lobby",
+    Component: RoomLobbyPage,
   },
   {
     path: "/room/:slug",

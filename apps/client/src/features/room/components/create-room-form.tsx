@@ -19,9 +19,9 @@ export function CreateRoomForm({ onSuccess, onCancel }: CreateRoomFormProps) {
     onSuccess: (room) => {
       if (onSuccess) {
         onSuccess(room);
-      } else {
-        navigate(`/room/${room.slug}`);
       }
+
+      navigate(`/room/${room.slug}/lobby`);
     },
   });
 
