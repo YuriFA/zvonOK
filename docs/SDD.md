@@ -107,9 +107,7 @@ The WebRTC Chat application provides:
 
 ```mermaid
 erDiagram
-    User ||--o{ Room : hosts
-    User ||--o{ Message : sends
-    Room ||--o{ Message : contains
+    User ||--o{ Room : owns
 
     User {
         string id PK
@@ -128,18 +126,24 @@ erDiagram
         string id PK
         string slug UK
         string name
-        string hostId FK
+        string ownerId FK
+        boolean isPublic
+        int maxParticipants
+        enum status
         datetime createdAt
         datetime updatedAt
+        datetime endedAt
+        datetime lastActivityAt
     }
 
-    Message {
-        string id PK
-        string content
-        string userId FK
-        string roomId FK
-        datetime createdAt
-    }
+    %% Message model to be added in Stage 6 (Chat)
+    %% Message {
+    %%     string id PK
+    %%     string content
+    %%     string userId FK
+    %%     string roomId FK
+    %%     datetime createdAt
+    %% }
 ```
 
 ### 2.2 High-Level Architecture
@@ -224,29 +228,40 @@ model User {
   updatedAt           DateTime  @updatedAt
 
   rooms      Room[]     @relation("RoomHost")
-  messages   Message[]
 }
 
 model Room {
-  id        String    @id @default(cuid())
-  slug      String    @unique
-  name      String
-  hostId    String
-  host      User      @relation("RoomHost", fields: [hostId], references: [id])
-  messages  Message[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id              String     @id @default(cuid())
+  name            String?
+  slug            String     @unique
+  ownerId         String
+  owner           User       @relation("RoomHost", fields: [ownerId], references: [id])
+  isPublic        Boolean    @default(true)
+  maxParticipants Int        @default(10)
+  status          RoomStatus @default(active)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  endedAt         DateTime?
+  lastActivityAt  DateTime?
+
+  @@index([ownerId])
+  @@index([status])
+  @@index([isPublic])
 }
 
-model Message {
-  id        String   @id @default(cuid())
-  content   String
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  roomId    String
-  room      Room     @relation(fields: [roomId], references: [id])
-  createdAt DateTime @default(now())
+enum RoomStatus {
+  active
+  ended
 }
+
+// Note: Message model will be added in Stage 6 (Chat feature)
+// model Message {
+//   id        String   @id @default(cuid())
+//   content   String
+//   userId    String
+//   roomId    String
+//   createdAt DateTime @default(now())
+// }
 ```
 
 ### 3.2 Database Schema
@@ -254,8 +269,8 @@ model Message {
 | Table | Columns | Indexes |
 |-------|---------|---------|
 | `User` | id, email, username, passwordHash, refreshTokenHash, failedLoginAttempts, lockedUntil, tokenVersion, createdAt, updatedAt | email (unique), username (unique) |
-| `Room` | id, slug, name, hostId, createdAt, updatedAt | slug (unique), hostId (FK to User) |
-| `Message` | id, content, userId, roomId, createdAt | userId (FK to User), roomId (FK to Room) |
+| `Room` | id, slug, name, ownerId, isPublic, maxParticipants, status, createdAt, updatedAt, endedAt, lastActivityAt | slug (unique), ownerId (FK to User, indexed), status (indexed), isPublic (indexed) |
+| `Message` | id, content, userId, roomId, createdAt | userId (FK to User), roomId (FK to Room) — *To be added in Stage 6* |
 
 ---
 
@@ -637,7 +652,7 @@ pnpm dev             # Vite dev server on port 5173
 
 ## Appendix A: Sequence Diagrams
 
-### WebRTC P2P Handshake (planned)
+### WebRTC P2P Handshake
 
 ```mermaid
 sequenceDiagram

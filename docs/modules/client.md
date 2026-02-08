@@ -48,8 +48,8 @@ React 19 + Vite frontend for the WebRTC chat application. Handles user authentic
 | `/` | `LobbyPage` | No | Main lobby, create/join rooms |
 | `/login` | `LoginPage` | No (redirect if auth) | Email/password login |
 | `/register` | `RegisterPage` | No (redirect if auth) | User registration |
-| `/room/:code/lobby` | `RoomLobbyPage` | Optional | Device setup, video preview, share link |
-| `/room/:code` | `RoomPage` | Optional | Video call interface |
+| `/room/:slug/lobby` | `RoomLobbyPage` | Optional | Device setup, video preview, share link |
+| `/room/:slug` | `RoomPage` | Optional | Video call interface |
 
 ---
 
@@ -122,7 +122,7 @@ Located in `apps/client/src/components/ui/`:
 **RoomLobbyPage** (`src/routes/room-lobby.tsx`)
 - Pre-room lobby with device setup
 - Video preview and device configuration
-- Shareable room link
+- Shareable room link (using slug)
 - "Join Room" button to enter call
 
 ---
@@ -144,6 +144,34 @@ Located in `apps/client/src/components/ui/`:
 ## Data Fetching Strategy (React Query)
 
 The client uses `@tanstack/react-query` for server state management, providing automatic cache invalidation, background refetching, and reduced boilerplate.
+
+### Integration with Auth API Client
+
+**Important:** React Query works alongside the existing `apiClient` wrapper:
+
+- The `apiClient` (in `lib/api/auth.ts`) continues to handle **authentication concerns**:
+  - Attaches access tokens to requests
+  - Handles 401 errors with automatic token refresh
+  - Manages authentication failures
+
+- React Query wraps the `apiClient` for **data fetching concerns**:
+  - Caching and invalidation
+  - Background refetching
+  - Loading/error states
+  - Optimistic updates
+
+**Pattern:** React Query hooks call `apiClient` methods, benefiting from both layers:
+
+```typescript
+// Example: Room API hook
+const useRoom = (slug: string) => {
+  return useQuery({
+    queryKey: roomKeys.detail(slug),
+    queryFn: () => roomApi.getBySlug(slug), // Uses apiClient internally
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+```
 
 ### Query Keys Structure
 
@@ -194,6 +222,7 @@ const roomKeys = {
 - Existing `ApiError`, `ValidationError`, `AuthError` types preserved
 - React Query wraps existing `apiClient` (auth refresh logic continues to work)
 - Mutations expose `isPending`, `error` states for UI handling
+- Auth errors (401) are handled by `apiClient` before reaching React Query
 
 ---
 

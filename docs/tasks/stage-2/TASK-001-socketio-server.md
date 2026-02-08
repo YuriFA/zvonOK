@@ -1,7 +1,7 @@
-# TASK-020 — Socket.io Server Setup
+# TASK-001 — Socket.io Server Setup
 
 ## Status
-in_progress
+pending
 
 ## Priority
 high
@@ -16,8 +16,8 @@ Configure Socket.io in NestJS for WebSocket signalling. Create the WebrtcGateway
 - Test connection with a simple ping/pong handler
 
 ## Out of Scope
-- Room join/leave logic (TASK-020)
-- WebRTC signalling (TASK-021)
+- Room join/leave logic (TASK-002)
+- WebRTC signalling (TASK-003)
 - Authentication integration (future)
 
 ## Technical Design
@@ -59,4 +59,4 @@ pnpm add @nestjs/websockets @nestjs/platform-socket.io
 - `apps/server/src/app.module.ts` - App module registration
 
 ## Next Task
-TASK-020 — Join/Leave Room Functionality
+TASK-002 — Join/Leave Room Functionality

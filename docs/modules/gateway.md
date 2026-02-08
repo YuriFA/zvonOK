@@ -119,9 +119,104 @@ WebSocket server for real-time WebRTC signalling. Manages room membership and ex
 - Target peer may have disconnected
 
 ### Authentication Required
-- Verify JWT from socket handshake
-- Associate socket with user ID
-- Allow only authenticated users to join
+
+**Implementation Pattern for NestJS Socket.io Authentication:**
+
+NestJS uses a middleware-based approach for Socket.io authentication. The JWT is extracted from HTTP-only cookies during the WebSocket handshake.
+
+```typescript
+// Gateway configuration with authentication
+@WebSocketGateway({
+  cors: {
+    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    credentials: true, // Required for HTTP-only cookies
+  },
+  namespace: '/',
+})
+export class WebrtcGateway implements OnGatewayInit {
+  constructor(private jwtService: JwtService) {}
+
+  // Authentication middleware
+  async handleConnection(client: Socket) {
+    try {
+      // Extract JWT from cookies in handshake
+      const cookies = client.handshake.headers.cookie;
+      const token = this.extractTokenFromCookies(cookies, 'access_token');
+
+      if (!token) {
+        client.disconnect();
+        return;
+      }
+
+      // Verify token using JwtService
+      const payload = this.jwtService.verify(token);
+
+      // Attach user info to socket for use in event handlers
+      client.data.user = payload;
+      client.data.userId = payload.sub;
+
+      // Optionally join user-specific room
+      await client.join(`user:${payload.sub}`);
+    } catch (error) {
+      // Invalid token - disconnect
+      client.disconnect();
+    }
+  }
+
+  private extractTokenFromCookies(cookieHeader: string, cookieName: string): string | null {
+    if (!cookieHeader) return null;
+    const cookies = cookieHeader.split(';').map(c => c.trim());
+    const targetCookie = cookies.find(c => c.startsWith(`${cookieName}=`));
+    return targetCookie ? targetCookie.split('=')[1] : null;
+  }
+
+  @SubscribeMessage('join:room')
+  async handleJoinRoom(@ConnectedSocket() client: Socket, payload: JoinRoomDto) {
+    // User is authenticated (otherwise they'd be disconnected)
+    const userId = client.data.userId;
+    // ... rest of join logic
+  }
+}
+```
+
+**Alternative: Using Socket.io Middleware (Cleaner Approach):**
+
+```typescript
+@WebSocketGateway({
+  cors: {
+    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    credentials: true,
+  },
+})
+export class WebrtcGateway {
+  @WebSocketMiddleware()
+  async authenticate(socket: Socket, next: (err?: Error) => void) {
+    try {
+      const cookies = socket.handshake.headers.cookie;
+      const token = this.extractTokenFromCookies(cookies, 'access_token');
+
+      if (!token) {
+        return next(new Error('Authentication error: No token'));
+      }
+
+      const payload = this.jwtService.verify(token);
+      socket.data.user = payload;
+      socket.data.userId = payload.sub;
+      next();
+    } catch (error) {
+      next(new Error('Authentication error: Invalid token'));
+    }
+  }
+}
+```
+
+**Key Points:**
+- JWT is stored in HTTP-only cookies (same as REST API)
+- Extract cookie from `socket.handshake.headers.cookie`
+- Use `JwtService` from `@nestjs/jwt` to verify token
+- Attach user info to `socket.data` for later use
+- Disconnect immediately on authentication failure
+- CORS `credentials: true` is required for cookie transmission
 
 ### Max Room Size
 - Limit rooms to 10 participants for P2P

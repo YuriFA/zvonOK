@@ -2,11 +2,7 @@
 
 Guidelines for AI agents working on the WebRTC Chat codebase.
 
-## Active Task
-
-**TASK-001** — Client-Side Room Functionality
-
-Reference: `docs/tasks/stage-1.5/TASK-001-client-rooms.md`
+> **Note:** For the current active task, refer to the [Roadmap](./roadmap.md) and task files in `/docs/tasks/`.
 
 ## Rules
 
@@ -168,4 +164,4 @@ pnpm -C apps/server bd:dev          # Start PostgreSQL via Docker
 ---
 
 **Last Updated:** 2026-02-08
-**Current Version:** Based on SDD v1.0
+**Current Version:** Based on SDD v1.4
