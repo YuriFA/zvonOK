@@ -25,4 +25,29 @@ model User {
   failedLoginAttempts Int      @default(0)
   lockedUntil         DateTime?
   tokenVersion        Int      @default(0)
+  rooms               Room[]   @relation("RoomHost")
+}
+
+model Room {
+  id              String     @id @default(cuid())
+  name            String?
+  slug            String     @unique
+  ownerId         String
+  owner           User       @relation("RoomHost", fields: [ownerId], references: [id])
+  isPublic        Boolean    @default(true)
+  maxParticipants Int        @default(10)
+  status          RoomStatus @default(active)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  endedAt         DateTime?
+  lastActivityAt  DateTime?
+
+  @@index([ownerId])
+  @@index([status])
+  @@index([isPublic])
+}
+
+enum RoomStatus {
+  active
+  ended
 }
