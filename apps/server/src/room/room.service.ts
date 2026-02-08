@@ -21,20 +21,6 @@ export class RoomService {
     });
   }
 
-  async findMany(params: { skip?: number; take?: number }) {
-    const { skip = 0, take = 20 } = params;
-    const [data, total] = await Promise.all([
-      this.prisma.room.findMany({
-        where: { isPublic: true, status: 'active' },
-        skip,
-        take,
-        orderBy: { createdAt: 'desc' },
-      }),
-      this.prisma.room.count({ where: { isPublic: true, status: 'active' } }),
-    ]);
-    return { data, total };
-  }
-
   async findBySlug(slug: string) {
     const room = await this.prisma.room.findUnique({ where: { slug } });
     if (!room) {

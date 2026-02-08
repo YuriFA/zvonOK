@@ -51,7 +51,7 @@ Tasks:
 
 ## Stage 1.5 — Client Rooms
 
-**Status:** In progress
+**Status:** Completed
 **Goal:** Client-side room management UI
 
 Tasks:
@@ -237,7 +237,7 @@ Tasks:
 | Stage 0 | Completed | 1-2 days |
 | Stage 0.5 | Completed | 2-3 days |
 | Stage 1 | Completed | 3-5 days |
-| Stage 1.5 | In progress | 1-2 days |
+| Stage 1.5 | Completed | 1-2 days |
 | Stage 2 | Planned | 2-3 days |
 | Stage 2.5 | Planned | 1 day |
 | Stage 3 | Planned | 3-4 days |
@@ -258,8 +258,8 @@ Tasks:
 
 ## Next Steps
 
-1. **Stage 1.5** (Client Rooms) — implement room UI on frontend
-2. **Stage 2** (Signalling Server) — Socket.io setup in NestJS
+1. **Stage 2** (Signalling Server) — Socket.io setup in NestJS
+2. **Stage 2.5** (Socket.io Client) — Frontend WebSocket connection management
 3. Follow task files in numerical order
 4. Update task status as work progresses
 5. Refer to [SDD](./SDD.md) for architecture and design decisions

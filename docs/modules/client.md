@@ -122,6 +122,62 @@ Located in `apps/client/src/components/ui/`:
 
 ---
 
+## Data Fetching Strategy (React Query)
+
+The client uses `@tanstack/react-query` for server state management, providing automatic cache invalidation, background refetching, and reduced boilerplate.
+
+### Query Keys Structure
+
+**Room Query Keys:**
+```typescript
+const roomKeys = {
+  all: ['rooms'] as const,
+  details: () => [...roomKeys.all, 'detail'] as const,
+  detail: (slug: string) => [...roomKeys.details(), slug] as const,
+} as const;
+```
+
+### Cache Invalidation Strategy
+
+| Action | Cache Invalidation |
+|--------|-------------------|
+| **Create Room** | Pre-populate new room detail in cache |
+| **Update Room** | Invalidate `['rooms', 'detail', slug]` |
+| **End Room** | Remove `['rooms', 'detail', slug]` from cache |
+
+### React Query Hooks
+
+| Hook | Purpose | Stale Time |
+|------|---------|------------|
+| `useRoom(slug)` | Fetch single room by slug | 5 minutes |
+| `useCreateRoom()` | Create room mutation | - |
+| `useEndRoom()` | End room mutation (removes from cache) | - |
+
+### QueryClient Configuration
+
+```typescript
+{
+  queries: {
+    staleTime: 0,           // Global default
+    gcTime: 5 * 60 * 1000,  // 5 minutes cache
+    retry: 3,
+    refetchOnWindowFocus: true,
+    refetchOnMount: false,
+  },
+  mutations: {
+    retry: 1,
+  },
+}
+```
+
+### Error Handling
+
+- Existing `ApiError`, `ValidationError`, `AuthError` types preserved
+- React Query wraps existing `apiClient` (auth refresh logic continues to work)
+- Mutations expose `isPending`, `error` states for UI handling
+
+---
+
 ## WebSocket Events
 
 ### Emitted (Client → Server)

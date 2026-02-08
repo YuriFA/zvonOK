@@ -5,6 +5,7 @@ import { useNavigate } from "react-router";
 import { AuthHeader } from "@/features/auth/components/auth-header";
 import { useAuth } from "@/features/auth/contexts/auth.context";
 import { Link } from "react-router";
+import { CreateRoomDialog } from "@/features/room/components/create-room-dialog";
 
 export const Lobby = () => {
   const navigate = useNavigate();
@@ -20,7 +21,8 @@ export const Lobby = () => {
     <div className="flex min-h-screen flex-col">
       <AuthHeader />
 
-      <main className="flex flex-1 items-center justify-center p-4">
+      <main className="flex flex-1 flex-col items-center justify-center p-4 gap-8">
+        {/* Join by code section */}
         <div className="max-w-[600px] p-4 space-y-4 w-11/12 border border-border rounded-lg">
           <p className="leading-7 text-center">Create or Join a Room</p>
 
@@ -37,9 +39,12 @@ export const Lobby = () => {
               }}
             />
             {isAuthenticated ? (
-              <Button type="button" className="w-full" onClick={handleJoinRoom}>
-                Join Room
-              </Button>
+              <div className="flex gap-2">
+                <Button type="button" className="flex-1" onClick={handleJoinRoom}>
+                  Join Room
+                </Button>
+                <CreateRoomDialog />
+              </div>
             ) : (
               <div className="text-center space-y-2">
                 <Button type="button" className="w-full" asChild>

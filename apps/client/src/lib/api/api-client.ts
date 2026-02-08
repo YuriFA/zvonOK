@@ -133,7 +133,7 @@ export class ApiClient {
     }
   }
 
-  private async performRefresh(): Promise<void> {
+  private async performRefresh(): Promise<boolean> {
     const response = await fetch(`${this.baseURL}/auth/refresh-token`, {
       method: 'POST',
       credentials: 'include',
@@ -145,6 +145,8 @@ export class ApiClient {
     if (!response.ok) {
       throw new AuthError('Failed to refresh token', response.status);
     }
+
+    return true;
   }
 
   async get<T>(endpoint: string, options?: RequestInit): Promise<T> {
@@ -169,6 +171,14 @@ export class ApiClient {
 
   async delete<T>(endpoint: string, options?: RequestInit): Promise<T> {
     return this.request<T>(endpoint, { ...options, method: 'DELETE' });
+  }
+
+  async patch<T>(endpoint: string, data?: unknown, options?: RequestInit): Promise<T> {
+    return this.request<T>(endpoint, {
+      ...options,
+      method: 'PATCH',
+      body: data ? JSON.stringify(data) : undefined,
+    });
   }
 }
 

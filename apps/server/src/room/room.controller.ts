@@ -6,11 +6,8 @@ import {
   Delete,
   Param,
   Body,
-  Query,
   HttpCode,
   HttpStatus,
-  ParseIntPipe,
-  DefaultValuePipe,
   ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
@@ -31,16 +28,6 @@ export class RoomController {
   @ApiOperation({ summary: 'Create a new room' })
   async createRoom(@User() user: JwtPayloadDto, @Body() dto: CreateRoomDto) {
     return this.roomService.createRoom(user.id, dto);
-  }
-
-  @Get()
-  @ApiOperation({ summary: 'List public active rooms' })
-  async listRooms(
-    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number = 1,
-    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number = 20,
-  ) {
-    const skip = (page - 1) * limit;
-    return this.roomService.findMany({ skip, take: limit });
   }
 
   @Get(':slug')

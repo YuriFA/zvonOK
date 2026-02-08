@@ -1,19 +1,19 @@
 # TASK-019 — Client-Side Room Functionality
 
 ## Status
-pending
+completed
 
 ## Priority
 high
 
 ## Description
-Implement client-side room functionality for the WebRTC chat application. Users can create rooms, view public rooms list, and join rooms via UI.
+Implement client-side room functionality for the WebRTC chat application. Users can create rooms and join rooms via UI using a room code (shared privately via link or directly).
 
 ## Scope
 - Room type definitions matching backend DTOs
-- RoomApi service (create, list, get by slug, update, delete)
+- RoomApi service (create, get by slug, update, delete)
 - Create room dialog with form validation
-- Update lobby with "Create Room" button and rooms list
+- Update lobby with "Create Room" button
 - Room page with placeholder video elements
 
 ## Out of Scope
@@ -42,7 +42,6 @@ interface Room {
 
 ### Room API Endpoints
 - POST /rooms - Create room (auth required)
-- GET /rooms - List public active rooms (no auth)
 - GET /rooms/:slug - Get room by slug (no auth)
 - PATCH /rooms/:id - Update room (owner only)
 - DELETE /rooms/:id - End room (owner only)
@@ -56,16 +55,15 @@ interface Room {
 - `apps/client/src/components/ui/dialog.tsx` (if not exists)
 
 ### Components to Modify
-- `apps/client/src/routes/lobby.tsx` - Add Create Room button and rooms list
+- `apps/client/src/routes/lobby.tsx` - Add Create Room button
 - `apps/client/src/routes/room.tsx` - Create room page (new file)
 - `apps/client/src/main.tsx` - Add /room/:slug route
 
 ## Acceptance Criteria
 - [ ] Room types defined matching backend DTOs
-- [ ] RoomApi service created with all CRUD methods
+- [ ] RoomApi service created with CRUD methods (create, get by slug, update, delete)
 - [ ] Create room dialog with validation (name max 100 chars, maxParticipants 2-50)
 - [ ] Lobby shows "Create Room" button for authenticated users
-- [ ] Lobby displays public rooms list
 - [ ] Room page loads room by slug
 - [ ] Room page shows placeholder video elements
 - [ ] "End Room" button only visible for room owner
