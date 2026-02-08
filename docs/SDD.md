@@ -1,6 +1,6 @@
 # Software Design Document: WebRTC Chat
 
-> **Version:** 1.2
+> **Version:** 1.4
 >
 > **Date:** 2025-02-07 / Updated: 2026-02-08
 >
@@ -49,6 +49,56 @@ The WebRTC Chat application provides:
 | **Signalling** | Process of exchanging connection info (offer/answer/ICE) via WebSocket |
 | **JWT** | JSON Web Token — Stateless authentication token |
 | **Prisma** | ORM for type-safe database access |
+
+---
+
+### 1.4 Spec-Driven Requirements
+
+| ID | Requirement | Phase/Status |
+|----|-------------|--------------|
+| REQ-001 | Authentication via JWT access/refresh with rotation and HTTP-only cookies. | Phase 1 (Completed) |
+| REQ-002 | User profile access via `/api/users/me` and public lookup via `/api/users/:id` without sensitive fields. | Phase 1 (Completed) |
+| REQ-003 | Room management via REST with slug-based invite codes. | Phase 1 (Completed) |
+| REQ-004 | WebSocket signalling for join/leave and offer/answer/ICE exchange. | Phase 2 (In Progress) |
+| REQ-005 | SFU signalling for group calls (mediasoup). | Phase 7 (Planned) |
+| REQ-006 | Client UI with lobby/auth/room routes consuming REST + WebSocket APIs. | Phase 0.5 (Completed) |
+| REQ-007 | Security baseline: bcrypt hashing, env-based JWT secrets, timing-safe refresh validation. | Phase 1 (Completed) |
+| REQ-008 | Performance targets and monitoring for media and UI. | Phase 10 (Planned) |
+
+### 1.5 Traceability
+
+| Requirement | Spec References | Tasks |
+|-------------|-----------------|-------|
+| REQ-001 | [modules/auth.md](./modules/auth.md), SDD 4.1 | TASK-015, TASK-016 |
+| REQ-002 | [modules/user.md](./modules/user.md), SDD 4.1 | TASK-014, TASK-016 |
+| REQ-003 | SDD 3.1, SDD 4.1 | TASK-017, TASK-018 |
+| REQ-004 | [modules/gateway.md](./modules/gateway.md), SDD 4.2 | TASK-019, TASK-020, TASK-021 |
+| REQ-005 | [modules/sfu.md](./modules/sfu.md), SDD 4.2 | TASK-035 to TASK-041 |
+| REQ-006 | [modules/client.md](./modules/client.md), SDD 4.3 | TASK-005 to TASK-013, TASK-022 to TASK-026 |
+| REQ-007 | SDD 6 | TASK-015, TASK-016 |
+| REQ-008 | SDD 7 | TASK-047, TASK-048 |
+
+---
+
+### 1.6 Product Goals and MVP Scope
+
+**Primary Goal:** deliver a general-purpose video calling experience similar to Google Meet.
+
+**Target Audience:** general users and small groups needing reliable video calls.
+
+**MVP Focus:**
+- Group video calls with authentication and room codes
+- Join/leave flow with WebSocket signalling
+- P2P calls for up to ~10 participants (SFU planned for scale)
+
+**Planned After MVP:**
+- Screen sharing, device management, and chat history
+- SFU-based group calls for larger rooms
+
+**MVP Success Criteria (assumptions):**
+- Users can register/login and join a room by code
+- Small-group video calls are stable on typical networks
+- Basic join/leave and reconnection work without manual support
 
 ---
 
@@ -228,6 +278,8 @@ model Message {
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | GET | `/api/users/me` | Protected | Get current user profile |
+| GET | `/api/users/:id` | Public | Get user by ID |
+| PATCH | `/api/users/me` | Protected | Update current user |
 
 #### Room Endpoints
 
@@ -266,6 +318,8 @@ Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800
 
 ### 4.2 WebSocket Events
 
+**Note:** `roomCode` corresponds to `Room.slug` (invite code).
+
 | Event | Direction | Payload | Description |
 |-------|-----------|---------|-------------|
 | `join:room` | Client → Server | `{ roomCode: string }` | Join a room |
@@ -276,6 +330,31 @@ Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800
 | `webrtc:offer` | Bidirectional | `{ targetPeerId, offer }` | WebRTC offer |
 | `webrtc:answer` | Bidirectional | `{ targetPeerId, answer }` | WebRTC answer |
 | `webrtc:ice` | Bidirectional | `{ targetPeerId, candidate }` | ICE candidate |
+
+**SFU Events**
+
+| Event | Direction | Payload | Description |
+|-------|-----------|---------|-------------|
+| `sfu:join` | Client → Server | `{ roomId, rtpCapabilities }` | Join SFU room |
+| `sfu:joined` | Server → Client | `{ sendTransport, recvTransport }` | SFU room joined |
+| `sfu:produce` | Client → Server | `{ transportId, kind, rtpParameters }` | Create producer |
+| `sfu:producer-created` | Server → Client | `{ producerId, userId, kind }` | New producer |
+| `sfu:consume` | Client → Server | `{ producerId, rtpCapabilities }` | Create consumer |
+| `sfu:consumer-created` | Server → Client | `{ consumerId, ...params }` | Consumer ready |
+| `sfu:pause-producer` | Client → Server | `{ producerId }` | Pause producer |
+| `sfu:resume-producer` | Client → Server | `{ producerId }` | Resume producer |
+
+**Error Payload (Server -> Client):**
+```json
+{
+  "code": "UNAUTHORIZED",
+  "message": "..."
+}
+```
+
+**Error Codes:** `UNAUTHORIZED`, `ROOM_NOT_FOUND`, `PEER_NOT_FOUND`, `VALIDATION_ERROR`.
+
+**Authentication:** WebSocket connections use JWT cookies; unauthenticated access should return `UNAUTHORIZED` and disconnect for protected flows.
 
 ### 4.3 Frontend Routes
 
@@ -521,6 +600,24 @@ pnpm dev             # Vite dev server on port 5173
 
 ---
 
+### 9.3 Operational Requirements (MVP assumptions)
+
+- **Availability:** best-effort, no formal SLA
+- **Monitoring:** server logs, basic metrics (API latency/error rate), WebSocket connection counts
+- **Client Quality:** optional sampling of WebRTC stats (bitrate, jitter, packet loss)
+- **Incidents:** manual restart/rollback; on-call/support process defined later
+- **Data Handling:** media is not stored; database contains only user/room metadata
+
+### 9.4 Risks and Constraints (MVP assumptions)
+
+- WebRTC connectivity may fail behind strict NAT/firewalls; TURN is required for reliability
+- P2P group calls do not scale beyond ~10 participants; SFU needed for larger rooms
+- Device permissions and hardware variability can impact call quality
+- Network conditions vary; quality adaptation is planned in Phase 10
+- Compliance requirements (education/privacy) must be validated before production rollout
+
+---
+
 ## 10. References
 
 - [WebRTC MDN Documentation](https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API)
@@ -605,4 +702,6 @@ sequenceDiagram
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2025-02-07 | — | Initial SDD creation |
-| 1.2 | 2026-02-08 | — | Consolidated architecture/overview.md, uncommented data models, removed "(planned)" labels |
+| 1.2 | 2026-02-08 | — | Consolidated architecture/overview.md, uncommented data models |
+| 1.3 | 2026-02-08 | — | Added requirements/traceability and clarified interface specs |
+| 1.4 | 2026-02-08 | — | Added product goals, MVP scope, and operational assumptions |

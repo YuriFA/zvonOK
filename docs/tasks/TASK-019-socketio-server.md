@@ -40,7 +40,7 @@ pnpm add @nestjs/websockets @nestjs/platform-socket.io
 
 ## Acceptance Criteria
 - [ ] Socket.io packages installed
-- [ ] WebrtcGateway created in `apps/server/src/webrtc/`
+- [ ] WebrtcGateway created in `apps/server/src/gateway/`
 - [ ] WebrtcModule registered in AppModule
 - [ ] Client can connect and receive confirmation
 - [ ] ping/pong test event works
@@ -55,8 +55,8 @@ pnpm add @nestjs/websockets @nestjs/platform-socket.io
 See: `docs/tasks/phase-02-signalling/2.1-socketio-server.md`
 
 ## Related Files
-- `apps/server/src/webrtc/webrtc.gateway.ts` - Gateway implementation
-- `apps/server/src/webrtc/webrtc.module.ts` - Module definition
+- `apps/server/src/gateway/webrtc.gateway.ts` - Gateway implementation
+- `apps/server/src/gateway/webrtc.module.ts` - Module definition
 - `apps/server/src/app.module.ts` - App module registration
 
 ## Next Task
