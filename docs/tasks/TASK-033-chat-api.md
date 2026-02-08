@@ -1,4 +1,4 @@
-# TASK-032 — Chat API Endpoints
+# TASK-033 — Chat API Endpoints
 
 ## Status
 planned

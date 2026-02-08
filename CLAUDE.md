@@ -22,18 +22,6 @@ Monorepo with WebRTC video chat. P2P for 1-on-1, mediasoup SFU for group calls.
 - **Frontend:** React 19 + Vite 7 + Tailwind CSS v4 + React Router v7 + Radix UI
 - **WebRTC:** Socket.io signalling + native WebRTC API
 
-### Docker Build
-```bash
-# Start PostgreSQL + pgAdmin
-pnpm -C apps/server bd:dev
-```
-
-## Current Development Status
-
-**Active Phase:** Phase 2 — Signalling Server (WebSocket signalling)
-**Task:** TASK-019 — Socket.io server setup in NestJS
-**See:** [Agent Guide](docs/agent-guide.md) for current work details
-
 ## Development Commands
 
 ### Project Root
@@ -50,9 +38,12 @@ pnpm start        # Production run
 pnpm start:debug  # Debug mode
 pnpm start:prod   # Run compiled version
 
+pnpm bd:dev # Run PostgreSQL via Docker (see docker-compose.yml)
+
 pnpm build        # Compile TypeScript to dist/
 pnpm lint         # ESLint with auto-fix
 pnpm format       # Prettier formatting
+
 
 pnpm test         # Run unit tests
 pnpm test:e2e     # E2E tests
@@ -200,27 +191,39 @@ if (error.response?.status === 401) {
 
 ### Documentation Structure
 
-1. **[SDD](docs/SDD.md)** — Complete system architecture
-   - System Architecture, Data Models, API specification
-   - Security, Performance, Scalability
-   - **Use when:** changing architecture, adding API
+| File | Purpose | When to use |
+|------|---------|-------------|
+| **[SDD](docs/SDD.md)** | Complete system architecture: data models, API specification, security, performance | Changing architecture, adding API |
+| **[Modules](docs/modules/)** | API contracts for: auth, user, gateway, sfu, client | Integrating with modules |
+| **[Roadmap](docs/roadmap.md)** | Development phases and status | Planning work |
+| **[Tasks](docs/tasks/)** | Step-by-step guides (Russian, phases 0-11) | Studying project, implementing features |
 
-2. **[Modules](docs/modules/)** — API contracts for modules
-   - auth, user, gateway, sfu, client
-   - **Use when:** integrating with modules
+---
 
-3. **[Roadmap](docs/roadmap.md)** — Development phases and status
-   - **Use when:** planning work
+## SDD Workflow
 
-4. **[Tasks](docs/tasks/)** — Step-by-step guides (Russian)
-   - Learning tasks by phases (0-11)
-   - **Use when:** studying project, implementing features
+### Before Implementation
+1. Check `docs/agent-guide.md` for agent rules
+2. Analyze `docs/SDD.md` for relevant sections (architecture, API, data models)
+3. If SDD is outdated → update it first
+4. For module details → check `docs/modules/`
+5. For task steps → check `docs/tasks/TASK-XXX.md`
 
-### Working Rules
+### During Implementation
+6. Follow API contracts and architecture from SDD
+7. If architecture changes → update SDD first, then implement
+8. Follow existing patterns in codebase
+9. Refer to SDD when uncertain
 
-- **Before changing architecture** → read the relevant SDD section
-- **When implementing a new feature** → consult SDD to understand its place in architecture
-- **When uncertain** → use SDD as the source of truth
+### After Implementation
+10. Update SDD.md if architecture/API changed
+11. Update task status: `pending` → `in_progress` → `completed`
+12. Commit with format: `TASK-XXX: description`
+
+### References
+- **Security:** Security Requirements section in SDD.md
+- **Testing:** Troubleshooting section in SDD.md
+- **Planning:** docs/roadmap.md for development phases
 
 ---
 
@@ -302,11 +305,6 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 - **API responses:** never expose sensitive data
 
 ## Troubleshooting
-
-### Database Connection Issues
-1. Check Docker: `docker ps`
-2. Check `DATABASE_URL` in `.env.development`
-3. Verify PostgreSQL: `docker compose exec postgres psql -U zvonok -d zvonok`
 
 ### WebSocket Connection Issues
 1. Check CORS configuration in gateway

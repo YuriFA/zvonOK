@@ -70,4 +70,4 @@ status?: 'ended' | 'active'
 - `apps/server/src/room/dto/*.dto.ts`
 
 ## Next Task
-TASK-019 — Socket.io Server Setup
+TASK-020 — Socket.io Server Setup

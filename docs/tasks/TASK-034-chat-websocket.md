@@ -61,4 +61,4 @@ async handleGetHistory(client, { roomId }) {
 - `apps/server/src/webrtc/webrtc.gateway.ts`
 
 ## Next Task
-TASK-034 — Chat UI Component
+TASK-035 — Chat UI Component

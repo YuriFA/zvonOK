@@ -81,4 +81,4 @@ const defaultConstraints: MediaStreamConstraints = {
 - `MediaStreamTrack`
 
 ## Next Task
-TASK-024 — RTCPeerConnection Setup
+TASK-025 — RTCPeerConnection Setup

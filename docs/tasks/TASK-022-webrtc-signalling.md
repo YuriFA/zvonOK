@@ -1,4 +1,4 @@
-# TASK-021 — WebRTC Signalling
+# TASK-022 — WebRTC Signalling
 
 ## Status
 planned
@@ -66,4 +66,4 @@ interface RTCEventPayload {
 - `apps/server/src/webrtc/interfaces/` - Event type definitions
 
 ## Next Task
-TASK-022 — Socket.io Client Setup
+TASK-023 — Socket.io Client Setup

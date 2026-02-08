@@ -9,9 +9,9 @@ Guidelines for AI agents working on the WebRTC Chat codebase.
 
 ## Active Task
 
-**TASK-019** — Socket.io server setup in NestJS
+**TASK-019** — Client-Side Room Functionality
 
-Reference: `docs/tasks/TASK-019-socketio-server.md`
+Reference: `docs/tasks/TASK-019-client-rooms.md`
 
 ## Rules
 

@@ -1,4 +1,4 @@
-# TASK-024 — RTCPeerConnection Setup
+# TASK-025 — RTCPeerConnection Setup
 
 ## Status
 planned
@@ -81,4 +81,4 @@ const rtcConfig: RTCConfiguration = {
 - `RTCTrackEvent`
 
 ## Next Task
-TASK-025 — Offer/Answer Exchange
+TASK-026 — Offer/Answer Exchange

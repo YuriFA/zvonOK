@@ -1,4 +1,4 @@
-# TASK-022 — Socket.io Client Setup
+# TASK-023 — Socket.io Client Setup
 
 ## Status
 planned

@@ -1,4 +1,4 @@
-# TASK-041 — SFU Client Integration
+# TASK-042 — SFU Client Integration
 
 ## Status
 planned
@@ -41,4 +41,4 @@ await device.load({ routerRtpCapabilities });
 - `apps/client/src/hooks/use-mediasoup.ts`
 
 ## Next Task
-TASK-042 — Video Grid Layout
+TASK-059 — SFU Participants List UI

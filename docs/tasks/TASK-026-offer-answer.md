@@ -1,4 +1,4 @@
-# TASK-025 — Offer/Answer Exchange Implementation
+# TASK-026 — Offer/Answer Exchange Implementation
 
 ## Status
 planned

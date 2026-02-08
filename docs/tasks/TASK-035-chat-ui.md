@@ -1,4 +1,4 @@
-# TASK-034 — Chat UI Component
+# TASK-035 — Chat UI Component
 
 ## Status
 planned
@@ -55,4 +55,4 @@ Create React UI component for chat with message list, input, and auto-scroll fun
 - `apps/client/src/hooks/use-chat.ts`
 
 ## Next Task
-TASK-035 — mediasoup Worker Setup
+TASK-036 — mediasoup Worker Setup

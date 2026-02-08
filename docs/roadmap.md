@@ -4,7 +4,7 @@ Implementation stages for the WebRTC Chat application.
 
 ## Stage 0 — Theory
 
-**Status:** Planned
+**Status:** Completed
 **Goal:** Understand WebRTC fundamentals before implementation
 
 Tasks:
@@ -49,17 +49,41 @@ Tasks:
 
 ---
 
+## Stage 1.5 — Client Rooms
+
+**Status:** In progress
+**Goal:** Client-side room management UI
+
+Tasks:
+- [TASK-019](./tasks/TASK-019-client-rooms.md) — Room types, API, create dialog, lobby, room page
+
+**Result:** Users can create and join rooms via UI
+
+---
+
 ## Stage 2 — Signalling Server
 
-**Status:** In Progress
+**Status:** Planned
 **Goal:** WebSocket server for WebRTC signalling
 
 Tasks:
-- [TASK-019](./tasks/TASK-019-socketio-server.md) — Socket.io server setup in NestJS
-- [TASK-020](./tasks/TASK-020-join-leave.md) — Room join/leave functionality
-- [TASK-021](./tasks/TASK-021-webrtc-signalling.md) — Offer/Answer/ICE exchange
+- [TASK-020](./tasks/TASK-020-socketio-server.md) — Socket.io server setup in NestJS
+- [TASK-021](./tasks/TASK-021-join-leave.md) — Room join/leave functionality
+- [TASK-022](./tasks/TASK-022-webrtc-signalling.md) — Offer/Answer/ICE exchange
 
 **Result:** Signalling server ready for P2P
+
+---
+
+## Stage 2.5 — Socket.io Client
+
+**Status:** Planned
+**Goal:** Frontend WebSocket connection management
+
+Tasks:
+- [TASK-023](./tasks/TASK-023-socketio-client.md) — Socket.io client setup, connection handling, room join/leave
+
+**Result:** Client can connect to signalling server
 
 ---
 
@@ -69,11 +93,10 @@ Tasks:
 **Goal:** 1-on-1 video calls via direct peer connection
 
 Tasks:
-- [TASK-022](./tasks/TASK-022-socketio-client.md) — Socket.io client setup
-- [TASK-023](./tasks/TASK-023-media-stream.md) — Camera/microphone access
-- [TASK-024](./tasks/TASK-024-rtc-peer-connection.md) — RTCPeerConnection setup
-- [TASK-025](./tasks/TASK-025-offer-answer.md) — Offer/Answer exchange implementation
-- [TASK-026](./tasks/TASK-026-mute-unmute.md) — Media controls (mute/unmute)
+- [TASK-024](./tasks/TASK-024-media-stream.md) — Camera/microphone access
+- [TASK-025](./tasks/TASK-025-rtc-peer-connection.md) — RTCPeerConnection setup
+- [TASK-026](./tasks/TASK-026-offer-answer.md) — Offer/Answer exchange implementation
+- [TASK-027](./tasks/TASK-027-mute-unmute.md) — Media controls (mute/unmute)
 
 **Result:** Working 1-on-1 video call
 
@@ -85,7 +108,8 @@ Tasks:
 **Goal:** Desktop/application window sharing
 
 Tasks:
-- [TASK-027](./tasks/TASK-027-screen-share.md) — getDisplayMedia + replaceTrack
+- [TASK-028](./tasks/TASK-028-screen-share.md) — getDisplayMedia + replaceTrack
+- [TASK-062](./tasks/TASK-062-screen-share-ui.md) — Screen share button, status indicator, error handling
 
 **Result:** Screen sharing capability
 
@@ -97,9 +121,11 @@ Tasks:
 **Goal:** Switch between cameras, microphones, speakers
 
 Tasks:
-- [TASK-028](./tasks/TASK-028-device-enumeration.md) — enumerateDevices API
-- [TASK-029](./tasks/TASK-029-device-switching.md) — Switch camera/mic/speaker
-- [TASK-030](./tasks/TASK-030-device-permissions.md) — Handle device permissions
+- [TASK-029](./tasks/TASK-029-device-enumeration.md) — enumerateDevices API
+- [TASK-030](./tasks/TASK-030-device-switching.md) — Switch camera/mic/speaker
+- [TASK-031](./tasks/TASK-031-device-permissions.md) — Handle device permissions
+- [TASK-063](./tasks/TASK-063-device-selector-ui.md) — Device selector dropdown/settings panel
+- [TASK-064](./tasks/TASK-064-active-device-display.md) — Display currently active devices
 
 **Result:** User can select input/output devices
 
@@ -111,10 +137,13 @@ Tasks:
 **Goal:** Real-time text chat with history
 
 Tasks:
-- [TASK-031](./tasks/TASK-031-chat-model.md) — Message data model
-- [TASK-032](./tasks/TASK-032-chat-api.md) — Chat API endpoints
-- [TASK-033](./tasks/TASK-033-chat-websocket.md) — Real-time chat via WebSocket
-- [TASK-034](./tasks/TASK-034-chat-ui.md) — Chat UI component
+- [TASK-032](./tasks/TASK-032-chat-model.md) — Message data model
+- [TASK-033](./tasks/TASK-033-chat-api.md) — Chat API endpoints
+- [TASK-034](./tasks/TASK-034-chat-websocket.md) — Real-time chat via WebSocket
+- [TASK-035](./tasks/TASK-035-chat-container.md) — Chat container layout
+- [TASK-065](./tasks/TASK-065-message-list.md) — Message list component
+- [TASK-066](./tasks/TASK-066-message-input.md) — Message input component
+- [TASK-067](./tasks/TASK-067-chat-integration.md) — Chat integration in room page
 
 **Result:** Working chat with history
 
@@ -126,13 +155,15 @@ Tasks:
 **Goal:** Scalable group calls (3-10+ participants) via mediasoup
 
 Tasks:
-- [TASK-035](./tasks/TASK-035-mediasoup-worker.md) — mediasoup Worker setup
-- [TASK-036](./tasks/TASK-036-mediasoup-router.md) — Router per room
-- [TASK-037](./tasks/TASK-037-mediasoup-transport.md) — Transport creation
-- [TASK-038](./tasks/TASK-038-mediasoup-producer.md) — Producer for incoming tracks
-- [TASK-039](./tasks/TASK-039-mediasoup-consumer.md) — Consumer for outgoing tracks
-- [TASK-040](./tasks/TASK-040-sfu-signalling.md) — SFU signalling protocol
-- [TASK-041](./tasks/TASK-041-sfu-client.md) — Client-side SFU integration
+- [TASK-036](./tasks/TASK-036-mediasoup-worker.md) — mediasoup Worker setup
+- [TASK-037](./tasks/TASK-037-mediasoup-router.md) — Router per room
+- [TASK-038](./tasks/TASK-038-mediasoup-transport.md) — Transport creation
+- [TASK-039](./tasks/TASK-039-mediasoup-producer.md) — Producer for incoming tracks
+- [TASK-040](./tasks/TASK-040-mediasoup-consumer.md) — Consumer for outgoing tracks
+- [TASK-041](./tasks/TASK-041-sfu-signalling.md) — SFU signalling protocol
+- [TASK-042](./tasks/TASK-042-sfu-client.md) — Client-side SFU integration
+- [TASK-059](./tasks/TASK-059-sfu-participants.md) — Participants list UI
+- [TASK-060](./tasks/TASK-060-sfu-quality-indicator.md) — Connection quality indicator
 
 **Result:** Group video calls working
 
@@ -144,8 +175,8 @@ Tasks:
 **Goal:** Adaptive video layout with speaker detection
 
 Tasks:
-- [TASK-042](./tasks/TASK-042-video-grid-layout.md) — CSS Grid adaptive layout
-- [TASK-043](./tasks/TASK-043-speaker-detection.md) — Active speaker detection
+- [TASK-043](./tasks/TASK-043-video-grid-layout.md) — CSS Grid adaptive layout
+- [TASK-044](./tasks/TASK-044-speaker-detection.md) — Active speaker detection
 
 **Result:** Video tiles auto-arrange based on participant count
 
@@ -157,9 +188,10 @@ Tasks:
 **Goal:** Production-ready deployment with HTTPS and TURN
 
 Tasks:
-- [TASK-044](./tasks/TASK-044-https-caddy.md) — Caddy reverse proxy with auto HTTPS
-- [TASK-045](./tasks/TASK-045-turn-coturn.md) — coturn TURN server setup
-- [TASK-046](./tasks/TASK-046-deploy-process.md) — Production deployment process
+- [TASK-045](./tasks/TASK-045-https-caddy.md) — Caddy reverse proxy with auto HTTPS
+- [TASK-046](./tasks/TASK-046-turn-coturn.md) — coturn TURN server setup
+- [TASK-047](./tasks/TASK-047-deploy-process.md) — Production deployment process
+- [TASK-061](./tasks/TASK-061-client-build.md) — Client build and deployment
 
 **Result:** Application available via HTTPS, works through NAT
 
@@ -171,9 +203,9 @@ Tasks:
 **Goal:** Network monitoring and adaptation
 
 Tasks:
-- [TASK-047](./tasks/TASK-047-network-info.md) — Display connection quality metrics
-- [TASK-048](./tasks/TASK-048-bandwidth-adaptation.md) — Adaptive video quality
-- [TASK-049](./tasks/TASK-049-reconnection.md) — Automatic reconnection handling
+- [TASK-048](./tasks/TASK-048-network-info.md) — Display connection quality metrics
+- [TASK-049](./tasks/TASK-049-bandwidth-adaptation.md) — Adaptive video quality
+- [TASK-050](./tasks/TASK-050-reconnection.md) — Automatic reconnection handling
 
 **Result:** Stable connection with quality indicators
 
@@ -185,14 +217,14 @@ Tasks:
 **Goal:** UX improvements and additional features
 
 Tasks:
-- [TASK-050](./tasks/TASK-050-e2e-testing.md) — Playwright end-to-end tests
-- [TASK-051](./tasks/TASK-051-error-boundaries.md) — Error boundaries and fallback UI
-- [TASK-052](./tasks/TASK-052-loading-states.md) — Improved loading states
-- [TASK-053](./tasks/TASK-053-notifications.md) — Toast notifications
-- [TASK-054](./tasks/TASK-054-dark-mode.md) — Dark theme support
-- [TASK-055](./tasks/TASK-055-responsiveness.md) — Mobile adaptation
-- [TASK-056](./tasks/TASK-056-keyboard-shortcuts.md) — Hotkey support
-- [TASK-057](./tasks/TASK-057-accessibility.md) — ARIA labels and a11y
+- [TASK-051](./tasks/TASK-051-e2e-testing.md) — Playwright end-to-end tests
+- [TASK-052](./tasks/TASK-052-error-boundaries.md) — Error boundaries and fallback UI
+- [TASK-053](./tasks/TASK-053-loading-states.md) — Improved loading states
+- [TASK-054](./tasks/TASK-054-notifications.md) — Toast notifications
+- [TASK-055](./tasks/TASK-055-dark-mode.md) — Dark theme support
+- [TASK-056](./tasks/TASK-056-responsiveness.md) — Mobile adaptation
+- [TASK-057](./tasks/TASK-057-keyboard-shortcuts.md) — Hotkey support
+- [TASK-058](./tasks/TASK-058-accessibility.md) — ARIA labels and a11y
 
 **Result:** Enhanced user experience
 
@@ -202,14 +234,16 @@ Tasks:
 
 | Stage | Status | Time Estimate |
 |-------|--------|---------------|
-| Stage 0 | Planned | 1-2 days |
+| Stage 0 | Completed | 1-2 days |
 | Stage 0.5 | Completed | 2-3 days |
 | Stage 1 | Completed | 3-5 days |
-| Stage 2 | In Progress | 2-3 days |
+| Stage 1.5 | In progress | 1-2 days |
+| Stage 2 | Planned | 2-3 days |
+| Stage 2.5 | Planned | 1 day |
 | Stage 3 | Planned | 3-4 days |
 | Stage 4 | Planned | 1-2 days |
 | Stage 5 | Planned | 1-2 days |
-| Stage 6 | Planned | 1-2 days |
+| Stage 6 | Planned | 2-3 days |
 | Stage 7 | Planned | 5-7 days |
 | Stage 8 | Planned | 2-3 days |
 | Stage 9 | Planned | 2-3 days |
@@ -224,7 +258,8 @@ Tasks:
 
 ## Next Steps
 
-1. Continue with **Stage 2** (Signalling Server) — currently in progress
-2. Follow task files in numerical order
-3. Update task status as work progresses
-4. Refer to [SDD](./SDD.md) for architecture and design decisions
+1. **Stage 1.5** (Client Rooms) — implement room UI on frontend
+2. **Stage 2** (Signalling Server) — Socket.io setup in NestJS
+3. Follow task files in numerical order
+4. Update task status as work progresses
+5. Refer to [SDD](./SDD.md) for architecture and design decisions

@@ -1,4 +1,4 @@
-# TASK-056 — Keyboard Shortcuts
+# TASK-057 — Keyboard Shortcuts
 
 ## Status
 planned
