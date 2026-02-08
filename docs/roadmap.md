@@ -8,8 +8,8 @@ Implementation stages for the WebRTC Chat application.
 **Goal:** Understand WebRTC fundamentals before implementation
 
 Tasks:
-- [TASK-000](./tasks/TASK-000-theory.md) — WebRTC Basics (signalling, STUN, TURN, ICE)
-- [TASK-001](./tasks/TASK-001-p2p-vs-sfu.md) — P2P vs SFU Architecture
+- [task-1](./tasks/stage-0/TASK-001-webrtc-basics.md) — WebRTC Basics (signalling, STUN, TURN, ICE)
+- [task-2](./tasks/stage-0/TASK-002-p2p-vs-sfu.md) — P2P vs SFU Architecture
 
 ---
 
@@ -19,15 +19,15 @@ Tasks:
 **Goal:** Basic frontend with authentication system
 
 Tasks:
-- [TASK-005](./tasks/TASK-005-project-setup.md) — React + Vite + Tailwind CSS v4 setup
-- [TASK-006](./tasks/TASK-006-ui-components.md) — Radix UI components
-- [TASK-007](./tasks/TASK-007-routing.md) — React Router v7 with file-routing
-- [TASK-008](./tasks/TASK-008-forms-validation.md) — React Hook Form + Zod
-- [TASK-009](./tasks/TASK-009-auth-api-client.md) — Auth API client with token refresh
-- [TASK-010](./tasks/TASK-010-login-page.md) — Login page
-- [TASK-011](./tasks/TASK-011-register-page.md) — Register page
-- [TASK-012](./tasks/TASK-012-auth-context.md) — AuthContext state management
-- [TASK-013](./tasks/TASK-013-lobby-page.md) — Main lobby page
+- [task-1](./tasks/stage-0.5/TASK-001-project-setup.md) — React + Vite + Tailwind CSS v4 setup
+- [task-2](./tasks/stage-0.5/TASK-002-ui-components.md) — Radix UI components
+- [task-3](./tasks/stage-0.5/TASK-003-routing.md) — React Router v7 with file-routing
+- [task-4](./tasks/stage-0.5/TASK-004-forms-validation.md) — React Hook Form + Zod
+- [task-5](./tasks/stage-0.5/TASK-005-auth-api-client.md) — Auth API client with token refresh
+- [task-6](./tasks/stage-0.5/TASK-006-login-page.md) — Login page
+- [task-7](./tasks/stage-0.5/TASK-007-register-page.md) — Register page
+- [task-8](./tasks/stage-0.5/TASK-008-auth-context.md) — AuthContext state management
+- [task-9](./tasks/stage-0.5/TASK-009-lobby-page.md) — Main lobby page
 
 **Result:** Fully working authentication on frontend
 
@@ -39,11 +39,11 @@ Tasks:
 **Goal:** Server setup with authentication and room API
 
 Tasks:
-- [TASK-014](./tasks/TASK-014-postgresql-prisma.md) — PostgreSQL + Prisma setup
-- [TASK-015](./tasks/TASK-015-registration.md) — User registration endpoint
-- [TASK-016](./tasks/TASK-016-login-jwt.md) — JWT authentication with refresh tokens
-- [TASK-017](./tasks/TASK-017-room-model.md) — Room data model
-- [TASK-018](./tasks/TASK-018-rooms-api.md) — CRUD API for rooms
+- [task-1](./tasks/stage-1/TASK-001-postgresql-prisma.md) — PostgreSQL + Prisma setup
+- [task-2](./tasks/stage-1/TASK-002-registration.md) — User registration endpoint
+- [task-3](./tasks/stage-1/TASK-003-login-jwt.md) — JWT authentication with refresh tokens
+- [task-4](./tasks/stage-1/TASK-004-room-model.md) — Room data model
+- [task-5](./tasks/stage-1/TASK-005-rooms-api.md) — CRUD API for rooms
 
 **Result:** Backend with Auth + Rooms
 
@@ -55,7 +55,8 @@ Tasks:
 **Goal:** Client-side room management UI
 
 Tasks:
-- [TASK-019](./tasks/TASK-019-client-rooms.md) — Room types, API, create dialog, lobby, room page
+- [task-1](./tasks/stage-1.5/TASK-001-client-rooms.md) — Room types, API, create dialog, lobby, room page
+- [task-2](./tasks/stage-1.5/TASK-002-room-lobby.md) — Room lobby page with device selector and share link
 
 **Result:** Users can create and join rooms via UI
 
@@ -67,9 +68,9 @@ Tasks:
 **Goal:** WebSocket server for WebRTC signalling
 
 Tasks:
-- [TASK-020](./tasks/TASK-020-socketio-server.md) — Socket.io server setup in NestJS
-- [TASK-021](./tasks/TASK-021-join-leave.md) — Room join/leave functionality
-- [TASK-022](./tasks/TASK-022-webrtc-signalling.md) — Offer/Answer/ICE exchange
+- [task-1](./tasks/stage-2/TASK-001-socketio-server.md) — Socket.io server setup in NestJS
+- [task-2](./tasks/stage-2/TASK-002-join-leave.md) — Room join/leave functionality
+- [task-3](./tasks/stage-2/TASK-003-webrtc-signalling.md) — Offer/Answer/ICE exchange
 
 **Result:** Signalling server ready for P2P
 
@@ -81,7 +82,7 @@ Tasks:
 **Goal:** Frontend WebSocket connection management
 
 Tasks:
-- [TASK-023](./tasks/TASK-023-socketio-client.md) — Socket.io client setup, connection handling, room join/leave
+- [task-1](./tasks/stage-2.5/TASK-001-socketio-client.md) — Socket.io client setup, connection handling, room join/leave
 
 **Result:** Client can connect to signalling server
 
@@ -93,10 +94,10 @@ Tasks:
 **Goal:** 1-on-1 video calls via direct peer connection
 
 Tasks:
-- [TASK-024](./tasks/TASK-024-media-stream.md) — Camera/microphone access
-- [TASK-025](./tasks/TASK-025-rtc-peer-connection.md) — RTCPeerConnection setup
-- [TASK-026](./tasks/TASK-026-offer-answer.md) — Offer/Answer exchange implementation
-- [TASK-027](./tasks/TASK-027-mute-unmute.md) — Media controls (mute/unmute)
+- [task-1](./tasks/stage-3/TASK-001-media-stream.md) — Camera/microphone access
+- [task-2](./tasks/stage-3/TASK-002-rtc-peer-connection.md) — RTCPeerConnection setup
+- [task-3](./tasks/stage-3/TASK-003-offer-answer.md) — Offer/Answer exchange implementation
+- [task-4](./tasks/stage-3/TASK-004-mute-unmute.md) — Media controls (mute/unmute)
 
 **Result:** Working 1-on-1 video call
 
@@ -108,8 +109,8 @@ Tasks:
 **Goal:** Desktop/application window sharing
 
 Tasks:
-- [TASK-028](./tasks/TASK-028-screen-share.md) — getDisplayMedia + replaceTrack
-- [TASK-062](./tasks/TASK-062-screen-share-ui.md) — Screen share button, status indicator, error handling
+- [task-1](./tasks/stage-4/TASK-001-screen-share.md) — getDisplayMedia + replaceTrack
+- [task-2](./tasks/stage-4/TASK-002-screen-share-ui.md) — Screen share button, status indicator, error handling (TODO: create file)
 
 **Result:** Screen sharing capability
 
@@ -121,11 +122,11 @@ Tasks:
 **Goal:** Switch between cameras, microphones, speakers
 
 Tasks:
-- [TASK-029](./tasks/TASK-029-device-enumeration.md) — enumerateDevices API
-- [TASK-030](./tasks/TASK-030-device-switching.md) — Switch camera/mic/speaker
-- [TASK-031](./tasks/TASK-031-device-permissions.md) — Handle device permissions
-- [TASK-063](./tasks/TASK-063-device-selector-ui.md) — Device selector dropdown/settings panel
-- [TASK-064](./tasks/TASK-064-active-device-display.md) — Display currently active devices
+- [task-1](./tasks/stage-5/TASK-001-device-enumeration.md) — enumerateDevices API
+- [task-2](./tasks/stage-5/TASK-002-device-switching.md) — Switch camera/mic/speaker
+- [task-3](./tasks/stage-5/TASK-003-device-permissions.md) — Handle device permissions
+- [task-4](./tasks/stage-5/TASK-004-device-selector-ui.md) — Device selector dropdown/settings panel (TODO: create file)
+- [task-5](./tasks/stage-5/TASK-005-active-device-display.md) — Display currently active devices (TODO: create file)
 
 **Result:** User can select input/output devices
 
@@ -137,13 +138,13 @@ Tasks:
 **Goal:** Real-time text chat with history
 
 Tasks:
-- [TASK-032](./tasks/TASK-032-chat-model.md) — Message data model
-- [TASK-033](./tasks/TASK-033-chat-api.md) — Chat API endpoints
-- [TASK-034](./tasks/TASK-034-chat-websocket.md) — Real-time chat via WebSocket
-- [TASK-035](./tasks/TASK-035-chat-container.md) — Chat container layout
-- [TASK-065](./tasks/TASK-065-message-list.md) — Message list component
-- [TASK-066](./tasks/TASK-066-message-input.md) — Message input component
-- [TASK-067](./tasks/TASK-067-chat-integration.md) — Chat integration in room page
+- [task-1](./tasks/stage-6/TASK-001-chat-model.md) — Message data model
+- [task-2](./tasks/stage-6/TASK-002-chat-api.md) — Chat API endpoints
+- [task-3](./tasks/stage-6/TASK-003-chat-websocket.md) — Real-time chat via WebSocket
+- [task-4](./tasks/stage-6/TASK-004-chat-ui.md) — Chat container layout
+- [task-5](./tasks/stage-6/TASK-005-message-list.md) — Message list component (TODO: create file)
+- [task-6](./tasks/stage-6/TASK-006-message-input.md) — Message input component (TODO: create file)
+- [task-7](./tasks/stage-6/TASK-007-chat-integration.md) — Chat integration in room page (TODO: create file)
 
 **Result:** Working chat with history
 
@@ -155,15 +156,15 @@ Tasks:
 **Goal:** Scalable group calls (3-10+ participants) via mediasoup
 
 Tasks:
-- [TASK-036](./tasks/TASK-036-mediasoup-worker.md) — mediasoup Worker setup
-- [TASK-037](./tasks/TASK-037-mediasoup-router.md) — Router per room
-- [TASK-038](./tasks/TASK-038-mediasoup-transport.md) — Transport creation
-- [TASK-039](./tasks/TASK-039-mediasoup-producer.md) — Producer for incoming tracks
-- [TASK-040](./tasks/TASK-040-mediasoup-consumer.md) — Consumer for outgoing tracks
-- [TASK-041](./tasks/TASK-041-sfu-signalling.md) — SFU signalling protocol
-- [TASK-042](./tasks/TASK-042-sfu-client.md) — Client-side SFU integration
-- [TASK-059](./tasks/TASK-059-sfu-participants.md) — Participants list UI
-- [TASK-060](./tasks/TASK-060-sfu-quality-indicator.md) — Connection quality indicator
+- [task-1](./tasks/stage-7/TASK-001-mediasoup-worker.md) — mediasoup Worker setup
+- [task-2](./tasks/stage-7/TASK-002-mediasoup-router.md) — Router per room
+- [task-3](./tasks/stage-7/TASK-003-mediasoup-transport.md) — Transport creation
+- [task-4](./tasks/stage-7/TASK-004-mediasoup-producer.md) — Producer for incoming tracks
+- [task-5](./tasks/stage-7/TASK-005-mediasoup-consumer.md) — Consumer for outgoing tracks
+- [task-6](./tasks/stage-7/TASK-006-sfu-signalling.md) — SFU signalling protocol
+- [task-7](./tasks/stage-7/TASK-007-sfu-client.md) — Client-side SFU integration
+- [task-8](./tasks/stage-7/TASK-008-sfu-participants.md) — Participants list UI
+- [task-9](./tasks/stage-7/TASK-009-sfu-quality-indicator.md) — Connection quality indicator
 
 **Result:** Group video calls working
 
@@ -175,8 +176,8 @@ Tasks:
 **Goal:** Adaptive video layout with speaker detection
 
 Tasks:
-- [TASK-043](./tasks/TASK-043-video-grid-layout.md) — CSS Grid adaptive layout
-- [TASK-044](./tasks/TASK-044-speaker-detection.md) — Active speaker detection
+- [task-1](./tasks/stage-8/TASK-001-video-grid-layout.md) — CSS Grid adaptive layout
+- [task-2](./tasks/stage-8/TASK-002-speaker-detection.md) — Active speaker detection
 
 **Result:** Video tiles auto-arrange based on participant count
 
@@ -188,10 +189,10 @@ Tasks:
 **Goal:** Production-ready deployment with HTTPS and TURN
 
 Tasks:
-- [TASK-045](./tasks/TASK-045-https-caddy.md) — Caddy reverse proxy with auto HTTPS
-- [TASK-046](./tasks/TASK-046-turn-coturn.md) — coturn TURN server setup
-- [TASK-047](./tasks/TASK-047-deploy-process.md) — Production deployment process
-- [TASK-061](./tasks/TASK-061-client-build.md) — Client build and deployment
+- [task-1](./tasks/stage-9/TASK-001-https-caddy.md) — Caddy reverse proxy with auto HTTPS
+- [task-2](./tasks/stage-9/TASK-002-turn-coturn.md) — coturn TURN server setup
+- [task-3](./tasks/stage-9/TASK-003-deploy-process.md) — Production deployment process
+- [task-4](./tasks/stage-9/TASK-004-client-build.md) — Client build and deployment
 
 **Result:** Application available via HTTPS, works through NAT
 
@@ -203,9 +204,9 @@ Tasks:
 **Goal:** Network monitoring and adaptation
 
 Tasks:
-- [TASK-048](./tasks/TASK-048-network-info.md) — Display connection quality metrics
-- [TASK-049](./tasks/TASK-049-bandwidth-adaptation.md) — Adaptive video quality
-- [TASK-050](./tasks/TASK-050-reconnection.md) — Automatic reconnection handling
+- [task-1](./tasks/stage-10/TASK-001-network-info.md) — Display connection quality metrics
+- [task-2](./tasks/stage-10/TASK-002-bandwidth-adaptation.md) — Adaptive video quality
+- [task-3](./tasks/stage-10/TASK-003-reconnection.md) — Automatic reconnection handling
 
 **Result:** Stable connection with quality indicators
 
@@ -217,14 +218,14 @@ Tasks:
 **Goal:** UX improvements and additional features
 
 Tasks:
-- [TASK-051](./tasks/TASK-051-e2e-testing.md) — Playwright end-to-end tests
-- [TASK-052](./tasks/TASK-052-error-boundaries.md) — Error boundaries and fallback UI
-- [TASK-053](./tasks/TASK-053-loading-states.md) — Improved loading states
-- [TASK-054](./tasks/TASK-054-notifications.md) — Toast notifications
-- [TASK-055](./tasks/TASK-055-dark-mode.md) — Dark theme support
-- [TASK-056](./tasks/TASK-056-responsiveness.md) — Mobile adaptation
-- [TASK-057](./tasks/TASK-057-keyboard-shortcuts.md) — Hotkey support
-- [TASK-058](./tasks/TASK-058-accessibility.md) — ARIA labels and a11y
+- [task-1](./tasks/stage-11/TASK-001-e2e-testing.md) — Playwright end-to-end tests
+- [task-2](./tasks/stage-11/TASK-002-error-boundaries.md) — Error boundaries and fallback UI
+- [task-3](./tasks/stage-11/TASK-003-loading-states.md) — Improved loading states
+- [task-4](./tasks/stage-11/TASK-004-notifications.md) — Toast notifications
+- [task-5](./tasks/stage-11/TASK-005-dark-mode.md) — Dark theme support
+- [task-6](./tasks/stage-11/TASK-006-responsiveness.md) — Mobile adaptation
+- [task-7](./tasks/stage-11/TASK-007-keyboard-shortcuts.md) — Hotkey support
+- [task-8](./tasks/stage-11/TASK-008-accessibility.md) — ARIA labels and a11y
 
 **Result:** Enhanced user experience
 

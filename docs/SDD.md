@@ -68,14 +68,14 @@ The WebRTC Chat application provides:
 
 | Requirement | Spec References | Tasks |
 |-------------|-----------------|-------|
-| REQ-001 | [modules/auth.md](./modules/auth.md), SDD 4.1 | TASK-015, TASK-016 |
-| REQ-002 | [modules/user.md](./modules/user.md), SDD 4.1 | TASK-014, TASK-016 |
-| REQ-003 | SDD 3.1, SDD 4.1 | TASK-017, TASK-018 |
-| REQ-004 | [modules/gateway.md](./modules/gateway.md), SDD 4.2 | TASK-019, TASK-020, TASK-021 |
-| REQ-005 | [modules/sfu.md](./modules/sfu.md), SDD 4.2 | TASK-035 to TASK-041 |
-| REQ-006 | [modules/client.md](./modules/client.md), SDD 4.3 | TASK-005 to TASK-013, TASK-022 to TASK-026 |
-| REQ-007 | SDD 6 | TASK-015, TASK-016 |
-| REQ-008 | SDD 7 | TASK-047, TASK-048 |
+| REQ-001 | [modules/auth.md](./modules/auth.md), SDD 4.1 | stage-1/TASK-002, TASK-003 |
+| REQ-002 | [modules/user.md](./modules/user.md), SDD 4.1 | stage-1/TASK-001, TASK-003 |
+| REQ-003 | SDD 3.1, SDD 4.1 | stage-1/TASK-004, TASK-005 |
+| REQ-004 | [modules/gateway.md](./modules/gateway.md), SDD 4.2 | stage-1.5/TASK-001, stage-2/TASK-001, TASK-002 |
+| REQ-005 | [modules/sfu.md](./modules/sfu.md), SDD 4.2 | stage-7/TASK-001 to TASK-007 |
+| REQ-006 | [modules/client.md](./modules/client.md), SDD 4.3 | stage-0.5/TASK-001 to TASK-009, stage-2/TASK-003, stage-3/TASK-001 to TASK-004 |
+| REQ-007 | SDD 6 | stage-1/TASK-002, TASK-003 |
+| REQ-008 | SDD 7 | stage-9/TASK-003, stage-10/TASK-001 |
 
 ---
 
@@ -362,7 +362,14 @@ Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800
 | `/` | Lobby | No |
 | `/login` | Login Page | No (redirect if authenticated) |
 | `/register` | Register Page | No (redirect if authenticated) |
-| `/room/:code` | Video Room | Optional |
+| `/room/:slug/lobby` | Room Lobby (device setup, share link) | Optional |
+| `/room/:slug` | Video Room | Optional |
+
+**Room Creation Flow:**
+1. User creates room via dialog on lobby page
+2. Redirect to `/room/:slug/lobby` (not directly to room)
+3. Lobby shows: device setup, video preview, shareable link
+4. User clicks "Join Room" → navigate to `/room/:slug`
 
 ---
 
@@ -411,7 +418,8 @@ Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800
 - `LobbyPage` (`/`) — Room join/create, auth-aware navigation
 - `LoginPage` (`/login`) — Email/password login form
 - `RegisterPage` (`/register`) — Registration with password confirmation
-- `RoomPage` (`/room/:code`) — Video call interface
+- `RoomLobbyPage` (`/room/:slug/lobby`) — Device setup, video preview, share link (for room creator)
+- `RoomPage` (`/room/:slug`) — Video call interface
 
 **Features:**
 - `AuthContext` — Global auth state with `useAuth()` hook

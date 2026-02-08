@@ -199,61 +199,34 @@ if (error.response?.status === 401) {
 | **[Tasks](docs/tasks/)** | Step-by-step guides (Russian, phases 0-11) | Studying project, implementing features |
 
 ---
-
-## SDD Workflow
-
-### Before Implementation
-1. Check `docs/agent-guide.md` for agent rules
-2. Analyze `docs/SDD.md` for relevant sections (architecture, API, data models)
-3. If SDD is outdated → update it first
-4. For module details → check `docs/modules/`
-5. For task steps → check `docs/tasks/TASK-XXX.md`
-
-### During Implementation
-6. Follow API contracts and architecture from SDD
-7. If architecture changes → update SDD first, then implement
-8. Follow existing patterns in codebase
-9. Refer to SDD when uncertain
-
-### After Implementation
-10. Update SDD.md if architecture/API changed
-11. Update task status: `pending` → `in_progress` → `completed`
-12. Commit with format: `TASK-XXX: description`
-
-### References
-- **Security:** Security Requirements section in SDD.md
-- **Testing:** Troubleshooting section in SDD.md
-- **Planning:** docs/roadmap.md for development phases
-
----
-
 ## Claude Coding Guidelines
 
-## 1. Think Before Coding
-
-**Don't assume. Don't hide confusion. Surface tradeoffs.**
-
-Before implementing:
-
+### Before Implementation
+- Check `docs/agent-guide.md` for agent rules
+- Analyze `docs/SDD.md` for relevant sections (architecture, API, data models)
+- If SDD is outdated → update it first
+- For module details → check `docs/modules/`
+- For task steps → check `docs/tasks/TASK-XXX.md`
 - State your assumptions explicitly. If uncertain, ask.
 - If multiple interpretations exist, present them - don't pick silently.
 - If a simpler approach exists, say so. Push back when warranted.
 - If something is unclear, stop. Name what's confusing. Ask.
 
-## 2. Simplicity First
-
-**Minimum code that solves the problem. Nothing speculative.**
+### During Implementation
 
 - No features beyond what was asked.
 - No abstractions for single-use code.
 - No "flexibility" or "configurability" that wasn't requested.
 - No error handling for impossible scenarios.
 - If you write 200 lines and it could be 50, rewrite it.
+- Follow API contracts and architecture from SDD
+- If architecture changes → update SDD first, then implement
+- Follow existing patterns in codebase
+- Refer to SDD when uncertain
 
 Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
 
-## 3. Surgical Changes
-
+### Surgical Changes
 **Touch only what you must. Clean up only your own mess.**
 
 When editing existing code:
@@ -270,29 +243,26 @@ When your changes create orphans:
 
 The test: Every changed line should trace directly to the user's request.
 
-## 4. Goal-Driven Execution
+### After Implementation
+- Update SDD.md if architecture/API changed
+- Update task status: `pending` → `in_progress` → `completed`
+- Commit with format: `TASK-XXX: description`
 
-**Define success criteria. Loop until verified.**
-
-Transform tasks into verifiable goals:
-
-- "Add validation" → "Write tests for invalid inputs, then make them pass"
-- "Fix the bug" → "Write a test that reproduces it, then make it pass"
-- "Refactor X" → "Ensure tests pass before and after"
-
-For multi-step tasks, state a brief plan:
-
-```
-1. [Step] → verify: [check]
-2. [Step] → verify: [check]
-3. [Step] → verify: [check]
-```
-
-Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+### References
+- **Security:** Security Requirements section in SDD.md
+- **Testing:** Troubleshooting section in SDD.md
+- **Planning:** docs/roadmap.md for development phases
 
 ---
 
-**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
+## ⚠️ CRITICAL: Documentation Before Code
+
+**BEFORE implementing ANY feature or architectural change:**
+1. Update `docs/SDD.md` first — it is the single source of truth
+2. Create/update task file in `docs/tasks/TASK-XXX-<slug>.md`
+3. Only THEN write the code
+
+**No code without documentation.** If you skip this step, the implementation will be rejected.
 
 ---
 

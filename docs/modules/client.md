@@ -48,6 +48,7 @@ React 19 + Vite frontend for the WebRTC chat application. Handles user authentic
 | `/` | `LobbyPage` | No | Main lobby, create/join rooms |
 | `/login` | `LoginPage` | No (redirect if auth) | Email/password login |
 | `/register` | `RegisterPage` | No (redirect if auth) | User registration |
+| `/room/:code/lobby` | `RoomLobbyPage` | Optional | Device setup, video preview, share link |
 | `/room/:code` | `RoomPage` | Optional | Video call interface |
 
 ---
@@ -81,6 +82,7 @@ Located in `apps/client/src/components/ui/`:
 | `Input` | text, email, password | Form inputs |
 | `Card` | — | Content container |
 | `Label` | — | Form labels with accessibility |
+| `CopyLink` | — | Copy link to clipboard with visual feedback |
 
 ### Feature Components
 
@@ -105,6 +107,23 @@ Located in `apps/client/src/components/ui/`:
 - Message list
 - Message input
 - Message history via API
+
+**DeviceSelector** (`src/features/media/components/device-selector.tsx`)
+- Camera/mic device selection with preview
+- Toggle buttons for camera/mute
+- Device dropdowns for switching input devices
+- Local video preview via getUserMedia
+
+**CopyLink** (`src/components/ui/copy-link.tsx`)
+- Reusable copy-to-clipboard component
+- Visual feedback ("Copied!" state)
+- Shareable room link display
+
+**RoomLobbyPage** (`src/routes/room-lobby.tsx`)
+- Pre-room lobby with device setup
+- Video preview and device configuration
+- Shareable room link
+- "Join Room" button to enter call
 
 ---
 
@@ -249,19 +268,25 @@ apps/client/src/
 │   ├── lobby.tsx
 │   ├── login.tsx
 │   ├── register.tsx
+│   ├── room-lobby.tsx
 │   └── room.tsx
 ├── components/
 │   ├── ui/              # Radix UI primitives
 │   │   ├── Button.tsx
 │   │   ├── Input.tsx
 │   │   ├── Card.tsx
-│   │   └── Label.tsx
+│   │   ├── Label.tsx
+│   │   └── copy-link.tsx
 │   ├── VideoGrid.tsx
 │   ├── MediaControls.tsx
 │   ├── ChatPanel.tsx
 │   └── ProfileDropdown.tsx
 ├── contexts/
 │   └── AuthContext.tsx
+├── features/
+│   └── media/
+│       └── components/
+│           └── device-selector.tsx
 ├── lib/
 │   ├── api/
 │   │   └── auth.ts      # Auth API client

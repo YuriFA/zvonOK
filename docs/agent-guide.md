@@ -2,16 +2,11 @@
 
 Guidelines for AI agents working on the WebRTC Chat codebase.
 
-## Current Focus
-
-**Signalling Server**
-**Status:** In Progress
-
 ## Active Task
 
-**TASK-019** — Client-Side Room Functionality
+**TASK-001** — Client-Side Room Functionality
 
-Reference: `docs/tasks/TASK-019-client-rooms.md`
+Reference: `docs/tasks/stage-1.5/TASK-001-client-rooms.md`
 
 ## Rules
 
