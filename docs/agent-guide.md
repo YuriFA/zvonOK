@@ -22,8 +22,8 @@ Reference: `docs/tasks/TASK-019-socketio-server.md`
 - Mark tasks as `in_progress` when starting, `completed` when done
 
 ### 2. Architecture Adherence
-- **Follow architecture in `/docs/architecture/`**
-- Read module documentation before making changes
+- **Follow architecture in [SDD](./SDD.md)**
+- Read [module documentation](./modules/) before making changes
 - Keep module boundaries clear
 - Auth logic belongs in AuthModule, not UserModule
 - UI components go in `apps/client/src/components/`

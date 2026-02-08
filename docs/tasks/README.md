@@ -1,280 +1,87 @@
-# WebRTC Chat — Implementation Guides
+# WebRTC Chat — Implementation Tasks
 
-> Step-by-step guides for implementing the WebRTC chat application
+> Task files and implementation guides for the WebRTC chat application
 
-## 📚 Documentation Structure
+---
 
-This directory contains two types of documentation:
+## 📖 Documentation
 
-1. **Task Files** (`TASK-XXX-*.md`) — Agent-friendly task specifications
-   - Structured with status, scope, acceptance criteria
-   - Used for tracking implementation progress
-   - See [Roadmap](../roadmap.md) for complete task list
-
-2. **Phase Guides** (`phase-*/`) — Detailed implementation tutorials (Russian)
-   - Step-by-step instructions with code examples
-   - Educational materials for learning
-   - Referenced by task files
-
-## 🎯 Quick Links
-
-- **[Architecture Overview](../architecture/overview.md)** — System design and tech stack
-- **[Module Documentation](../modules/)** — Detailed module specifications
-- **[Roadmap](../roadmap.md)** — Implementation phases and task list
+- **[Software Design Document (SDD)](../SDD.md)** — Complete system architecture and design
+- **[Roadmap](../roadmap.md)** — Implementation phases and task status
+- **[Module Documentation](../modules/)** — API contracts for each module
 - **[Agent Guide](../agent-guide.md)** — Guidelines for AI agents
 
-## 📖 Phase Guides (Russian)
+---
 
-**Фаза 0: Теория (1-2 дня)**
+## 📚 Task Structure
 
-## 📚 Структура обучения
+This directory contains:
 
-Каждая фаза — это логически завершённый модуль (2-4 часа работы). После каждой фазы у вас будет **рабочая функциональность**.
+1. **Task Files** (`TASK-XXX-*.md`) — Structured task specifications
+   - Status, scope, acceptance criteria
+   - Used for tracking implementation progress
 
-### Фаза 0: Теория (1-2 дня)
-Изучение основ WebRTC перед началом разработки.
-
-- **[0.1 WebRTC Basics](./phase-00-theory/0.1-webrtc-basics.md)** — Понять signalling, STUN, TURN, ICE
-- **[0.2 P2P vs SFU](./phase-00-theory/0.2-p2p-vs-sfu.md)** — Архитектура для групповых звонков
-
-**Результат:** Понимание концепций WebRTC
+2. **Phase Guides** (`phase-*/`) — Step-by-step implementation tutorials (Russian)
+   - Educational materials with code examples
+   - Referenced by task files
 
 ---
 
-### Фаза 0.5: Frontend Auth (2-3 дня) ✅
-Базовый фронтенд с системой авторизации.
+## 🎯 Quick Start
 
-- **[0.5.1 Project Setup](./phase-0.5-frontend-auth/0.5.1-project-setup.md)** — React + Vite + Tailwind CSS v4
-- **[0.5.2 UI Components](./phase-0.5-frontend-auth/0.5.2-ui-components.md)** — Radix UI компоненты
-- **[0.5.3 Routing](./phase-0.5-frontend-auth/0.5.3-routing.md)** — React Router v7 с файл-роутингом
-- **[0.5.4 Forms + Validation](./phase-0.5-frontend-auth/0.5.4-forms-validation.md)** — React Hook Form + Zod
-- **[0.5.5 Auth API Client](./phase-0.5-frontend-auth/0.5.5-auth-api-client.md)** — API клиент с автообновлением токенов
-- **[0.5.6 Login Page](./phase-0.5-frontend-auth/0.5.6-login-page.md)** — Страница входа
-- **[0.5.7 Register Page](./phase-0.5-frontend-auth/0.5.7-register-page.md)** — Страница регистрации
-- **[0.5.8 Auth Context](./phase-0.5-frontend-auth/0.5.8-auth-context.md)** — AuthContext с управлением состоянием
-- **[0.5.9 Lobby Page](./phase-0.5-frontend-auth/0.5.9-lobby-page.md)** — Главная страница
+### Current Phase
 
-**Результат:** Полностью работающая авторизация на фронтенде
+See [Roadmap](../roadmap.md) for the current implementation phase and active tasks.
 
----
+### Finding Tasks
 
-### Фаза 1: Backend (3-5 дней) ✅
-Настройка сервера с аутентификацией и API для комнат.
+All tasks are listed in the [Roadmap](../roadmap.md), organized by phase:
 
-- **[1.1 PostgreSQL + Prisma](./phase-01-backend/1.1-postgresql-prisma.md)** — Настроить БД
-- **[1.2 Регистрация](./phase-01-backend/1.2-registration.md)** — Endpoint для регистрации
-- **[1.3 Login JWT](./phase-01-backend/1.3-login-jwt.md)** — Аутентификация с токенами
-- **[1.4 Room Model](./phase-01-backend/1.4-room-model.md)** — Модель комнаты
-- **[1.5 Rooms API](./phase-01-backend/1.5-rooms-api.md)** — CRUD для комнат
+- **Phase 0** — WebRTC Theory
+- **Phase 0.5** — Frontend Auth ✅ 
+- **Phase 1** — Backend ✅
+- **Phase 2** — Signalling Server 🚧
+- **Phase 3-11** — Planned
 
-**Результат:** Backend с Auth + Комнаты
+### Task Format
+
+Each task file includes:
+- Обзор (Overview)
+- Статус (Status)
+- Цель (Goal)
+- Материалы (Resources)
+- Пошаговая инструкция (Step-by-step)
+- Критерии выполнения (Acceptance criteria)
 
 ---
 
-### Фаза 2: Signalling Server (2-3 дня) 🚧
-WebSocket сервер для обмена WebRTC сигналами.
+## 📋 Phase Guides (Russian)
 
-- **[2.1 Socket.io Server](./phase-02-signalling/2.1-socketio-server.md)** — Настроить WebSocket
-- **[2.2 Join/Leave Room](./phase-02-signalling/2.2-join-leave.md)** — Управление комнатами
-- **[2.3 WebRTC Signalling](./phase-02-signalling/2.3-webrtc-signalling.md)** — Offer/Answer/ICE
+Detailed implementation tutorials are organized in `phase-*/` directories:
 
-**Результат:** Signalling сервер готов для P2P
-
----
-
-### Фаза 3: WebRTC P2P (3-4 дня) 🚧
-Реализация видеозвонка между двумя участниками.
-
-- **[3.1 Socket.io Client](./phase-03-webrtc-p2p/3.1-socketio-client.md)** — Подключить клиент
-- **[3.2 Media Stream](./phase-03-webrtc-p2p/3.2-media-stream.md)** — Получить камеру/микрофон
-- **[3.3 RTCPeerConnection](./phase-03-webrtc-p2p/3.3-rtc-peer-connection.md)** — Создать P2P соединение
-- **[3.4 Offer/Answer](./phase-03-webrtc-p2p/3.4-offer-answer.md)** — Установить соединение
-- **[3.5 Mute/Unmute](./phase-03-webrtc-p2p/3.5-mute-unmute.md)** — Контроль медиа
-
-**Результат:** Видеозвонок 1-на-1 работает
+- `phase-00-theory/` — WebRTC fundamentals
+- `phase-0.5-frontend-auth/` — React authentication ✅
+- `phase-01-backend/` — NestJS backend ✅
+- `phase-02-signalling/` — WebSocket signalling 🚧
+- `phase-03-webrtc-p2p/` — P2P video calls
+- `phase-04-screen-share/` — Screen sharing
+- `phase-05-devices/` — Device management
+- `phase-06-chat/` — Text chat
+- `phase-07-sfu/` — mediasoup SFU
+- `phase-08-video-grid/` — Video layout
+- `phase-09-deploy/` — Production deployment
+- `phase-10-quality/` — Network quality
+- `phase-11-future/` — Enhancements
 
 ---
 
-### Фаза 4: Screen Share (1-2 дня) 📋
-Демонстрация экрана с переключением между камерой и экраном.
+## 🚀 For Developers
 
-- **[4.1 Screen Share](./phase-04-screen-share/4.1-screen-share.md)** — getDisplayMedia + replaceTrack
+**Before starting a new task:**
+1. Read the [SDD](../SDD.md) to understand the architecture
+2. Check the [Roadmap](../roadmap.md) for dependencies
+3. Follow the task file step-by-step
+4. Update task status when complete
 
-**Результат:** Можно показывать экран собеседнику
-
----
-
-### Фаза 5: Управление устройствами (1-2 дня) 📋
-Переключение между камерами, микрофонами, динамиками.
-
-- **[5.1-5.3 Devices](./phase-05-devices/5.1-2-3-devices.md)** — enumerateDevices + переключение
-
-**Результат:** Можно выбирать устройства ввода/вывода
-
----
-
-### Фаза 6: Чат (1-2 дня) 📋
-Текстовый чат с сохранением истории в БД.
-
-- **[6.1-6.3 Chat](./phase-06-chat/6.1-2-3-chat.md)** — Message модель + Socket.io + UI
-
-**Результат:** Работающий чат с историей
-
----
-
-### Фаза 7: SFU для групповых звонков (5-7 дней) 📋
-Масштабируемая архитектура для 5-10+ участников через mediasoup.
-
-- **[7.1-7.7 SFU](./phase-07-sfu/7.1-7-sfu.md)** — mediasoup Worker/Router/Transport/Producer/Consumer
-
-**Результат:** Групповые видеозвонки работают
-
----
-
-### Фаза 8: Видео-грид (2-3 дня) 📋
-Адаптивная раскладка видео и определение активного говорящего.
-
-- **[8.1-8.2 Video Grid](./phase-08-video-grid/8.1-2-video-grid.md)** — CSS Grid + Speaker Detection
-
-**Результат:** Видео автоматически перестраиваются
-
----
-
-### Фаза 9: Деплой (2-3 дня) 📋
-Production готовность: HTTPS + TURN сервер.
-
-- **[9.1-9.2 Deploy + TURN](./phase-09-deploy/9.1-2-deploy-turn.md)** — Caddy + coturn
-
-**Результат:** Проект доступен по HTTPS, работает через NAT
-
----
-
-### Фаза 10: Качество соединения (2-3 дня) 📋
-Мониторинг сети, адаптация под bandwidth, переподключение.
-
-- **[10.1 Network Info](./phase-10-quality/10.1-network-info.md)** — Отображение качества
-- **[10.2 Bandwidth Adaptation](./phase-10-quality/10.2-bandwidth-adaptation.md)** — Адаптивное качество
-- **[10.3 Reconnection](./phase-10-quality/10.3-reconnection.md)** — Переподключение при обрыве
-
-**Результат:** Стабильное соединение с индикаторами качества
-
----
-
-### Фаза 11: Future Enhancements (будущее) 📋
-Улучшения UX и дополнительные возможности.
-
-- **[11.1 E2E Testing](./phase-11-future/11.1-e2e-testing.md)** — Playwright тесты
-- **[11.2 Error Boundaries](./phase-11-future/11.2-error-boundaries.md)** — Error Boundaries и fallback UI
-- **[11.3 Loading States](./phase-11-future/11.3-loading-states.md)** — Улучшенные loading states
-- **[11.4 Notifications](./phase-11-future/11.4-notifications.md)** — Toast уведомления
-- **[11.5 Dark Mode](./phase-11-future/11.5-dark-mode.md)** — Тёмная тема
-- **[11.6 Responsiveness](./phase-11-future/11.6-responsiveness.md)** — Мобильная адаптация
-- **[11.7 Keyboard Shortcuts](./phase-11-future/11.7-keyboard-shortcuts.md)** — Горячие клавиши
-- **[11.8 Accessibility](./phase-11-future/11.8-accessibility.md)** — ARIA labels и a11y
-
-**Результат:** Улучшенный пользовательский опыт
-
----
-
-## ⏱️ Общая оценка времени
-
-| Фаза | Описание | Статус | Время |
-|------|----------|--------|-------|
-| Фаза 0 | Теория | ✅ | 1-2 дня |
-| Фаза 0.5 | Frontend Auth | ✅ | 2-3 дня |
-| Фаза 1 | Backend | ✅ | 3-5 дней |
-| Фаза 2 | Signalling | 🚧 | 2-3 дня |
-| Фаза 3 | P2P видеозвонок | 🚧 | 3-4 дня |
-| Фаза 4 | Screen Share | 📋 | 1-2 дня |
-| Фаза 5 | Устройства | 📋 | 1-2 дня |
-| Фаза 6 | Чат | 📋 | 1-2 дня |
-| Фаза 7 | SFU (групповые) | 📋 | 5-7 дней |
-| Фаза 8 | Видео-грид | 📋 | 2-3 дня |
-| Фаза 9 | Деплой | 📋 | 2-3 дня |
-| Фаза 10 | Качество | 📋 | 2-3 дня |
-| Фаза 11 | Future | 📋 | TBD |
-
-**Итого:** 3-6 недель полного цикла
-
----
-
-## 🚀 Быстрый старт (MVP)
-
-Если нужен MVP быстрее:
-
-1. **Пропусти Фазу 7** — используй готовый SFU сервис (LiveKit и др.)
-2. **Пропусти Фазу 8** — простой CSS Grid без speaker detection
-3. **Пропусти Фазу 10** — для начала хватит STUN без TURN
-
-⏱️ **MVP за 1-2 недели:** Фазы 0-6 + базовый деплой
-
----
-
-## 📖 Как пользоваться
-
-1. **Последовательно** — начни с Фазы 0, затем 0.5, 1, 2, и т.д.
-2. **Проверяй результат** — в конце каждой задачи есть критерии выполнения
-3. **Делай коммиты** — после каждой завершённой задачи
-4. **Задавай вопросы** — используй ссылки на документацию
-
----
-
-## 🛠️ Технологический стек
-
-**Backend:**
-- NestJS (Node.js framework)
-- PostgreSQL (база данных)
-- Prisma (ORM)
-- Socket.io (WebSocket)
-- mediasoup (SFU для групповых звонков)
-
-**Frontend:**
-- React 19 (UI библиотека)
-- React Router v7 (роутинг)
-- TypeScript
-- Tailwind CSS v4 (стилизация)
-- Socket.io-client (WebSocket)
-- Radix UI (компоненты)
-- React Hook Form + Zod (формы)
-
-**Инфраструктура:**
-- Docker (PostgreSQL)
-- Caddy (HTTPS reverse proxy)
-- coturn (TURN сервер)
-
----
-
-## 📝 Формат задач
-
-Каждый файл задачи содержит:
-
-- **Обзор** — краткое описание
-- **Статус** — ✅ Выполнено / 🚧 В работе / 📋 Planned
-- **🎯 Цель** — что получишь в результате
-- **📚 Материалы** — ссылки на статьи и документацию
-- **📝 Пошаговая инструкция** — код и команды
-- **⚠️ Важные нюансы** — подводные камни
-- **✅ Критерии выполнения** — как проверить
-
----
-
-## 💡 Советы
-
-- **Не торопись** — лучше понять, чем скопировать
-- **Экспериментируй** — меняй код, смотри что сломается
-- **Читай ошибки** — они подскажут что не так
-- **Используй DevTools** — console, network, webrtc-internals
-- **Делай заметки** — что узнал нового
-
----
-
-## 🆘 Где получить помощь
-
-- **WebRTC:** [webrtc.org](https://webrtc.org)
-- **MDN:** [developer.mozilla.org](https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API)
-- **mediasoup:** [mediasoup.org/documentation](https://mediasoup.org/documentation/v3/)
-- **Stack Overflow:** [stackoverflow.com/questions/tagged/webrtc](https://stackoverflow.com/questions/tagged/webrtc)
-
----
-
-**Готов начать? Открой [Фазу 0: Теория](./phase-00-theory/0.1-webrtc-basics.md)** или [Фазу 0.5: Frontend Auth](./phase-0.5-frontend-auth/0.5.1-project-setup.md)** 🚀
+**For AI agents:**
+See [Agent Guide](../agent-guide.md) for development rules and patterns.

@@ -227,4 +227,4 @@ Tasks:
 1. Continue with **Phase 2** (Signalling Server) — currently in progress
 2. Follow task files in numerical order
 3. Update task status as work progresses
-4. Refer to [Architecture Overview](./architecture/overview.md) for design decisions
+4. Refer to [SDD](./SDD.md) for architecture and design decisions

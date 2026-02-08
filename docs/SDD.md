@@ -1,10 +1,10 @@
 # Software Design Document: WebRTC Chat
 
-> **Version:** 1.1
+> **Version:** 1.2
 >
 > **Date:** 2025-02-07 / Updated: 2026-02-08
 >
-> **Status:** Draft
+> **Status:** Living Document
 
 ---
 
@@ -12,7 +12,6 @@
 
 | Document | Purpose | Location |
 |----------|---------|----------|
-| **Architecture Overview** | High-level system design and tech stack | [architecture/overview.md](./architecture/overview.md) |
 | **Module Documentation** | Detailed module specifications | [modules/](./modules/) |
 | **Roadmap** | Implementation phases and task list | [roadmap.md](./roadmap.md) |
 | **Agent Guide** | Guidelines for AI agents | [agent-guide.md](./agent-guide.md) |
@@ -55,7 +54,46 @@ The WebRTC Chat application provides:
 
 ## 2. System Architecture
 
-### 2.1 High-Level Architecture
+### 2.1 Domain Model
+
+```mermaid
+erDiagram
+    User ||--o{ Room : hosts
+    User ||--o{ Message : sends
+    Room ||--o{ Message : contains
+
+    User {
+        string id PK
+        string email UK
+        string username UK
+        string passwordHash
+        string refreshTokenHash
+        int failedLoginAttempts
+        datetime lockedUntil
+        int tokenVersion
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    Room {
+        string id PK
+        string slug UK
+        string name
+        string hostId FK
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    Message {
+        string id PK
+        string content
+        string userId FK
+        string roomId FK
+        datetime createdAt
+    }
+```
+
+### 2.2 High-Level Architecture
 
 ```mermaid
 flowchart TB
@@ -87,25 +125,25 @@ flowchart TB
     C2 -.->|via SFU| C3
 ```
 
-### 2.2 Component Overview
+### 2.3 Component Overview
 
 | Component | Description | Location |
 |-----------|-------------|----------|
 | **AuthModule** | JWT authentication with refresh token rotation | `apps/server/src/auth/` |
 | **UserModule** | User management via Prisma | `apps/server/src/user/` |
 | **PrismaModule** | Global database service | `apps/server/src/prisma/` |
-| **GatewayModule** | WebSocket signalling (planned) | `apps/server/src/gateway/` |
-| **SFUModule** | mediasoup for group calls (planned) | `apps/server/src/sfu/` |
+| **GatewayModule** | WebSocket signalling | `apps/server/src/gateway/` |
+| **SFUModule** | mediasoup for group calls | `apps/server/src/sfu/` |
 | **Client App** | React 19 + Vite frontend | `apps/client/src/` |
 
-### 2.3 Technology Stack
+### 2.4 Technology Stack
 
 **Backend:**
 - **Framework:** NestJS (Node.js)
 - **Database:** PostgreSQL 16
 - **ORM:** Prisma
-- **WebSocket:** Socket.io (planned)
-- **WebRTC:** mediasoup SFU (planned)
+- **WebSocket:** Socket.io
+- **WebRTC:** mediasoup SFU
 - **Auth:** Passport.js + JWT
 
 **Frontend:**
@@ -136,32 +174,30 @@ model User {
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
-  // Relations (planned)
-  // rooms      Room[]     @relation("RoomHost")
-  // messages   Message[]
+  rooms      Room[]     @relation("RoomHost")
+  messages   Message[]
 }
 
-// Planned models
-// model Room {
-//   id        String    @id @default(cuid())
-//   slug      String    @unique
-//   name      String
-//   hostId    String
-//   host      User      @relation("RoomHost", fields: [hostId], references: [id])
-//   messages  Message[]
-//   createdAt DateTime  @default(now())
-//   updatedAt DateTime  @updatedAt
-// }
+model Room {
+  id        String    @id @default(cuid())
+  slug      String    @unique
+  name      String
+  hostId    String
+  host      User      @relation("RoomHost", fields: [hostId], references: [id])
+  messages  Message[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
 
-// model Message {
-//   id        String   @id @default(cuid())
-//   content   String
-//   userId    String
-//   user      User     @relation(fields: [userId], references: [id])
-//   roomId    String
-//   room      Room     @relation(fields: [roomId], references: [id])
-//   createdAt DateTime @default(now())
-// }
+model Message {
+  id        String   @id @default(cuid())
+  content   String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  roomId    String
+  room      Room     @relation(fields: [roomId], references: [id])
+  createdAt DateTime @default(now())
+}
 ```
 
 ### 3.2 Database Schema
@@ -169,6 +205,8 @@ model User {
 | Table | Columns | Indexes |
 |-------|---------|---------|
 | `User` | id, email, username, passwordHash, refreshTokenHash, failedLoginAttempts, lockedUntil, tokenVersion, createdAt, updatedAt | email (unique), username (unique) |
+| `Room` | id, slug, name, hostId, createdAt, updatedAt | slug (unique), hostId (FK to User) |
+| `Message` | id, content, userId, roomId, createdAt | userId (FK to User), roomId (FK to Room) |
 
 ---
 
@@ -191,7 +229,7 @@ model User {
 |--------|------|------|-------------|
 | GET | `/api/users/me` | Protected | Get current user profile |
 
-#### Room Endpoints (planned)
+#### Room Endpoints
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
@@ -226,7 +264,7 @@ Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800
 }
 ```
 
-### 4.2 WebSocket Events (planned)
+### 4.2 WebSocket Events
 
 | Event | Direction | Payload | Description |
 |-------|-----------|---------|-------------|
@@ -567,3 +605,4 @@ sequenceDiagram
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2025-02-07 | — | Initial SDD creation |
+| 1.2 | 2026-02-08 | — | Consolidated architecture/overview.md, uncommented data models, removed "(planned)" labels |

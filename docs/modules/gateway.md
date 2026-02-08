@@ -4,34 +4,7 @@
 
 WebSocket server for real-time WebRTC signalling. Manages room membership and exchanges offers, answers, and ICE candidates between peers.
 
-## Domain Model
-
-### Room State (In-Memory)
-
-```typescript
-interface RoomState {
-  id: string;
-  code: string;
-  peers: Map<peerId, PeerInfo>;
-}
-
-interface PeerInfo {
-  id: string;           // socket.id
-  userId?: string;      // Authenticated user ID
-  userInfo?: {
-    username: string;
-  };
-}
-```
-
-### Socket State
-
-```typescript
-interface SocketData {
-  userId?: string;
-  currentRoom?: string;
-}
-```
+---
 
 ## Use Cases
 
@@ -51,21 +24,18 @@ interface SocketData {
 - Client creates `RTCPeerConnection` and offer
 - Client sends `webrtc:offer` with target peer
 - Server forwards offer to target peer
-- Target peer sets remote description and creates answer
 
 ### 4. WebRTC Answer
 - Target peer sends `webrtc:answer` to caller
 - Server forwards answer to caller
-- Caller sets remote description
 
 ### 5. ICE Candidate
 - Peer sends `webrtc:ice` with candidate
 - Server forwards to target peer
-- Target peer adds candidate to connection
 
-## API Contracts
+---
 
-### WebSocket Events
+## WebSocket Events
 
 | Event | Direction | Payload | Description |
 |-------|-----------|---------|-------------|
@@ -122,28 +92,9 @@ interface SocketData {
 }
 ```
 
-## Edge Cases
+---
 
-### 1. Room Not Found
-- Send error response to client
-- Client should create room or check code
-
-### 2. Target Peer Not Found
-- Send error response to client
-- Target peer may have disconnected
-
-### 3. Authentication Required (Future)
-- Verify JWT from socket handshake
-- Associate socket with user ID
-- Allow only authenticated users to join
-
-### 4. Max Room Size (Future)
-- Limit rooms to 10 participants for P2P
-- Route to SFU for larger groups
-
-## Implementation Details
-
-### Gateway Configuration
+## Configuration
 
 ```typescript
 @WebSocketGateway({
@@ -153,121 +104,33 @@ interface SocketData {
   },
   namespace: '/',
 })
-export class WebrtcGateway {
-  @WebSocketServer()
-  server: Server;
-
-  private rooms = new Map<string, RoomState>();
-}
 ```
 
-### Room Management
+---
 
-```typescript
-// Join room
-@SubscribeMessage('join:room')
-handleJoinRoom(
-  @MessageBody() data: { roomCode: string },
-  @ConnectedSocket() client: Socket,
-) {
-  const room = this.getOrCreateRoom(data.roomCode);
-  room.peers.set(client.id, { id: client.id });
+## Edge Cases
 
-  client.join(room.id);
-  client.data.currentRoom = room.id;
+### Room Not Found
+- Send error response to client
+- Client should create room or check code
 
-  // Notify client
-  client.emit('room:joined', {
-    roomId: room.id,
-    peerId: client.id,
-    peers: Array.from(room.peers.values()),
-  });
+### Target Peer Not Found
+- Send error response to client
+- Target peer may have disconnected
 
-  // Notify others
-  client.to(room.id).emit('peer:joined', {
-    peerId: client.id,
-  });
-}
+### Authentication Required
+- Verify JWT from socket handshake
+- Associate socket with user ID
+- Allow only authenticated users to join
 
-// Leave room
-handleLeave(@ConnectedSocket() client: Socket) {
-  const roomCode = client.data.currentRoom;
-  if (roomCode) {
-    const room = this.rooms.get(roomCode);
-    if (room) {
-      room.peers.delete(client.id);
-      client.to(room.id).emit('peer:left', { peerId: client.id });
-    }
-    client.leave(roomCode);
-  }
-}
-```
+### Max Room Size
+- Limit rooms to 10 participants for P2P
+- Route to SFU for larger groups
 
-### WebRTC Signalling
-
-```typescript
-@SubscribeMessage('webrtc:offer')
-handleOffer(
-  @MessageBody() data: { targetPeerId: string; offer: RTCSessionDescriptionInit },
-  @ConnectedSocket() client: Socket,
-) {
-  const target = this.server.sockets.get(data.targetPeerId);
-  if (target) {
-    target.emit('webrtc:offer', {
-      from: client.id,
-      offer: data.offer,
-    });
-  }
-}
-
-@SubscribeMessage('webrtc:answer')
-handleAnswer(
-  @MessageBody() data: { targetPeerId: string; answer: RTCSessionDescriptionInit },
-  @ConnectedSocket() client: Socket,
-) {
-  const target = this.server.sockets.get(data.targetPeerId);
-  if (target) {
-    target.emit('webrtc:answer', {
-      from: client.id,
-      answer: data.answer,
-    });
-  }
-}
-
-@SubscribeMessage('webrtc:ice')
-handleIceCandidate(
-  @MessageBody() data: { targetPeerId: string; candidate: RTCIceCandidateInit },
-  @ConnectedSocket() client: Socket,
-) {
-  const target = this.server.sockets.get(data.targetPeerId);
-  if (target) {
-    target.emit('webrtc:ice', {
-      from: client.id,
-      candidate: data.candidate,
-    });
-  }
-}
-```
-
-### Lifecycle Hooks
-
-```typescript
-afterInit(server: Server) {
-  console.log('WebSocket server initialized');
-}
-
-handleConnection(client: Socket) {
-  console.log('Client connected:', client.id);
-}
-
-handleDisconnect(client: Socket) {
-  console.log('Client disconnected:', client.id);
-  this.handleLeave(client);
-}
-```
+---
 
 ## Files
 
-- `apps/server/src/gateway/webrtc.gateway.ts` - Gateway class
-- `apps/server/src/gateway/webrtc.module.ts` - Module definition
-- `apps/server/src/gateway/interfaces/` - Type definitions
+- `apps/server/src/gateway/webrtc.gateway.ts` — Gateway class
+- `apps/server/src/gateway/webrtc.module.ts` — Module definition
+- `apps/server/src/gateway/interfaces/` — Type definitions
