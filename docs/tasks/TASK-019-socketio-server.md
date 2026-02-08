@@ -52,7 +52,6 @@ pnpm add @nestjs/websockets @nestjs/platform-socket.io
 - Connection logs visible in console
 
 ## Implementation Guide
-See: `docs/tasks/phase-02-signalling/2.1-socketio-server.md`
 
 ## Related Files
 - `apps/server/src/gateway/webrtc.gateway.ts` - Gateway implementation

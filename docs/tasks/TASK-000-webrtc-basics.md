@@ -59,7 +59,6 @@ Understand fundamental WebRTC concepts before implementation: signalling, STUN/T
 - Understand the complete signalling flow
 
 ## Implementation Guide
-See: `docs/tasks/phase-00-theory/0.1-webrtc-basics.md`
 
 ## Related Files
 - None (theory task)

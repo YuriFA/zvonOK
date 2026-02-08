@@ -19,7 +19,7 @@ Implement media track controls for enabling/disabling camera and microphone with
 
 ## Out of Scope
 - Screen share (covered in TASK-027)
-- Device switching (covered in Phase 5)
+- Device switching (covered in TASK-028 to TASK-030)
 
 ## Technical Design
 
@@ -68,7 +68,6 @@ For mute: Use `enabled = false`
 - No WebRTC disruption on toggle
 
 ## Implementation Guide
-See: `docs/tasks/phase-03-webrtc-p2p/3.5-mute-unmute.md`
 
 ## Related Files
 - `apps/client/src/hooks/use-media-controls.ts`

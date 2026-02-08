@@ -1,7 +1,7 @@
 # TASK-001 — P2P vs SFU Architecture
 
 ## Status
-planned
+completed
 
 ## Priority
 high
@@ -18,8 +18,8 @@ Understand different architectures for video calls: Mesh (P2P), SFU, and MCU. Le
 - Evaluate SFU solutions (mediasoup, LiveKit, etc.)
 
 ## Out of Scope
-- Actual SFU implementation (covered in Phase 7 tasks)
-- P2P implementation details (covered in Phase 3 tasks)
+- Actual SFU implementation (covered in TASK-035 to TASK-041)
+- P2P implementation details (covered in TASK-022 to TASK-026)
 
 ## Technical Design
 
@@ -63,7 +63,7 @@ Understand different architectures for video calls: Mesh (P2P), SFU, and MCU. Le
 | Pion | Go | MIT | Pure Go |
 
 ### Project Recommendation
-Start with P2P for 1-on-1 (Phase 3), then add mediasoup for groups (Phase 7).
+Start with P2P for 1-on-1 (TASK-022 to TASK-026), then add mediasoup for groups (TASK-035 to TASK-041).
 
 ## Acceptance Criteria
 - Can explain why Mesh doesn't scale for 10+ participants
@@ -79,7 +79,6 @@ Start with P2P for 1-on-1 (Phase 3), then add mediasoup for groups (Phase 7).
 - Ready to proceed with implementation
 
 ## Implementation Guide
-See: `docs/tasks/phase-00-theory/0.2-p2p-vs-sfu.md`
 
 ## Related Files
 - None (theory task)

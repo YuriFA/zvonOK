@@ -63,7 +63,6 @@ if (!user) return <Navigate to="/login" />;
 - Protected routes function correctly
 
 ## Implementation Guide
-See: `docs/tasks/phase-0.5-frontend-auth/0.5.8-auth-context.md`
 
 ## Related Files
 - `apps/client/src/features/auth/auth-context.tsx`

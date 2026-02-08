@@ -1,8 +1,8 @@
 # Roadmap
 
-Implementation phases for the WebRTC Chat application.
+Implementation stages for the WebRTC Chat application.
 
-## Phase 0 — Theory
+## Stage 0 — Theory
 
 **Status:** Planned
 **Goal:** Understand WebRTC fundamentals before implementation
@@ -13,7 +13,7 @@ Tasks:
 
 ---
 
-## Phase 0.5 — Frontend Auth
+## Stage 0.5 — Frontend Auth
 
 **Status:** Completed
 **Goal:** Basic frontend with authentication system
@@ -33,7 +33,7 @@ Tasks:
 
 ---
 
-## Phase 1 — Backend
+## Stage 1 — Backend
 
 **Status:** Completed
 **Goal:** Server setup with authentication and room API
@@ -49,7 +49,7 @@ Tasks:
 
 ---
 
-## Phase 2 — Signalling Server
+## Stage 2 — Signalling Server
 
 **Status:** In Progress
 **Goal:** WebSocket server for WebRTC signalling
@@ -63,7 +63,7 @@ Tasks:
 
 ---
 
-## Phase 3 — WebRTC P2P
+## Stage 3 — WebRTC P2P
 
 **Status:** Planned
 **Goal:** 1-on-1 video calls via direct peer connection
@@ -79,7 +79,7 @@ Tasks:
 
 ---
 
-## Phase 4 — Screen Share
+## Stage 4 — Screen Share
 
 **Status:** Planned
 **Goal:** Desktop/application window sharing
@@ -91,7 +91,7 @@ Tasks:
 
 ---
 
-## Phase 5 — Device Management
+## Stage 5 — Device Management
 
 **Status:** Planned
 **Goal:** Switch between cameras, microphones, speakers
@@ -105,7 +105,7 @@ Tasks:
 
 ---
 
-## Phase 6 — Chat
+## Stage 6 — Chat
 
 **Status:** Planned
 **Goal:** Real-time text chat with history
@@ -120,7 +120,7 @@ Tasks:
 
 ---
 
-## Phase 7 — SFU (Group Calls)
+## Stage 7 — SFU (Group Calls)
 
 **Status:** Planned
 **Goal:** Scalable group calls (3-10+ participants) via mediasoup
@@ -138,7 +138,7 @@ Tasks:
 
 ---
 
-## Phase 8 — Video Grid
+## Stage 8 — Video Grid
 
 **Status:** Planned
 **Goal:** Adaptive video layout with speaker detection
@@ -151,7 +151,7 @@ Tasks:
 
 ---
 
-## Phase 9 — Deployment
+## Stage 9 — Deployment
 
 **Status:** Planned
 **Goal:** Production-ready deployment with HTTPS and TURN
@@ -165,7 +165,7 @@ Tasks:
 
 ---
 
-## Phase 10 — Quality
+## Stage 10 — Quality
 
 **Status:** Planned
 **Goal:** Network monitoring and adaptation
@@ -179,7 +179,7 @@ Tasks:
 
 ---
 
-## Phase 11 — Future Enhancements
+## Stage 11 — Future Enhancements
 
 **Status:** Planned
 **Goal:** UX improvements and additional features
@@ -200,31 +200,31 @@ Tasks:
 
 ## Timeline
 
-| Phase | Status | Time Estimate |
+| Stage | Status | Time Estimate |
 |-------|--------|---------------|
-| Phase 0 | Planned | 1-2 days |
-| Phase 0.5 | Completed | 2-3 days |
-| Phase 1 | Completed | 3-5 days |
-| Phase 2 | In Progress | 2-3 days |
-| Phase 3 | Planned | 3-4 days |
-| Phase 4 | Planned | 1-2 days |
-| Phase 5 | Planned | 1-2 days |
-| Phase 6 | Planned | 1-2 days |
-| Phase 7 | Planned | 5-7 days |
-| Phase 8 | Planned | 2-3 days |
-| Phase 9 | Planned | 2-3 days |
-| Phase 10 | Planned | 2-3 days |
-| Phase 11 | Planned | TBD |
+| Stage 0 | Planned | 1-2 days |
+| Stage 0.5 | Completed | 2-3 days |
+| Stage 1 | Completed | 3-5 days |
+| Stage 2 | In Progress | 2-3 days |
+| Stage 3 | Planned | 3-4 days |
+| Stage 4 | Planned | 1-2 days |
+| Stage 5 | Planned | 1-2 days |
+| Stage 6 | Planned | 1-2 days |
+| Stage 7 | Planned | 5-7 days |
+| Stage 8 | Planned | 2-3 days |
+| Stage 9 | Planned | 2-3 days |
+| Stage 10 | Planned | 2-3 days |
+| Stage 11 | Planned | TBD |
 
 **Total:** 3-6 weeks for full implementation
 
-**MVP Path:** Phases 0-6 + basic deploy = 1-2 weeks
+**MVP Path:** Stages 0-6 + basic deploy = 1-2 weeks
 
 ---
 
 ## Next Steps
 
-1. Continue with **Phase 2** (Signalling Server) — currently in progress
+1. Continue with **Stage 2** (Signalling Server) — currently in progress
 2. Follow task files in numerical order
 3. Update task status as work progresses
 4. Refer to [SDD](./SDD.md) for architecture and design decisions

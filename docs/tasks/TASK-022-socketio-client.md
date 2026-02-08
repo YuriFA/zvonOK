@@ -58,7 +58,6 @@ class WebSocketManager {
 - Connection status is observable
 
 ## Implementation Guide
-See: `docs/tasks/phase-03-webrtc-p2p/3.1-socketio-client.md`
 
 ## Related Files
 - `apps/client/src/lib/websocket/manager.ts` - WebSocket manager

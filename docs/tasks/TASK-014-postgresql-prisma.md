@@ -62,7 +62,6 @@ model User {
 - PrismaService works in NestJS
 
 ## Implementation Guide
-See: `docs/tasks/phase-01-backend/1.1-postgresql-prisma.md`
 
 ## Related Files
 - `apps/server/prisma/schema.prisma`

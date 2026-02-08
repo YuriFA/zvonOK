@@ -13,10 +13,9 @@
 | Document | Purpose | Location |
 |----------|---------|----------|
 | **Module Documentation** | Detailed module specifications | [modules/](./modules/) |
-| **Roadmap** | Implementation phases and task list | [roadmap.md](./roadmap.md) |
+| **Roadmap** | Implementation stages and task list | [roadmap.md](./roadmap.md) |
 | **Agent Guide** | Guidelines for AI agents | [agent-guide.md](./agent-guide.md) |
 | **Tasks** | Individual task specifications | [tasks/](./tasks/) |
-| **Implementation Guides** | Step-by-step tutorials (Russian) | [tasks/phase-*/](./tasks/) |
 
 ---
 
@@ -54,16 +53,16 @@ The WebRTC Chat application provides:
 
 ### 1.4 Spec-Driven Requirements
 
-| ID | Requirement | Phase/Status |
+| ID | Requirement | Status |
 |----|-------------|--------------|
-| REQ-001 | Authentication via JWT access/refresh with rotation and HTTP-only cookies. | Phase 1 (Completed) |
-| REQ-002 | User profile access via `/api/users/me` and public lookup via `/api/users/:id` without sensitive fields. | Phase 1 (Completed) |
-| REQ-003 | Room management via REST with slug-based invite codes. | Phase 1 (Completed) |
-| REQ-004 | WebSocket signalling for join/leave and offer/answer/ICE exchange. | Phase 2 (In Progress) |
-| REQ-005 | SFU signalling for group calls (mediasoup). | Phase 7 (Planned) |
-| REQ-006 | Client UI with lobby/auth/room routes consuming REST + WebSocket APIs. | Phase 0.5 (Completed) |
-| REQ-007 | Security baseline: bcrypt hashing, env-based JWT secrets, timing-safe refresh validation. | Phase 1 (Completed) |
-| REQ-008 | Performance targets and monitoring for media and UI. | Phase 10 (Planned) |
+| REQ-001 | Authentication via JWT access/refresh with rotation and HTTP-only cookies. | Completed |
+| REQ-002 | User profile access via `/api/users/me` and public lookup via `/api/users/:id` without sensitive fields. | Completed |
+| REQ-003 | Room management via REST with slug-based invite codes. | Completed |
+| REQ-004 | WebSocket signalling for join/leave and offer/answer/ICE exchange. | In Progress |
+| REQ-005 | SFU signalling for group calls (mediasoup). | Planned |
+| REQ-006 | Client UI with lobby/auth/room routes consuming REST + WebSocket APIs. | Completed |
+| REQ-007 | Security baseline: bcrypt hashing, env-based JWT secrets, timing-safe refresh validation. | Completed |
+| REQ-008 | Performance targets and monitoring for media and UI. | Planned |
 
 ### 1.5 Traceability
 
@@ -613,7 +612,7 @@ pnpm dev             # Vite dev server on port 5173
 - WebRTC connectivity may fail behind strict NAT/firewalls; TURN is required for reliability
 - P2P group calls do not scale beyond ~10 participants; SFU needed for larger rooms
 - Device permissions and hardware variability can impact call quality
-- Network conditions vary; quality adaptation is planned in Phase 10
+- Network conditions vary; quality adaptation is planned in TASK-047 and TASK-048
 - Compliance requirements (education/privacy) must be validated before production rollout
 
 ---

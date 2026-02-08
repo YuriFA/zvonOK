@@ -18,7 +18,7 @@ Implement access to camera and microphone using MediaDevices API. Create a media
 
 ## Out of Scope
 - Screen sharing (TASK-027)
-- Device switching (Phase 5)
+- Device switching (see TASK-028 to TASK-030)
 
 ## Technical Design
 
@@ -69,7 +69,6 @@ const defaultConstraints: MediaStreamConstraints = {
 - Clean cleanup on unmount
 
 ## Implementation Guide
-See: `docs/tasks/phase-03-webrtc-p2p/3.2-media-stream.md`
 
 ## Related Files
 - `apps/client/src/lib/media/manager.ts` - Media stream manager

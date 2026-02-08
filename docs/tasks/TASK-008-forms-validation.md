@@ -59,7 +59,6 @@ const { register, handleSubmit, formState: { errors } } = useForm({
 - Error states display properly
 
 ## Implementation Guide
-See: `docs/tasks/phase-0.5-frontend-auth/0.5.4-forms-validation.md`
 
 ## Related Files
 - `apps/client/src/lib/schemas.ts`

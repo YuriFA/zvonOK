@@ -53,7 +53,6 @@ const stats = await peerConnection.getStats();
 - Performance acceptable
 
 ## Implementation Guide
-See: `docs/tasks/phase-10-quality/10.1-network-info.md`
 
 ## Related Files
 - `apps/client/src/hooks/use-connection-stats.ts`

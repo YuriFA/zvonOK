@@ -73,7 +73,6 @@ model User {
 - Room accessible via PrismaService
 
 ## Implementation Guide
-See: `docs/tasks/phase-01-backend/1.4-room-model.md`
 
 ## Related Files
 - `apps/server/prisma/schema.prisma`

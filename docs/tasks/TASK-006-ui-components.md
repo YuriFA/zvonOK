@@ -66,7 +66,6 @@ const buttonVariants = cva(
 - No TypeScript errors
 
 ## Implementation Guide
-See: `docs/tasks/phase-0.5-frontend-auth/0.5.2-ui-components.md`
 
 ## Related Files
 - `apps/client/src/components/ui/button.tsx`

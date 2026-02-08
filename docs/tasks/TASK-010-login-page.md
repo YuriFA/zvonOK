@@ -61,7 +61,6 @@ const loginSchema = z.object({
 - Navigation works after login
 
 ## Implementation Guide
-See: `docs/tasks/phase-0.5-frontend-auth/0.5.6-login-page.md`
 
 ## Related Files
 - `apps/client/src/routes/login.tsx`

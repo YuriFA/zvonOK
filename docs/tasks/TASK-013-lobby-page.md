@@ -18,7 +18,7 @@ Implement main lobby page with room joining functionality and user authenticatio
 - Redirect to room page on join
 
 ## Out of Scope
-- Actual room functionality (covered in later phases)
+- Actual room functionality (covered in TASK-019 to TASK-026)
 
 ## Technical Design
 
@@ -53,7 +53,6 @@ Implement main lobby page with room joining functionality and user authenticatio
 - Logout button functions
 
 ## Implementation Guide
-See: `docs/tasks/phase-0.5-frontend-auth/0.5.9-lobby-page.md`
 
 ## Related Files
 - `apps/client/src/routes/lobby.tsx`

@@ -18,7 +18,7 @@ Implement screen sharing using getDisplayMedia API with track replacement in Web
 - UI indication for active screen share
 
 ## Out of Scope
-- Device switching (covered in Phase 5)
+- Device switching (covered in TASK-028 to TASK-030)
 
 ## Technical Design
 
@@ -72,7 +72,6 @@ export function useScreenShare(localStream, peerConnection) {
 - Works in 1-on-1 calls
 
 ## Implementation Guide
-See: `docs/tasks/phase-04-screen-share/4.1-screen-share.md`
 
 ## Related Files
 - `apps/client/src/hooks/use-screen-share.ts`

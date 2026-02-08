@@ -56,7 +56,6 @@ model Room {
 - Model accessible via PrismaService
 
 ## Implementation Guide
-See: `docs/tasks/phase-06-chat/6.1-2-3-chat.md`
 
 ## Related Files
 - `apps/server/prisma/schema.prisma`

@@ -2,9 +2,9 @@
 
 Guidelines for AI agents working on the WebRTC Chat codebase.
 
-## Current Phase
+## Current Focus
 
-**Phase 2 — Signalling Server**
+**Signalling Server**
 **Status:** In Progress
 
 ## Active Task

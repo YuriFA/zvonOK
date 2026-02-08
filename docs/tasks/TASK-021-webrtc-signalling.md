@@ -16,8 +16,8 @@ Implement WebRTC signalling events to exchange offers, answers, and ICE candidat
 - Target peer validation
 
 ## Out of Scope
-- SFU integration (Phase 7)
-- TURN server integration (Phase 9)
+- SFU integration (TASK-035 to TASK-041)
+- TURN server integration (TASK-045)
 
 ## Technical Design
 
@@ -60,7 +60,6 @@ interface RTCEventPayload {
 - Error handling for missing peers
 
 ## Implementation Guide
-See: `docs/tasks/phase-02-signalling/2.3-webrtc-signalling.md`
 
 ## Related Files
 - `apps/server/src/webrtc/webrtc.gateway.ts` - Add signalling handlers

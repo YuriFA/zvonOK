@@ -49,7 +49,6 @@ Create React UI component for chat with message list, input, and auto-scroll fun
 - Styling consistent
 
 ## Implementation Guide
-See: `docs/tasks/phase-06-chat/6.1-2-3-chat.md`
 
 ## Related Files
 - `apps/client/src/components/chat.tsx`

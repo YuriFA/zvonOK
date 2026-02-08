@@ -62,7 +62,6 @@ interface PeerInfo {
 - Socket.io room functions used (client.join, client.leave)
 
 ## Implementation Guide
-See: `docs/tasks/phase-02-signalling/2.2-join-leave.md`
 
 ## Related Files
 - `apps/server/src/webrtc/webrtc.gateway.ts` - Add room handlers

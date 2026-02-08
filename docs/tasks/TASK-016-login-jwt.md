@@ -61,7 +61,6 @@ JWT_REFRESH_EXPIRES_IN_DAYS=7
 - Logout clears all cookies
 
 ## Implementation Guide
-See: `docs/tasks/phase-01-backend/1.3-login-jwt.md`
 
 ## Related Files
 - `apps/server/src/auth/dto/login.dto.ts`

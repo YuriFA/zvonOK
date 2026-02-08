@@ -81,7 +81,6 @@ export default defineConfig({
 - Tailwind styles apply correctly
 
 ## Implementation Guide
-See: `docs/tasks/phase-0.5-frontend-auth/0.5.1-project-setup.md`
 
 ## Related Files
 - `apps/client/vite.config.ts`

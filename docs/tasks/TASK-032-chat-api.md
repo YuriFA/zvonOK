@@ -48,7 +48,6 @@ class SendMessageDto {
 - Tests passing
 
 ## Implementation Guide
-See: `docs/tasks/phase-06-chat/6.1-2-3-chat.md`
 
 ## Related Files
 - `apps/server/src/chat/chat.controller.ts`

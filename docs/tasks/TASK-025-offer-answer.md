@@ -19,7 +19,7 @@ Implement P2P connection establishment through SDP offer/answer exchange between
 - Handle peer connection cleanup
 
 ## Out of Scope
-- SFU implementation (covered in Phase 7)
+- SFU implementation (covered in TASK-035 to TASK-041)
 - Media controls (covered in TASK-026)
 
 ## Technical Design
@@ -70,7 +70,6 @@ export function useWebRTC(roomId: string, localStream: MediaStream | null) {
 - No memory leaks
 
 ## Implementation Guide
-See: `docs/tasks/phase-03-webrtc-p2p/3.4-offer-answer.md`
 
 ## Related Files
 - `apps/client/src/hooks/use-webrtc.ts`

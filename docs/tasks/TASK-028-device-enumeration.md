@@ -54,7 +54,6 @@ navigator.mediaDevices.ondevicechange = handleDeviceChange;
 - LocalStorage persistence working
 
 ## Implementation Guide
-See: `docs/tasks/phase-05-devices/5.1-2-3-devices.md`
 
 ## Related Files
 - `apps/client/src/hooks/use-media-devices.ts`

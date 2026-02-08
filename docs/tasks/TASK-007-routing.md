@@ -63,7 +63,6 @@ useEffect(() => {
 - URL structure matches specification
 
 ## Implementation Guide
-See: `docs/tasks/phase-0.5-frontend-auth/0.5.3-routing.md`
 
 ## Related Files
 - `apps/client/src/main.tsx`

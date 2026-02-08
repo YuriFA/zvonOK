@@ -56,7 +56,6 @@ Create API client for authentication endpoints with automatic token refresh logi
 - TypeScript types defined
 
 ## Implementation Guide
-See: `docs/tasks/phase-0.5-frontend-auth/0.5.5-auth-api-client.md`
 
 ## Related Files
 - `apps/client/src/lib/api.ts`

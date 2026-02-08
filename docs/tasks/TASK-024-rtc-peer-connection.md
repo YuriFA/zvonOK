@@ -18,7 +18,7 @@ Create WebRTC manager to handle RTCPeerConnection for P2P video calls. Manage mu
 
 ## Out of Scope
 - Offer/Answer exchange (TASK-025)
-- SFU integration (Phase 7)
+- SFU integration (TASK-035 to TASK-041)
 
 ## Technical Design
 
@@ -68,7 +68,6 @@ const rtcConfig: RTCConfiguration = {
 - TypeScript types are strict
 
 ## Implementation Guide
-See: `docs/tasks/phase-03-webrtc-p2p/3.3-rtc-peer-connection.md`
 
 ## Related Files
 - `apps/client/src/lib/webrtc/manager.ts` - WebRTC manager

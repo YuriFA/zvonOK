@@ -70,7 +70,6 @@ const registerSchema = z.object({
 - Navigation works after registration
 
 ## Implementation Guide
-See: `docs/tasks/phase-0.5-frontend-auth/0.5.7-register-page.md`
 
 ## Related Files
 - `apps/client/src/routes/register.tsx`

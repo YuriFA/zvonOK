@@ -19,7 +19,7 @@ Implement REST API for managing rooms: create, list, view, update, and soft-dele
 - TTL cleanup job for ended rooms (1 hour)
 
 ## Out of Scope
-- WebSocket signalling (covered in Phase 2)
+- WebSocket signalling (covered in TASK-019 to TASK-021)
 
 ## Technical Design
 
@@ -63,7 +63,6 @@ status?: 'ended' | 'active'
 - Cleanup job runs
 
 ## Implementation Guide
-See: `docs/tasks/phase-01-backend/1.5-rooms-api.md`
 
 ## Related Files
 - `apps/server/src/room/room.controller.ts`

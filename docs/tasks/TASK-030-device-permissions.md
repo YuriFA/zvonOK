@@ -60,7 +60,6 @@ const initializeMedia = async () => {
 - Clear error messages
 
 ## Implementation Guide
-See: `docs/tasks/phase-05-devices/5.1-2-3-devices.md`
 
 ## Related Files
 - `apps/client/src/hooks/use-local-media.ts`

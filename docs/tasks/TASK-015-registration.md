@@ -65,7 +65,6 @@ export class RegisterDto {
 - Password hashing verified in DB
 
 ## Implementation Guide
-See: `docs/tasks/phase-01-backend/1.2-registration.md`
 
 ## Related Files
 - `apps/server/src/auth/dto/register.dto.ts`
