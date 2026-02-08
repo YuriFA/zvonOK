@@ -1,23 +1,31 @@
-# WebRTC Chat — Пошаговое руководство
+# WebRTC Chat — Implementation Guides
 
-> Обучающая документация для самостоятельного создания видео-чата аналога Google Meet
+> Step-by-step guides for implementing the WebRTC chat application
 
-## 🎯 Цель проекта
+## 📚 Documentation Structure
 
-Создать полнофункциональный WebRTC видео-чат с поддержкой:
-- ✅ Видео звонки (1-на-1 и групповые до 10+ участников)
-- ✅ Текстовый чат с историей
-- ✅ Шеринг экрана
-- ✅ Переключение устройств (микрофон, камера, динамики)
-- ✅ Адаптивный видео-грид
-- ✅ Production деплой
+This directory contains two types of documentation:
 
-## 📚 Документация
+1. **Task Files** (`TASK-XXX-*.md`) — Agent-friendly task specifications
+   - Structured with status, scope, acceptance criteria
+   - Used for tracking implementation progress
+   - See [Roadmap](../roadmap.md) for complete task list
 
-- **[Software Design Document (SDD)](../SDD.md)** — Архитектура системы, дизайн, API документация
-- **Tasks (this page)** — Пошаговое руководство по реализации
+2. **Phase Guides** (`phase-*/`) — Detailed implementation tutorials (Russian)
+   - Step-by-step instructions with code examples
+   - Educational materials for learning
+   - Referenced by task files
 
----
+## 🎯 Quick Links
+
+- **[Architecture Overview](../architecture/overview.md)** — System design and tech stack
+- **[Module Documentation](../modules/)** — Detailed module specifications
+- **[Roadmap](../roadmap.md)** — Implementation phases and task list
+- **[Agent Guide](../agent-guide.md)** — Guidelines for AI agents
+
+## 📖 Phase Guides (Russian)
+
+**Фаза 0: Теория (1-2 дня)**
 
 ## 📚 Структура обучения
 

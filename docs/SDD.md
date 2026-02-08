@@ -1,10 +1,23 @@
 # Software Design Document: WebRTC Chat
 
-> **Version:** 1.0
+> **Version:** 1.1
 >
-> **Date:** 2025-02-07
+> **Date:** 2025-02-07 / Updated: 2026-02-08
 >
 > **Status:** Draft
+
+---
+
+## Documentation Index
+
+| Document | Purpose | Location |
+|----------|---------|----------|
+| **Architecture Overview** | High-level system design and tech stack | [architecture/overview.md](./architecture/overview.md) |
+| **Module Documentation** | Detailed module specifications | [modules/](./modules/) |
+| **Roadmap** | Implementation phases and task list | [roadmap.md](./roadmap.md) |
+| **Agent Guide** | Guidelines for AI agents | [agent-guide.md](./agent-guide.md) |
+| **Tasks** | Individual task specifications | [tasks/](./tasks/) |
+| **Implementation Guides** | Step-by-step tutorials (Russian) | [tasks/phase-*/](./tasks/) |
 
 ---
 
@@ -13,6 +26,8 @@
 ### 1.1 Purpose
 
 This document describes the architecture, design, and technical decisions for the WebRTC Chat application — a browser-based video conferencing system similar to Google Meet.
+
+> **Note:** For module-specific details, see the [Module Documentation](./modules/). For implementation tasks, see the [Roadmap](./roadmap.md).
 
 ### 1.2 Scope
 
