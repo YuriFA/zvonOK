@@ -1,7 +1,7 @@
 # TASK-022 — WebRTC Signalling
 
 ## Status
-planned
+completed
 
 ## Priority
 high
@@ -47,11 +47,11 @@ interface RTCEventPayload {
 ```
 
 ## Acceptance Criteria
-- [ ] Server forwards offers to target peer
-- [ ] Server forwards answers to target peer
-- [ ] Server forwards ICE candidates to target peer
-- [ ] Target peer validation works
-- [ ] Returns error if target peer not found
+- [x] Server forwards offers to target peer
+- [x] Server forwards answers to target peer
+- [x] Server forwards ICE candidates to target peer
+- [x] Target peer validation works
+- [x] Returns error if target peer not found
 
 ## Definition of Done
 - Acceptance criteria satisfied

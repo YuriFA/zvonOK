@@ -16,6 +16,12 @@ import type {
   PeerJoinedPayload,
   PeerLeftPayload,
   JoinRoomPayload,
+  OfferPayload,
+  AnswerPayload,
+  IcePayload,
+  RtcOfferEvent,
+  RtcAnswerEvent,
+  RtcIceEvent,
 } from './interfaces/room.interface';
 
 @WebSocketGateway({
@@ -126,5 +132,80 @@ export class WebrtcGateway
 
     const peerLeftPayload: PeerLeftPayload = { peerId: client.id };
     client.to(roomId).emit('peer:left', peerLeftPayload);
+  }
+
+  @SubscribeMessage('webrtc:offer')
+  handleOffer(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: OfferPayload,
+  ): void {
+    const { targetPeerId, offer } = payload;
+    this.logger.log(`Forwarding offer from ${client.id} to ${targetPeerId}`);
+
+    const targetSocket = this.server.sockets.sockets.get(targetPeerId);
+    if (!targetSocket) {
+      this.logger.warn(`Target peer ${targetPeerId} not found for offer`);
+      client.emit('webrtc:error', {
+        error: 'Target peer not found',
+        targetPeerId,
+      });
+      return;
+    }
+
+    const event: RtcOfferEvent = {
+      fromPeerId: client.id,
+      offer,
+    };
+    targetSocket.emit('webrtc:offer', event);
+  }
+
+  @SubscribeMessage('webrtc:answer')
+  handleAnswer(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: AnswerPayload,
+  ): void {
+    const { targetPeerId, answer } = payload;
+    this.logger.log(`Forwarding answer from ${client.id} to ${targetPeerId}`);
+
+    const targetSocket = this.server.sockets.sockets.get(targetPeerId);
+    if (!targetSocket) {
+      this.logger.warn(`Target peer ${targetPeerId} not found for answer`);
+      client.emit('webrtc:error', {
+        error: 'Target peer not found',
+        targetPeerId,
+      });
+      return;
+    }
+
+    const event: RtcAnswerEvent = {
+      fromPeerId: client.id,
+      answer,
+    };
+    targetSocket.emit('webrtc:answer', event);
+  }
+
+  @SubscribeMessage('webrtc:ice')
+  handleIce(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: IcePayload,
+  ): void {
+    const { targetPeerId, candidate } = payload;
+    this.logger.debug(`Forwarding ICE from ${client.id} to ${targetPeerId}`);
+
+    const targetSocket = this.server.sockets.sockets.get(targetPeerId);
+    if (!targetSocket) {
+      this.logger.warn(`Target peer ${targetPeerId} not found for ICE`);
+      client.emit('webrtc:error', {
+        error: 'Target peer not found',
+        targetPeerId,
+      });
+      return;
+    }
+
+    const event: RtcIceEvent = {
+      fromPeerId: client.id,
+      candidate,
+    };
+    targetSocket.emit('webrtc:ice', event);
   }
 }

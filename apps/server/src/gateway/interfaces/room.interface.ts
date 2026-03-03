@@ -22,3 +22,39 @@ export interface PeerLeftPayload {
 export interface JoinRoomPayload {
   roomCode: string;
 }
+
+// WebRTC Signalling Types
+export interface OfferPayload {
+  targetPeerId: string;
+  offer: RTCSessionDescriptionInit;
+}
+
+export interface AnswerPayload {
+  targetPeerId: string;
+  answer: RTCSessionDescriptionInit;
+}
+
+export interface IcePayload {
+  targetPeerId: string;
+  candidate: RTCIceCandidateInit;
+}
+
+export interface RtcOfferEvent {
+  fromPeerId: string;
+  offer: RTCSessionDescriptionInit;
+}
+
+export interface RtcAnswerEvent {
+  fromPeerId: string;
+  answer: RTCSessionDescriptionInit;
+}
+
+export interface RtcIceEvent {
+  fromPeerId: string;
+  candidate: RTCIceCandidateInit;
+}
+
+export interface RtcErrorPayload {
+  error: string;
+  targetPeerId?: string;
+}
