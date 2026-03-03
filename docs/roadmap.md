@@ -78,7 +78,7 @@ Tasks:
 
 ## Stage 2.5 — Socket.io Client
 
-**Status:** Planned
+**Status:** Completed
 **Goal:** Frontend WebSocket connection management
 
 Tasks:
@@ -240,7 +240,7 @@ Tasks:
 | Stage 1 | Completed | 3-5 days |
 | Stage 1.5 | Completed | 1-2 days |
 | Stage 2 | Completed | 2-3 days |
-| Stage 2.5 | Planned | 1 day |
+| Stage 2.5 | Completed | 1 day |
 | Stage 3 | Planned | 3-4 days |
 | Stage 4 | Planned | 1-2 days |
 | Stage 5 | Planned | 1-2 days |
@@ -259,8 +259,7 @@ Tasks:
 
 ## Next Steps
 
-1. **Stage 2.5** (Socket.io Client) — Frontend WebSocket connection management
-2. **Stage 3** (WebRTC P2P) — 1-on-1 video calls
-3. Follow task files in numerical order
-4. Update task status as work progresses
-5. Refer to [SDD](./SDD.md) for architecture and design decisions
+1. **Stage 3** (WebRTC P2P) — 1-on-1 video calls
+2. Follow task files in numerical order
+3. Update task status as work progresses
+4. Refer to [SDD](./SDD.md) for architecture and design decisions

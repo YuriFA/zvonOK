@@ -6,6 +6,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { ConfigService } from '@nestjs/config';
+import { UserService } from 'src/user/user.service';
 import type { Response } from 'express';
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 
@@ -41,6 +42,12 @@ describe('AuthController', () => {
 
               return undefined;
             }),
+          },
+        },
+        {
+          provide: UserService,
+          useValue: {
+            user: jest.fn(),
           },
         },
       ],

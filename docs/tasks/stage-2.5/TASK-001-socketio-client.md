@@ -1,7 +1,7 @@
 # TASK-023 — Socket.io Client Setup
 
 ## Status
-planned
+completed
 
 ## Priority
 high
@@ -44,12 +44,12 @@ class WebSocketManager {
 - transports: ['websocket', 'polling']
 
 ## Acceptance Criteria
-- [ ] socket.io-client installed
-- [ ] WebSocket manager created
-- [ ] Connects to server successfully
-- [ ] Handles connection/disconnection events
-- [ ] Can join and leave rooms
-- [ ] Emits and receives events
+- [x] socket.io-client installed
+- [x] WebSocket manager created
+- [x] Connects to server successfully
+- [x] Handles connection/disconnection events
+- [x] Can join and leave rooms
+- [x] Emits and receives events
 
 ## Definition of Done
 - Acceptance criteria satisfied

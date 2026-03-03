@@ -74,7 +74,13 @@ apps/client/src/
 - Create task files for new features
 - Keep roadmap in sync with progress
 
-### 10. Common Patterns
+### 10. Server Management
+- **Never start, stop, or restart the server yourself**
+- The server is always running in development
+- If server restart is needed, ask the user to do it manually
+- Same applies to database (PostgreSQL via Docker)
+
+### 11. Common Patterns
 
 **NestJS Service Pattern:**
 ```typescript
