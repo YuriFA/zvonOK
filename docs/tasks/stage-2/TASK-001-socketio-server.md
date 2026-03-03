@@ -1,7 +1,7 @@
 # TASK-001 — Socket.io Server Setup
 
 ## Status
-pending
+completed
 
 ## Priority
 high
@@ -39,11 +39,11 @@ pnpm add @nestjs/websockets @nestjs/platform-socket.io
 - `@SubscribeMessage('ping')` - Test event handler
 
 ## Acceptance Criteria
-- [ ] Socket.io packages installed
-- [ ] WebrtcGateway created in `apps/server/src/gateway/`
-- [ ] WebrtcModule registered in AppModule
-- [ ] Client can connect and receive confirmation
-- [ ] ping/pong test event works
+- [x] Socket.io packages installed
+- [x] WebrtcGateway created in `apps/server/src/gateway/`
+- [x] WebrtcModule registered in AppModule
+- [x] Client can connect and receive confirmation
+- [x] ping/pong test event works
 
 ## Definition of Done
 - Acceptance criteria satisfied
