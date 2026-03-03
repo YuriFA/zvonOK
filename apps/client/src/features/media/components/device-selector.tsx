@@ -1,8 +1,9 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Video, VideoOff, Mic, MicOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { LocalVideo } from '@/components/local-video';
 
 interface MediaDeviceInfo {
   deviceId: string;
@@ -15,8 +16,8 @@ interface DeviceSelectorProps {
 }
 
 export function DeviceSelector({ className }: DeviceSelectorProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const [videoEnabled, setVideoEnabled] = useState(true);
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
@@ -36,28 +37,25 @@ export function DeviceSelector({ className }: DeviceSelectorProps) {
         audio: true,
       });
 
+      streamRef.current = mediaStream;
       setStream(mediaStream);
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-      }
 
       // Get device list
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoInputDevices = devices
         .filter((d) => d.kind === 'videoinput')
-        .map((d) => ({
+        .map((d, index) => ({
           deviceId: d.deviceId,
           kind: d.kind as MediaDeviceKind,
-          label: d.label || `Camera ${videoDevices.length + 1}`,
+          label: d.label || `Camera ${index + 1}`,
         }));
 
       const audioInputDevices = devices
         .filter((d) => d.kind === 'audioinput')
-        .map((d) => ({
+        .map((d, index) => ({
           deviceId: d.deviceId,
           kind: d.kind as MediaDeviceKind,
-          label: d.label || `Microphone ${audioDevices.length + 1}`,
+          label: d.label || `Microphone ${index + 1}`,
         }));
 
       setVideoDevices(videoInputDevices);
@@ -95,12 +93,8 @@ export function DeviceSelector({ className }: DeviceSelectorProps) {
         audio: { deviceId: { exact: selectedAudioDevice } },
       });
 
+      streamRef.current = newStream;
       setStream(newStream);
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = newStream;
-      }
-
       setSelectedVideoDevice(deviceId);
     } catch (err) {
       console.error('Failed to change video device:', err);
@@ -121,12 +115,8 @@ export function DeviceSelector({ className }: DeviceSelectorProps) {
         audio: { deviceId: { exact: deviceId } },
       });
 
+      streamRef.current = newStream;
       setStream(newStream);
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = newStream;
-      }
-
       setSelectedAudioDevice(deviceId);
     } catch (err) {
       console.error('Failed to change audio device:', err);
@@ -158,9 +148,10 @@ export function DeviceSelector({ className }: DeviceSelectorProps) {
     getStream();
 
     return () => {
-      // Clean up stream on unmount
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
+      // Clean up stream on unmount using ref to avoid stale closure
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
       }
     };
   }, []);
@@ -179,13 +170,13 @@ export function DeviceSelector({ className }: DeviceSelectorProps) {
             <p className="text-sm text-destructive">{error}</p>
           </div>
         )}
-        {!isLoading && !error && (
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            className="h-full w-full object-cover"
+        {!isLoading && !error && stream && (
+          <LocalVideo
+            stream={stream}
+            isVideoEnabled={videoEnabled}
+            isAudioEnabled={audioEnabled}
+            className="h-full"
+            showControls={false}
           />
         )}
 

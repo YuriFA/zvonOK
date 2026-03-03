@@ -3,9 +3,11 @@ import { useParams, useNavigate } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { useRoom, useEndRoom } from '@/features/room/hooks';
 import { useAuth } from '@/features/auth/contexts/auth.context';
-import { ArrowLeft, Users, Calendar, Wifi, WifiOff } from 'lucide-react';
+import { ArrowLeft, Users, Calendar, Wifi, WifiOff, Video, VideoOff, Mic, MicOff } from 'lucide-react';
 import { Link } from 'react-router';
 import { wsManager, type ConnectionStatus, type PeerInfo } from '@/lib/websocket';
+import { mediaManager } from '@/lib/media';
+import { LocalVideo } from '@/components/local-video';
 
 export const RoomPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -23,9 +25,26 @@ export const RoomPage = () => {
   const [peers, setPeers] = useState<PeerInfo[]>([]);
   const [myPeerId, setMyPeerId] = useState<string | null>(null);
 
+  // Media state
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [isVideoEnabled, setIsVideoEnabled] = useState(true);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(true);
+  const [mediaError, setMediaError] = useState<string | null>(null);
+
   const handleEndRoom = () => {
     if (!room || !user || room.ownerId !== user.id) return;
     endRoom.mutate(room.id);
+  };
+
+  // Toggle handlers
+  const toggleVideo = () => {
+    mediaManager.toggleVideo(!isVideoEnabled);
+    setIsVideoEnabled(!isVideoEnabled);
+  };
+
+  const toggleAudio = () => {
+    mediaManager.toggleAudio(!isAudioEnabled);
+    setIsAudioEnabled(!isAudioEnabled);
   };
 
   // WebSocket connection
@@ -89,6 +108,28 @@ export const RoomPage = () => {
     };
   }, [room]);
 
+  // Media stream - start on mount, stop on unmount
+  useEffect(() => {
+    const startMedia = async () => {
+      try {
+        const stream = await mediaManager.startStream();
+        setLocalStream(stream);
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Failed to access camera/microphone';
+        setMediaError(message);
+        console.error('Failed to start media stream:', err);
+      }
+    };
+
+    startMedia();
+
+    return () => {
+      mediaManager.stopStream();
+      setLocalStream(null);
+    };
+  }, []);
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -147,8 +188,58 @@ export const RoomPage = () => {
         </div>
       )}
 
+      {/* Media access error */}
+      {mediaError && (
+        <div className="container mx-auto px-4 py-4">
+          <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
+            Camera/microphone unavailable: {mediaError}
+          </div>
+        </div>
+      )}
+
       {/* Main content */}
       <main className="flex flex-1 flex-col p-4">
+        {/* Local video */}
+        {localStream && (
+          <div className="mb-4">
+            <div className="relative inline-block">
+              <LocalVideo
+                stream={localStream}
+                isVideoEnabled={isVideoEnabled}
+                isAudioEnabled={isAudioEnabled}
+                className="w-64 h-48"
+              />
+              {/* Media controls */}
+              <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="icon"
+                  onClick={toggleVideo}
+                >
+                  {isVideoEnabled ? (
+                    <Video className="size-4" />
+                  ) : (
+                    <VideoOff className="size-4" />
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="icon"
+                  onClick={toggleAudio}
+                >
+                  {isAudioEnabled ? (
+                    <Mic className="size-4" />
+                  ) : (
+                    <MicOff className="size-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Room info */}
         <div className="mb-4 flex gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-1">
