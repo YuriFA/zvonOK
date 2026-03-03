@@ -7,7 +7,9 @@ import { ArrowLeft, Users, Calendar, Wifi, WifiOff, Video, VideoOff, Mic, MicOff
 import { Link } from 'react-router';
 import { wsManager, type ConnectionStatus, type PeerInfo } from '@/lib/websocket';
 import { mediaManager } from '@/lib/media';
+import { webrtcManager, type PeerConnectionState } from '@/lib/webrtc';
 import { LocalVideo } from '@/components/local-video';
+import { RemoteVideo } from '@/components/remote-video';
 
 export const RoomPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -30,6 +32,10 @@ export const RoomPage = () => {
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [mediaError, setMediaError] = useState<string | null>(null);
+
+  // WebRTC state
+  const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
+  const [peerStates, setPeerStates] = useState<Map<string, PeerConnectionState>>(new Map());
 
   const handleEndRoom = () => {
     if (!room || !user || room.ownerId !== user.id) return;
@@ -57,23 +63,46 @@ export const RoomPage = () => {
     // Subscribe to status changes
     const unsubscribeStatus = wsManager.onStatusChange(setWsStatus);
 
-    // Handle room joined
+    // Handle room joined - create peer connections for existing peers
     const handleRoomJoined = (data: { peerId: string; peers: PeerInfo[] }) => {
       console.log('[WS] Room joined:', data);
       setMyPeerId(data.peerId);
       setPeers(data.peers);
+      // Create peer connections for existing peers
+      data.peers.forEach((peer) => {
+        webrtcManager.createPeerConnection(peer.id);
+      });
     };
 
-    // Handle peer joined
+    // Handle peer joined - create peer connection
     const handlePeerJoined = (data: { peerId: string; userInfo: { username: string } }) => {
       console.log('[WS] Peer joined:', data);
       setPeers((prev) => [...prev, { id: data.peerId, userInfo: data.userInfo }]);
+      // Create peer connection for new peer
+      webrtcManager.createPeerConnection(data.peerId);
     };
 
-    // Handle peer left
+    // Handle peer left - close peer connection
     const handlePeerLeft = (data: { peerId: string }) => {
       console.log('[WS] Peer left:', data);
       setPeers((prev) => prev.filter((p) => p.id !== data.peerId));
+      // Close peer connection
+      webrtcManager.closePeerConnection(data.peerId);
+      // Remove remote stream
+      setRemoteStreams((prev) => {
+        const next = new Map(prev);
+        next.delete(data.peerId);
+        return next;
+      });
+    };
+
+    // Handle incoming ICE candidates from server
+    const handleIceCandidate = (data: { targetPeerId: string; candidate: RTCIceCandidateInit }) => {
+      console.log('[WS] ICE candidate received for:', data.targetPeerId);
+      const pc = webrtcManager.getPeerConnection(data.targetPeerId);
+      if (pc) {
+        pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+      }
     };
 
     // Handle errors
@@ -85,6 +114,7 @@ export const RoomPage = () => {
     wsManager.on('room:joined', handleRoomJoined);
     wsManager.on('peer:joined', handlePeerJoined);
     wsManager.on('peer:left', handlePeerLeft);
+    wsManager.on('webrtc:ice', handleIceCandidate);
     wsManager.on('error', handleError);
 
     // Join room when connected
@@ -103,6 +133,7 @@ export const RoomPage = () => {
       wsManager.off('room:joined', handleRoomJoined);
       wsManager.off('peer:joined', handlePeerJoined);
       wsManager.off('peer:left', handlePeerLeft);
+      wsManager.off('webrtc:ice', handleIceCandidate);
       wsManager.off('error', handleError);
       wsManager.leaveRoom();
     };
@@ -114,6 +145,7 @@ export const RoomPage = () => {
       try {
         const stream = await mediaManager.startStream();
         setLocalStream(stream);
+        webrtcManager.setLocalStream(stream);
       } catch (err) {
         const message =
           err instanceof Error ? err.message : 'Failed to access camera/microphone';
@@ -127,6 +159,37 @@ export const RoomPage = () => {
     return () => {
       mediaManager.stopStream();
       setLocalStream(null);
+      webrtcManager.closeAll();
+    };
+  }, []);
+
+  // WebRTC manager event handlers
+  useEffect(() => {
+    // Handle remote streams
+    const unsubRemoteStream = webrtcManager.onRemoteStream(({ peerId, stream }) => {
+      console.log('[WebRTC] Remote stream received from:', peerId);
+      setRemoteStreams((prev) => new Map(prev).set(peerId, stream));
+    });
+
+    // Handle ICE candidates - send to server
+    const unsubIceCandidate = webrtcManager.onIceCandidate(({ peerId, candidate }) => {
+      console.log('[WebRTC] ICE candidate for:', peerId);
+      wsManager.emit('webrtc:ice', {
+        targetPeerId: peerId,
+        candidate,
+      });
+    });
+
+    // Handle peer connection state changes
+    const unsubPeerState = webrtcManager.onPeerStateChange((peerId, state) => {
+      console.log('[WebRTC] Peer', peerId, 'state:', state);
+      setPeerStates((prev) => new Map(prev).set(peerId, state));
+    });
+
+    return () => {
+      unsubRemoteStream();
+      unsubIceCandidate();
+      unsubPeerState();
     };
   }, []);
 
@@ -199,17 +262,19 @@ export const RoomPage = () => {
 
       {/* Main content */}
       <main className="flex flex-1 flex-col p-4">
-        {/* Local video */}
-        {localStream && (
-          <div className="mb-4">
-            <div className="relative inline-block">
+        {/* Video grid */}
+        <div className="mb-4 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+          {/* Local video */}
+          {localStream && (
+            <div className="relative">
               <LocalVideo
                 stream={localStream}
                 isVideoEnabled={isVideoEnabled}
                 isAudioEnabled={isAudioEnabled}
-                className="w-64 h-48"
+                className="w-full aspect-video"
+                showControls={false}
               />
-              {/* Media controls */}
+              {/* Media controls overlay */}
               <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-2">
                 <Button
                   type="button"
@@ -237,8 +302,29 @@ export const RoomPage = () => {
                 </Button>
               </div>
             </div>
-          </div>
-        )}
+          )}
+
+          {/* Remote videos */}
+          {peers.map((peer) => {
+            const stream = remoteStreams.get(peer.id);
+            const state = peerStates.get(peer.id);
+            return (
+              <div key={peer.id} className="relative">
+                <RemoteVideo
+                  stream={stream ?? null}
+                  username={peer.userInfo.username}
+                  className="w-full aspect-video"
+                />
+                {/* Connection state indicator */}
+                {state && state !== 'connected' && (
+                  <div className="absolute top-2 right-2 rounded bg-black/50 px-1.5 py-0.5 text-xs text-white">
+                    {state === 'connecting' ? 'Connecting...' : state}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
 
         {/* Room info */}
         <div className="mb-4 flex gap-4 text-sm text-muted-foreground">

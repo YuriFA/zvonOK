@@ -1,7 +1,7 @@
 # TASK-025 — RTCPeerConnection Setup
 
 ## Status
-planned
+completed
 
 ## Priority
 high
@@ -54,12 +54,12 @@ const rtcConfig: RTCConfiguration = {
 5. Set up connection state handlers
 
 ## Acceptance Criteria
-- [ ] Can create peer connection for remote peer
-- [ ] Local tracks are added to connection
-- [ ] ICE candidates are emitted via socket
-- [ ] Remote tracks trigger UI updates
-- [ ] Connection can be closed cleanly
-- [ ] Handles multiple simultaneous peers
+- [x] Can create peer connection for remote peer
+- [x] Local tracks are added to connection
+- [x] ICE candidates are emitted via socket
+- [x] Remote tracks trigger UI updates
+- [x] Connection can be closed cleanly
+- [x] Handles multiple simultaneous peers
 
 ## Definition of Done
 - Acceptance criteria satisfied

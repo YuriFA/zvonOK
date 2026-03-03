@@ -90,7 +90,7 @@ Tasks:
 
 ## Stage 3 — WebRTC P2P
 
-**Status:** Completed
+**Status:** In progress
 **Goal:** 1-on-1 video calls via direct peer connection
 
 Tasks:
