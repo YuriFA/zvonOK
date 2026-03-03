@@ -1,4 +1,4 @@
-# WebRTC Chat
+# ZvonOK - WebRTC Video Conferencing Platform
 
 A modern WebRTC video chat application built as a monorepo with NestJS backend and React frontend.
 
