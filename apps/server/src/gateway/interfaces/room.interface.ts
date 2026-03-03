@@ -58,3 +58,15 @@ export interface RtcErrorPayload {
   error: string;
   targetPeerId?: string;
 }
+
+// Media state sync
+export interface MediaStatePayload {
+  isVideoEnabled: boolean;
+  isAudioEnabled: boolean;
+}
+
+export interface MediaStateChangedPayload {
+  peerId: string;
+  isVideoEnabled: boolean;
+  isAudioEnabled: boolean;
+}

@@ -11,6 +11,7 @@ export interface ServerToClientEvents {
   'webrtc:offer': (data: WebRTCOfferEvent) => void;
   'webrtc:answer': (data: WebRTCAnswerEvent) => void;
   'webrtc:ice': (data: WebRTCIceEvent) => void;
+  'media:state_changed': (data: MediaStateChangedPayload) => void;
   'error': (data: ErrorPayload) => void;
 }
 
@@ -21,6 +22,7 @@ export interface ClientToServerEvents {
   'webrtc:offer': (data: WebRTCOfferPayload) => void;
   'webrtc:answer': (data: WebRTCAnswerPayload) => void;
   'webrtc:ice': (data: WebRTCIcePayload) => void;
+  'media:state': (data: MediaStatePayload) => void;
 }
 
 // Payload types
@@ -87,6 +89,18 @@ export interface WebRTCIceEvent {
 export interface ErrorPayload {
   message: string;
   code?: string;
+}
+
+// Media state sync
+export interface MediaStatePayload {
+  isVideoEnabled: boolean;
+  isAudioEnabled: boolean;
+}
+
+export interface MediaStateChangedPayload {
+  peerId: string;
+  isVideoEnabled: boolean;
+  isAudioEnabled: boolean;
 }
 
 // Connection state change callback

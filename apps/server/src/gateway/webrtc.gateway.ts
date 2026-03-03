@@ -22,6 +22,8 @@ import type {
   RtcOfferEvent,
   RtcAnswerEvent,
   RtcIceEvent,
+  MediaStatePayload,
+  MediaStateChangedPayload,
 } from './interfaces/room.interface';
 
 @WebSocketGateway({
@@ -207,5 +209,27 @@ export class WebrtcGateway
       candidate,
     };
     targetSocket.emit('webrtc:ice', event);
+  }
+
+  @SubscribeMessage('media:state')
+  handleMediaState(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: MediaStatePayload,
+  ): void {
+    const roomId = this.peerRooms.get(client.id);
+    if (!roomId) {
+      return;
+    }
+
+    this.logger.debug(
+      `Media state from ${client.id}: video=${payload.isVideoEnabled}, audio=${payload.isAudioEnabled}`,
+    );
+
+    const event: MediaStateChangedPayload = {
+      peerId: client.id,
+      isVideoEnabled: payload.isVideoEnabled,
+      isAudioEnabled: payload.isAudioEnabled,
+    };
+    client.to(roomId).emit('media:state_changed', event);
   }
 }

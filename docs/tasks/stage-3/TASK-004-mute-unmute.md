@@ -1,7 +1,7 @@
 # TASK-026 — Media Controls (Mute/Unmute)
 
 ## Status
-planned
+completed
 
 ## Priority
 high
@@ -53,12 +53,12 @@ For mute: Use `enabled = false`
 - Show icons for audio/video off
 
 ## Acceptance Criteria
-- Toggle video button works
-- Toggle audio button works
-- Local video shows "no signal" when camera off
-- Button icons reflect current state
-- State synced with participants
-- Remote participant mute states visible
+- [x] Toggle video button works
+- [x] Toggle audio button works
+- [x] Local video shows "no signal" when camera off
+- [x] Button icons reflect current state
+- [x] State synced with participants
+- [x] Remote participant mute states visible
 
 ## Definition of Done
 - Both toggle buttons functional

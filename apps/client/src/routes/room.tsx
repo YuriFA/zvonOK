@@ -3,13 +3,15 @@ import { useParams, useNavigate } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { useRoom, useEndRoom } from '@/features/room/hooks';
 import { useAuth } from '@/features/auth/contexts/auth.context';
-import { ArrowLeft, Users, Calendar, Wifi, WifiOff, Video, VideoOff, Mic, MicOff } from 'lucide-react';
+import { ArrowLeft, Users, Calendar, Wifi, WifiOff } from 'lucide-react';
 import { Link } from 'react-router';
-import { wsManager, type ConnectionStatus, type PeerInfo, type WebRTCOfferEvent, type WebRTCAnswerEvent, type WebRTCIceEvent } from '@/lib/websocket';
+import { wsManager, type ConnectionStatus, type PeerInfo, type WebRTCOfferEvent, type WebRTCAnswerEvent, type WebRTCIceEvent, type MediaStateChangedPayload } from '@/lib/websocket';
 import { mediaManager } from '@/lib/media';
 import { webrtcManager, type PeerConnectionState } from '@/lib/webrtc';
 import { LocalVideo } from '@/components/local-video';
 import { RemoteVideo } from '@/components/remote-video';
+import { useMediaControls } from '@/features/media/hooks';
+import { MediaControls } from '@/features/media/components/media-controls';
 
 export const RoomPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -29,28 +31,34 @@ export const RoomPage = () => {
 
   // Media state
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
-  const [isVideoEnabled, setIsVideoEnabled] = useState(true);
-  const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [mediaError, setMediaError] = useState<string | null>(null);
+  const mediaControls = useMediaControls();
 
   // WebRTC state
   const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
   const [peerStates, setPeerStates] = useState<Map<string, PeerConnectionState>>(new Map());
+  const [peerMediaStates, setPeerMediaStates] = useState<Map<string, { isVideoEnabled: boolean; isAudioEnabled: boolean }>>(new Map());
 
   const handleEndRoom = () => {
     if (!room || !user || room.ownerId !== user.id) return;
     endRoom.mutate(room.id);
   };
 
-  // Toggle handlers
-  const toggleVideo = () => {
-    mediaManager.toggleVideo(!isVideoEnabled);
-    setIsVideoEnabled(!isVideoEnabled);
+  // Toggle handlers with media state sync
+  const handleToggleVideo = () => {
+    mediaControls.toggleVideo();
+    wsManager.emit('media:state', {
+      isVideoEnabled: !mediaControls.isVideoEnabled,
+      isAudioEnabled: mediaControls.isAudioEnabled,
+    });
   };
 
-  const toggleAudio = () => {
-    mediaManager.toggleAudio(!isAudioEnabled);
-    setIsAudioEnabled(!isAudioEnabled);
+  const handleToggleAudio = () => {
+    mediaControls.toggleAudio();
+    wsManager.emit('media:state', {
+      isVideoEnabled: mediaControls.isVideoEnabled,
+      isAudioEnabled: !mediaControls.isAudioEnabled,
+    });
   };
 
   // WebSocket connection
@@ -123,6 +131,17 @@ export const RoomPage = () => {
       console.error('[WS] Error:', data);
     };
 
+    // Handle media state changes from other peers
+    const handleMediaStateChanged = (data: MediaStateChangedPayload) => {
+      console.log('[WS] Media state changed from:', data.peerId, data);
+      setPeerMediaStates((prev) =>
+        new Map(prev).set(data.peerId, {
+          isVideoEnabled: data.isVideoEnabled,
+          isAudioEnabled: data.isAudioEnabled,
+        })
+      );
+    };
+
     // Subscribe to events
     wsManager.on('room:joined', handleRoomJoined);
     wsManager.on('peer:joined', handlePeerJoined);
@@ -130,6 +149,7 @@ export const RoomPage = () => {
     wsManager.on('webrtc:ice', handleIceCandidate);
     wsManager.on('webrtc:offer', handleOffer);
     wsManager.on('webrtc:answer', handleAnswer);
+    wsManager.on('media:state_changed', handleMediaStateChanged);
     wsManager.on('error', handleError);
 
     // Join room when connected
@@ -151,6 +171,7 @@ export const RoomPage = () => {
       wsManager.off('webrtc:ice', handleIceCandidate);
       wsManager.off('webrtc:offer', handleOffer);
       wsManager.off('webrtc:answer', handleAnswer);
+      wsManager.off('media:state_changed', handleMediaStateChanged);
       wsManager.off('error', handleError);
       wsManager.leaveRoom();
     };
@@ -306,37 +327,19 @@ export const RoomPage = () => {
             <div className="relative">
               <LocalVideo
                 stream={localStream}
-                isVideoEnabled={isVideoEnabled}
-                isAudioEnabled={isAudioEnabled}
+                isVideoEnabled={mediaControls.isVideoEnabled}
+                isAudioEnabled={mediaControls.isAudioEnabled}
                 className="w-full aspect-video"
                 showControls={false}
               />
               {/* Media controls overlay */}
-              <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="icon"
-                  onClick={toggleVideo}
-                >
-                  {isVideoEnabled ? (
-                    <Video className="size-4" />
-                  ) : (
-                    <VideoOff className="size-4" />
-                  )}
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="icon"
-                  onClick={toggleAudio}
-                >
-                  {isAudioEnabled ? (
-                    <Mic className="size-4" />
-                  ) : (
-                    <MicOff className="size-4" />
-                  )}
-                </Button>
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2">
+                <MediaControls
+                  isVideoEnabled={mediaControls.isVideoEnabled}
+                  isAudioEnabled={mediaControls.isAudioEnabled}
+                  onToggleVideo={handleToggleVideo}
+                  onToggleAudio={handleToggleAudio}
+                />
               </div>
             </div>
           )}
@@ -345,11 +348,14 @@ export const RoomPage = () => {
           {peers.map((peer) => {
             const stream = remoteStreams.get(peer.id);
             const state = peerStates.get(peer.id);
+            const peerMediaState = peerMediaStates.get(peer.id);
             return (
               <div key={peer.id} className="relative">
                 <RemoteVideo
                   stream={stream ?? null}
                   username={peer.userInfo.username}
+                  isVideoEnabled={peerMediaState?.isVideoEnabled ?? true}
+                  isAudioEnabled={peerMediaState?.isAudioEnabled ?? true}
                   className="w-full aspect-video"
                 />
                 {/* Connection state indicator */}

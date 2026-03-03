@@ -15,6 +15,8 @@ export type {
   WebRTCOfferEvent,
   WebRTCAnswerEvent,
   WebRTCIceEvent,
+  MediaStatePayload,
+  MediaStateChangedPayload,
   ErrorPayload,
   TypedSocket,
 } from './types';
