@@ -90,7 +90,7 @@ Tasks:
 
 ## Stage 3 — WebRTC P2P
 
-**Status:** Planned
+**Status:** Completed
 **Goal:** 1-on-1 video calls via direct peer connection
 
 Tasks:
@@ -98,6 +98,7 @@ Tasks:
 - [task-2](./tasks/stage-3/TASK-002-rtc-peer-connection.md) — RTCPeerConnection setup
 - [task-3](./tasks/stage-3/TASK-003-offer-answer.md) — Offer/Answer exchange implementation
 - [task-4](./tasks/stage-3/TASK-004-mute-unmute.md) — Media controls (mute/unmute)
+- [task-5](./tasks/stage-3/TASK-005-local-video-integration.md) — LocalVideo component integration
 
 **Result:** Working 1-on-1 video call
 
@@ -110,7 +111,7 @@ Tasks:
 
 Tasks:
 - [task-1](./tasks/stage-4/TASK-001-screen-share.md) — getDisplayMedia + replaceTrack
-- [task-2](./tasks/stage-4/TASK-002-screen-share-ui.md) — Screen share button, status indicator, error handling (TODO: create file)
+- [task-2](./tasks/stage-4/TASK-002-screen-share-ui.md) — Screen share button, status indicator, error handling
 
 **Result:** Screen sharing capability
 
@@ -125,8 +126,8 @@ Tasks:
 - [task-1](./tasks/stage-5/TASK-001-device-enumeration.md) — enumerateDevices API
 - [task-2](./tasks/stage-5/TASK-002-device-switching.md) — Switch camera/mic/speaker
 - [task-3](./tasks/stage-5/TASK-003-device-permissions.md) — Handle device permissions
-- [task-4](./tasks/stage-5/TASK-004-device-selector-ui.md) — Device selector dropdown/settings panel (TODO: create file)
-- [task-5](./tasks/stage-5/TASK-005-active-device-display.md) — Display currently active devices (TODO: create file)
+- [task-4](./tasks/stage-5/TASK-004-device-selector-ui.md) — Device selector dropdown/settings panel
+- [task-5](./tasks/stage-5/TASK-005-active-device-display.md) — Display currently active devices
 
 **Result:** User can select input/output devices
 
@@ -142,9 +143,9 @@ Tasks:
 - [task-2](./tasks/stage-6/TASK-002-chat-api.md) — Chat API endpoints
 - [task-3](./tasks/stage-6/TASK-003-chat-websocket.md) — Real-time chat via WebSocket
 - [task-4](./tasks/stage-6/TASK-004-chat-ui.md) — Chat container layout
-- [task-5](./tasks/stage-6/TASK-005-message-list.md) — Message list component (TODO: create file)
-- [task-6](./tasks/stage-6/TASK-006-message-input.md) — Message input component (TODO: create file)
-- [task-7](./tasks/stage-6/TASK-007-chat-integration.md) — Chat integration in room page (TODO: create file)
+- [task-5](./tasks/stage-6/TASK-005-message-list.md) — Message list component
+- [task-6](./tasks/stage-6/TASK-006-message-input.md) — Message input component
+- [task-7](./tasks/stage-6/TASK-007-chat-integration.md) — Chat integration in room page
 
 **Result:** Working chat with history
 
@@ -241,7 +242,7 @@ Tasks:
 | Stage 1.5 | Completed | 1-2 days |
 | Stage 2 | Completed | 2-3 days |
 | Stage 2.5 | Completed | 1 day |
-| Stage 3 | Planned | 3-4 days |
+| Stage 3 | Completed | 3-4 days |
 | Stage 4 | Planned | 1-2 days |
 | Stage 5 | Planned | 1-2 days |
 | Stage 6 | Planned | 2-3 days |

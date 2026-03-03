@@ -170,8 +170,9 @@ Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800
 - Log security event
 
 ### Concurrent Sessions
-- Each device gets its own refresh token
-- All tokens stored in database (one-to-many relation)
+- One refresh token per user — stored as a single `refreshTokenHash` field on the User record
+- Logging in from a new device overwrites the previous hash, invalidating the previous session
+- Multi-device support (one-to-many tokens) is planned as a future enhancement
 
 ---
 

@@ -1,8 +1,8 @@
 # Software Design Document: WebRTC Chat
 
-> **Version:** 1.4
+> **Version:** 1.5
 >
-> **Date:** 2025-02-07 / Updated: 2026-02-08
+> **Date:** 2025-02-07 / Updated: 2026-03-03
 >
 > **Status:** Living Document
 
@@ -58,7 +58,7 @@ The WebRTC Chat application provides:
 | REQ-001 | Authentication via JWT access/refresh with rotation and HTTP-only cookies. | Completed |
 | REQ-002 | User profile access via `/api/users/me` and public lookup via `/api/users/:id` without sensitive fields. | Completed |
 | REQ-003 | Room management via REST with slug-based invite codes. | Completed |
-| REQ-004 | WebSocket signalling for join/leave and offer/answer/ICE exchange. | In Progress |
+| REQ-004 | WebSocket signalling for join/leave and offer/answer/ICE exchange. | Completed |
 | REQ-005 | SFU signalling for group calls (mediasoup). | Planned |
 | REQ-006 | Client UI with lobby/auth/room routes consuming REST + WebSocket APIs. | Completed |
 | REQ-007 | Security baseline: bcrypt hashing, env-based JWT secrets, timing-safe refresh validation. | Completed |
@@ -73,7 +73,7 @@ The WebRTC Chat application provides:
 | REQ-003 | SDD 3.1, SDD 4.1 | stage-1/TASK-004, TASK-005 |
 | REQ-004 | [modules/gateway.md](./modules/gateway.md), SDD 4.2 | stage-1.5/TASK-001, stage-2/TASK-001, TASK-002 |
 | REQ-005 | [modules/sfu.md](./modules/sfu.md), SDD 4.2 | stage-7/TASK-001 to TASK-007 |
-| REQ-006 | [modules/client.md](./modules/client.md), SDD 4.3 | stage-0.5/TASK-001 to TASK-009, stage-2/TASK-003, stage-3/TASK-001 to TASK-004 |
+| REQ-006 | [modules/client.md](./modules/client.md), SDD 4.3 | stage-0.5/TASK-001 to TASK-009, stage-2/TASK-003, stage-3/TASK-001 to TASK-005 |
 | REQ-007 | SDD 6 | stage-1/TASK-002, TASK-003 |
 | REQ-008 | SDD 7 | stage-9/TASK-003, stage-10/TASK-001 |
 
@@ -302,6 +302,8 @@ enum RoomStatus {
 | GET | `/api/rooms` | Protected | List user's rooms |
 | POST | `/api/rooms` | Protected | Create new room |
 | GET | `/api/rooms/:slug` | Public | Get room by slug |
+| PATCH | `/api/rooms/:id` | Protected | Update room (owner only) |
+| DELETE | `/api/rooms/:id` | Protected | End room (owner only) |
 
 #### Request/Response Examples
 
@@ -426,6 +428,31 @@ Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800
 - Global Prisma service injection
 - Database connection management
 - `@Global()` decorator makes service available everywhere
+
+#### GatewayModule
+
+**Responsibilities:**
+- WebSocket server for real-time WebRTC signalling
+- Room membership management (join/leave)
+- Forwarding offer/answer/ICE candidates between peers
+- JWT authentication via HTTP-only cookies on handshake
+
+**Key Classes:**
+- `WebrtcGateway` — Socket.io gateway with event handlers
+
+**See:** [modules/gateway.md](./modules/gateway.md)
+
+#### SFUModule
+
+**Responsibilities:**
+- mediasoup Worker and Router lifecycle management
+- Transport creation (send/receive) per peer
+- Producer/Consumer coordination for group calls
+- Scaling across multiple Workers (one per CPU core)
+
+**Status:** Planned (Stage 7)
+
+**See:** [modules/sfu.md](./modules/sfu.md)
 
 ### 5.2 Frontend Architecture
 
@@ -640,6 +667,29 @@ pnpm dev             # Vite dev server on port 5173
 
 ---
 
+### 9.5 Environment Variables
+
+**Server** (`apps/server/.env.development`):
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `PORT` | No | 3000 | HTTP server port |
+| `DATABASE_URL` | Yes | — | PostgreSQL connection string |
+| `JWT_ACCESS_SECRET` | Yes | — | Secret for signing access tokens |
+| `JWT_REFRESH_SECRET` | Yes | — | Secret for signing refresh tokens |
+| `JWT_ACCESS_EXPIRES_IN_MINUTES` | No | 15 | Access token lifetime in minutes |
+| `JWT_REFRESH_EXPIRES_IN_DAYS` | No | 7 | Refresh token lifetime in days |
+| `CLIENT_URL` | No | http://localhost:5173 | Allowed CORS origin for WebSocket |
+
+**Client** (`apps/client/.env.local`):
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `VITE_API_BASE_URL` | Yes | — | REST API base URL (e.g. `http://localhost:3000`) |
+| `VITE_SOCKET_URL` | Yes | — | Socket.io server URL |
+
+---
+
 ## 10. References
 
 - [WebRTC MDN Documentation](https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API)
@@ -647,6 +697,33 @@ pnpm dev             # Vite dev server on port 5173
 - [Prisma Documentation](https://www.prisma.io/docs/)
 - [mediasoup Documentation](https://mediasoup.org/documentation/v3/)
 - [Socket.io Documentation](https://socket.io/docs/)
+
+---
+
+## 11. Testing Strategy
+
+### 11.1 Test Levels
+
+| Level | Tool | Scope |
+|-------|------|-------|
+| Unit | Jest | Server services (auth, room, user logic) |
+| Integration | Jest + Supertest | REST API endpoints |
+| End-to-End | Playwright | Full user flows (auth, room creation, join) |
+
+### 11.2 Coverage Requirements
+
+- AuthService and RoomService must have unit test coverage
+- All error cases (401, 403, 404, 409) must be tested
+- E2E tests cover: registration, login, logout, room creation, room join
+
+### 11.3 Conventions
+
+- One spec file per NestJS module (`auth.service.spec.ts`, `room.service.spec.ts`)
+- E2E tests live in `apps/client/e2e/` using Page Object pattern
+- Tests must pass in CI before merge; run with `pnpm test` (server) and `pnpm test:e2e` (client)
+- Mock Prisma via `jest.mock` or a test database — never use production DB
+
+**See:** [stage-11/TASK-001-e2e-testing.md](./tasks/stage-11/TASK-001-e2e-testing.md)
 
 ---
 
@@ -727,3 +804,4 @@ sequenceDiagram
 | 1.2 | 2026-02-08 | — | Consolidated architecture/overview.md, uncommented data models |
 | 1.3 | 2026-02-08 | — | Added requirements/traceability and clarified interface specs |
 | 1.4 | 2026-02-08 | — | Added product goals, MVP scope, and operational assumptions |
+| 1.5 | 2026-03-03 | — | Synced REQ statuses, expanded Room API table, added GatewayModule/SFUModule to Sec 5.1, added Testing Strategy (Sec 11) and Environment Variables (Sec 9.5), fixed concurrent sessions doc |

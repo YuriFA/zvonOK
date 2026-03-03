@@ -84,6 +84,7 @@ enum RoomStatus {
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
+| GET | `/api/rooms` | Protected | List user's rooms |
 | POST | `/api/rooms` | Protected | Create new room |
 | GET | `/api/rooms/:slug` | Public | Get room by slug |
 | PATCH | `/api/rooms/:id` | Protected | Update room (owner only) |
