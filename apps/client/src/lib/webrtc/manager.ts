@@ -16,9 +16,21 @@ export interface IceCandidateEvent {
   candidate: RTCIceCandidateInit;
 }
 
+export interface OfferEvent {
+  peerId: string;
+  offer: RTCSessionDescriptionInit;
+}
+
+export interface AnswerEvent {
+  peerId: string;
+  answer: RTCSessionDescriptionInit;
+}
+
 export type RemoteStreamCallback = (event: RemoteStreamEvent) => void;
 export type IceCandidateCallback = (event: IceCandidateEvent) => void;
 export type PeerStateCallback = (peerId: string, state: PeerConnectionState) => void;
+export type OfferCallback = (event: OfferEvent) => void;
+export type AnswerCallback = (event: AnswerEvent) => void;
 
 const rtcConfig: RTCConfiguration = {
   iceServers: [
@@ -33,9 +45,14 @@ export class WebRTCManager {
   private localStream: MediaStream | null = null;
   private remoteStreams: Map<string, MediaStream> = new Map();
 
+  // ICE candidate queue - stores candidates before remote description is set
+  private pendingIceCandidates: Map<string, RTCIceCandidateInit[]> = new Map();
+
   private remoteStreamCallbacks: Set<RemoteStreamCallback> = new Set();
   private iceCandidateCallbacks: Set<IceCandidateCallback> = new Set();
   private peerStateCallbacks: Set<PeerStateCallback> = new Set();
+  private offerCallbacks: Set<OfferCallback> = new Set();
+  private answerCallbacks: Set<AnswerCallback> = new Set();
 
   setLocalStream(stream: MediaStream): void {
     this.localStream = stream;
@@ -146,6 +163,7 @@ export class WebRTCManager {
       this.peerConnections.delete(peerId);
     }
     this.remoteStreams.delete(peerId);
+    this.pendingIceCandidates.delete(peerId);
   }
 
   closeAll(): void {
@@ -192,6 +210,20 @@ export class WebRTCManager {
     };
   }
 
+  onOffer(callback: OfferCallback): () => void {
+    this.offerCallbacks.add(callback);
+    return () => {
+      this.offerCallbacks.delete(callback);
+    };
+  }
+
+  onAnswer(callback: AnswerCallback): () => void {
+    this.answerCallbacks.add(callback);
+    return () => {
+      this.answerCallbacks.delete(callback);
+    };
+  }
+
   // Get current peer IDs
   getPeerIds(): string[] {
     return Array.from(this.peerConnections.keys());
@@ -200,6 +232,148 @@ export class WebRTCManager {
   // Check if peer connection exists
   hasPeerConnection(peerId: string): boolean {
     return this.peerConnections.has(peerId);
+  }
+
+  // Offer/Answer exchange methods
+
+  /**
+   * Create an offer for a peer connection.
+   * Sets local description and notifies offer callbacks.
+   */
+  async createOffer(peerId: string): Promise<RTCSessionDescriptionInit | null> {
+    const pc = this.peerConnections.get(peerId);
+    if (!pc) {
+      console.error('[WebRTC] No peer connection for:', peerId);
+      return null;
+    }
+
+    try {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      // Notify callbacks to send offer via signalling
+      this.offerCallbacks.forEach((callback) => {
+        callback({ peerId, offer });
+      });
+
+      return offer;
+    } catch (error) {
+      console.error('[WebRTC] Failed to create offer:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Handle an incoming offer from a peer.
+   * Sets remote description, creates answer, and notifies answer callbacks.
+   */
+  async handleOffer(
+    peerId: string,
+    offer: RTCSessionDescriptionInit
+  ): Promise<RTCSessionDescriptionInit | null> {
+    let pc = this.peerConnections.get(peerId);
+    if (!pc) {
+      // Create peer connection if it doesn't exist
+      pc = this.createPeerConnection(peerId);
+    }
+
+    try {
+      await pc.setRemoteDescription(new RTCSessionDescription(offer));
+
+      // Apply any pending ICE candidates
+      await this.applyPendingIceCandidates(peerId);
+
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+
+      // Notify callbacks to send answer via signalling
+      this.answerCallbacks.forEach((callback) => {
+        callback({ peerId, answer });
+      });
+
+      return answer;
+    } catch (error) {
+      console.error('[WebRTC] Failed to handle offer:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Handle an incoming answer from a peer.
+   * Sets remote description and applies pending ICE candidates.
+   */
+  async handleAnswer(
+    peerId: string,
+    answer: RTCSessionDescriptionInit
+  ): Promise<boolean> {
+    const pc = this.peerConnections.get(peerId);
+    if (!pc) {
+      console.error('[WebRTC] No peer connection for:', peerId);
+      return false;
+    }
+
+    try {
+      await pc.setRemoteDescription(new RTCSessionDescription(answer));
+
+      // Apply any pending ICE candidates
+      await this.applyPendingIceCandidates(peerId);
+
+      return true;
+    } catch (error) {
+      console.error('[WebRTC] Failed to handle answer:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Add an ICE candidate to a peer connection.
+   * Queues the candidate if remote description is not set yet.
+   */
+  async addIceCandidate(
+    peerId: string,
+    candidate: RTCIceCandidateInit
+  ): Promise<void> {
+    const pc = this.peerConnections.get(peerId);
+    if (!pc) {
+      console.error('[WebRTC] No peer connection for:', peerId);
+      return;
+    }
+
+    // Check if remote description is set
+    if (!pc.remoteDescription) {
+      // Queue the candidate
+      const pending = this.pendingIceCandidates.get(peerId) || [];
+      pending.push(candidate);
+      this.pendingIceCandidates.set(peerId, pending);
+      return;
+    }
+
+    try {
+      await pc.addIceCandidate(new RTCIceCandidate(candidate));
+    } catch (error) {
+      console.error('[WebRTC] Failed to add ICE candidate:', error);
+    }
+  }
+
+  /**
+   * Apply pending ICE candidates after remote description is set.
+   */
+  private async applyPendingIceCandidates(peerId: string): Promise<void> {
+    const pending = this.pendingIceCandidates.get(peerId);
+    if (!pending || pending.length === 0) return;
+
+    const pc = this.peerConnections.get(peerId);
+    if (!pc) return;
+
+    this.pendingIceCandidates.delete(peerId);
+
+    for (const candidate of pending) {
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (error) {
+        console.error('[WebRTC] Failed to apply pending ICE candidate:', error);
+      }
+    }
   }
 }
 

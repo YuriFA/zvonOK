@@ -12,6 +12,9 @@ export type {
   WebRTCOfferPayload,
   WebRTCAnswerPayload,
   WebRTCIcePayload,
+  WebRTCOfferEvent,
+  WebRTCAnswerEvent,
+  WebRTCIceEvent,
   ErrorPayload,
   TypedSocket,
 } from './types';

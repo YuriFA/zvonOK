@@ -1,7 +1,7 @@
 # TASK-026 — Offer/Answer Exchange Implementation
 
 ## Status
-planned
+completed
 
 ## Priority
 high
@@ -55,12 +55,12 @@ export function useWebRTC(roomId: string, localStream: MediaStream | null) {
 - Apply queued candidates after remoteDescription
 
 ## Acceptance Criteria
-- Offer created when new participant joins
-- Answer created when offer received
-- Remote descriptions set correctly
-- ICE candidates added without errors
-- Two tabs can see each other's video
-- Peer connection closes on disconnect
+- [x] Offer created when new participant joins
+- [x] Answer created when offer received
+- [x] Remote descriptions set correctly
+- [x] ICE candidates added without errors
+- [x] Two tabs can see each other's video
+- [x] Peer connection closes on disconnect
 
 ## Definition of Done
 - Offer/answer exchange working

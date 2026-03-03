@@ -8,9 +8,9 @@ export interface ServerToClientEvents {
   'room:joined': (data: RoomJoinedPayload) => void;
   'peer:joined': (data: PeerJoinedPayload) => void;
   'peer:left': (data: PeerLeftPayload) => void;
-  'webrtc:offer': (data: WebRTCOfferPayload) => void;
-  'webrtc:answer': (data: WebRTCAnswerPayload) => void;
-  'webrtc:ice': (data: WebRTCIcePayload) => void;
+  'webrtc:offer': (data: WebRTCOfferEvent) => void;
+  'webrtc:answer': (data: WebRTCAnswerEvent) => void;
+  'webrtc:ice': (data: WebRTCIceEvent) => void;
   'error': (data: ErrorPayload) => void;
 }
 
@@ -52,6 +52,7 @@ export interface PeerLeftPayload {
   peerId: string;
 }
 
+// Client -> Server: WebRTC signalling (uses targetPeerId)
 export interface WebRTCOfferPayload {
   targetPeerId: string;
   offer: RTCSessionDescriptionInit;
@@ -64,6 +65,22 @@ export interface WebRTCAnswerPayload {
 
 export interface WebRTCIcePayload {
   targetPeerId: string;
+  candidate: RTCIceCandidateInit;
+}
+
+// Server -> Client: WebRTC signalling (uses fromPeerId)
+export interface WebRTCOfferEvent {
+  fromPeerId: string;
+  offer: RTCSessionDescriptionInit;
+}
+
+export interface WebRTCAnswerEvent {
+  fromPeerId: string;
+  answer: RTCSessionDescriptionInit;
+}
+
+export interface WebRTCIceEvent {
+  fromPeerId: string;
   candidate: RTCIceCandidateInit;
 }
 

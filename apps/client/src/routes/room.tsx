@@ -5,7 +5,7 @@ import { useRoom, useEndRoom } from '@/features/room/hooks';
 import { useAuth } from '@/features/auth/contexts/auth.context';
 import { ArrowLeft, Users, Calendar, Wifi, WifiOff, Video, VideoOff, Mic, MicOff } from 'lucide-react';
 import { Link } from 'react-router';
-import { wsManager, type ConnectionStatus, type PeerInfo } from '@/lib/websocket';
+import { wsManager, type ConnectionStatus, type PeerInfo, type WebRTCOfferEvent, type WebRTCAnswerEvent, type WebRTCIceEvent } from '@/lib/websocket';
 import { mediaManager } from '@/lib/media';
 import { webrtcManager, type PeerConnectionState } from '@/lib/webrtc';
 import { LocalVideo } from '@/components/local-video';
@@ -25,7 +25,7 @@ export const RoomPage = () => {
   // WebSocket state
   const [wsStatus, setWsStatus] = useState<ConnectionStatus>('disconnected');
   const [peers, setPeers] = useState<PeerInfo[]>([]);
-  const [myPeerId, setMyPeerId] = useState<string | null>(null);
+  const [_myPeerId, setMyPeerId] = useState<string | null>(null);
 
   // Media state
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
@@ -64,22 +64,26 @@ export const RoomPage = () => {
     const unsubscribeStatus = wsManager.onStatusChange(setWsStatus);
 
     // Handle room joined - create peer connections for existing peers
+    // NOTE: We do NOT create offers here - existing peers will send us offers
     const handleRoomJoined = (data: { peerId: string; peers: PeerInfo[] }) => {
       console.log('[WS] Room joined:', data);
       setMyPeerId(data.peerId);
       setPeers(data.peers);
-      // Create peer connections for existing peers
+      // Create peer connections for existing peers (they will send us offers)
       data.peers.forEach((peer) => {
         webrtcManager.createPeerConnection(peer.id);
       });
     };
 
-    // Handle peer joined - create peer connection
-    const handlePeerJoined = (data: { peerId: string; userInfo: { username: string } }) => {
+    // Handle peer joined - create peer connection and initiate offer
+    // We (existing peer) create the offer to the new peer
+    const handlePeerJoined = async (data: { peerId: string; userInfo: { username: string } }) => {
       console.log('[WS] Peer joined:', data);
       setPeers((prev) => [...prev, { id: data.peerId, userInfo: data.userInfo }]);
       // Create peer connection for new peer
       webrtcManager.createPeerConnection(data.peerId);
+      // As existing peer, we initiate the offer
+      await webrtcManager.createOffer(data.peerId);
     };
 
     // Handle peer left - close peer connection
@@ -97,12 +101,21 @@ export const RoomPage = () => {
     };
 
     // Handle incoming ICE candidates from server
-    const handleIceCandidate = (data: { targetPeerId: string; candidate: RTCIceCandidateInit }) => {
-      console.log('[WS] ICE candidate received for:', data.targetPeerId);
-      const pc = webrtcManager.getPeerConnection(data.targetPeerId);
-      if (pc) {
-        pc.addIceCandidate(new RTCIceCandidate(data.candidate));
-      }
+    const handleIceCandidate = async (data: WebRTCIceEvent) => {
+      console.log('[WS] ICE candidate received from:', data.fromPeerId);
+      await webrtcManager.addIceCandidate(data.fromPeerId, data.candidate);
+    };
+
+    // Handle incoming offer from peer
+    const handleOffer = async (data: WebRTCOfferEvent) => {
+      console.log('[WS] Offer received from:', data.fromPeerId);
+      await webrtcManager.handleOffer(data.fromPeerId, data.offer);
+    };
+
+    // Handle incoming answer from peer
+    const handleAnswer = async (data: WebRTCAnswerEvent) => {
+      console.log('[WS] Answer received from:', data.fromPeerId);
+      await webrtcManager.handleAnswer(data.fromPeerId, data.answer);
     };
 
     // Handle errors
@@ -115,6 +128,8 @@ export const RoomPage = () => {
     wsManager.on('peer:joined', handlePeerJoined);
     wsManager.on('peer:left', handlePeerLeft);
     wsManager.on('webrtc:ice', handleIceCandidate);
+    wsManager.on('webrtc:offer', handleOffer);
+    wsManager.on('webrtc:answer', handleAnswer);
     wsManager.on('error', handleError);
 
     // Join room when connected
@@ -134,6 +149,8 @@ export const RoomPage = () => {
       wsManager.off('peer:joined', handlePeerJoined);
       wsManager.off('peer:left', handlePeerLeft);
       wsManager.off('webrtc:ice', handleIceCandidate);
+      wsManager.off('webrtc:offer', handleOffer);
+      wsManager.off('webrtc:answer', handleAnswer);
       wsManager.off('error', handleError);
       wsManager.leaveRoom();
     };
@@ -186,10 +203,30 @@ export const RoomPage = () => {
       setPeerStates((prev) => new Map(prev).set(peerId, state));
     });
 
+    // Handle offer creation - send to server for forwarding
+    const unsubOffer = webrtcManager.onOffer(({ peerId, offer }) => {
+      console.log('[WebRTC] Offer created for:', peerId);
+      wsManager.emit('webrtc:offer', {
+        targetPeerId: peerId,
+        offer,
+      });
+    });
+
+    // Handle answer creation - send to server for forwarding
+    const unsubAnswer = webrtcManager.onAnswer(({ peerId, answer }) => {
+      console.log('[WebRTC] Answer created for:', peerId);
+      wsManager.emit('webrtc:answer', {
+        targetPeerId: peerId,
+        answer,
+      });
+    });
+
     return () => {
       unsubRemoteStream();
       unsubIceCandidate();
       unsubPeerState();
+      unsubOffer();
+      unsubAnswer();
     };
   }, []);
 
