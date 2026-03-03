@@ -1,7 +1,7 @@
 # TASK-020 — Room Join/Leave Functionality
 
 ## Status
-planned
+completed
 
 ## Priority
 high
@@ -48,12 +48,12 @@ interface PeerInfo {
 | `peer:left` | Server → Client | `{ peerId }` |
 
 ## Acceptance Criteria
-- [ ] Client can join a room by code
-- [ ] Client receives room:joined with peer list
-- [ ] Existing peers receive peer:joined notification
-- [ ] Client can leave room explicitly
-- [ ] Disconnect triggers implicit leave
-- [ ] Peers receive peer:left notification
+- [x] Client can join a room by code
+- [x] Client receives room:joined with peer list
+- [x] Existing peers receive peer:joined notification
+- [x] Client can leave room explicitly
+- [x] Disconnect triggers implicit leave
+- [x] Peers receive peer:left notification
 
 ## Definition of Done
 - Acceptance criteria satisfied
