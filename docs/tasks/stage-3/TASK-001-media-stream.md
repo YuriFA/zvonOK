@@ -1,7 +1,7 @@
 # TASK-023 — Media Stream Access
 
 ## Status
-planned
+completed
 
 ## Priority
 high
@@ -54,13 +54,13 @@ const defaultConstraints: MediaStreamConstraints = {
 ```
 
 ## Acceptance Criteria
-- [ ] Camera/microphone permission request works
-- [ ] Local stream is accessible
-- [ ] Local video displays in UI
-- [ ] Can stop/start stream
-- [ ] Can toggle video track
-- [ ] Can toggle audio track
-- [ ] Handles permission denied errors
+- [x] Camera/microphone permission request works
+- [x] Local stream is accessible
+- [x] Local video displays in UI
+- [x] Can stop/start stream
+- [x] Can toggle video track
+- [x] Can toggle audio track
+- [x] Handles permission denied errors
 
 ## Definition of Done
 - Acceptance criteria satisfied
