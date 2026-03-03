@@ -10,6 +10,7 @@
     "OTEL_METRICS_EXPORTER": "none",
     "ENABLE_TOOL_SEARCH": "auto:5"
   },
+  "includeCoAuthoredBy": false,
   "permissions": {
     "allow": [
       "Bash(docker compose ps:*)",
@@ -21,7 +22,8 @@
       "Bash(for:*)",
       "Bash(do:*)",
       "Bash(done:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Skill(gc)"
     ],
     "deny": [
       "Read(.env*)",
@@ -29,7 +31,6 @@
       "Bash(git push:*)"
     ]
   },
-  "includeCoAuthoredBy": false,
   "enableAllProjectMcpServers": true,
   "plansDirectory": "./docs/plans"
 }
