@@ -50,7 +50,12 @@ describe('PasswordHelper', () => {
 
   describe('integration', () => {
     it('hash and compare work together correctly', async () => {
-      const passwords = ['Simple123', 'Complex!@#123', '🔒🔑💻', 'a'.repeat(100)];
+      const passwords = [
+        'Simple123',
+        'Complex!@#123',
+        '🔒🔑💻',
+        'a'.repeat(100),
+      ];
 
       for (const password of passwords) {
         const hash = await PasswordHelper.hash(password);

@@ -49,7 +49,9 @@ export class AuthService {
     const user = await this.userService.user({ email: loginDto.email });
 
     if (!user) {
-      this.logger.warn(`Failed login attempt: email not found (${loginDto.email})`);
+      this.logger.warn(
+        `Failed login attempt: email not found (${loginDto.email})`,
+      );
       throw new UnauthorizedException('Invalid credentials');
     }
 
@@ -156,7 +158,10 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
-  private async issueTokens(user: { id: string; email: string; tokenVersion?: number }, tokenVersion = 0) {
+  private async issueTokens(
+    user: { id: string; email: string; tokenVersion?: number },
+    tokenVersion = 0,
+  ) {
     const payload = {
       id: user.id,
       email: user.email,

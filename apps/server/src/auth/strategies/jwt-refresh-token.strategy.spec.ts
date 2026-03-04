@@ -2,7 +2,7 @@ jest.mock('src/prisma/prisma.service', () => ({
   PrismaService: jest.fn(),
 }));
 
-import { Logger, UnauthorizedException } from '@nestjs/common';
+import { UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtRefreshTokenStrategy } from './jwt-refresh-token.strategy';
 import { UserService } from 'src/user/user.service';
@@ -39,11 +39,7 @@ describe('JwtRefreshTokenStrategy', () => {
       }),
     } as unknown as ConfigService;
 
-    const logger = {
-      warn: jest.fn(),
-    } as unknown as Logger;
-
-    strategy = new JwtRefreshTokenStrategy(configService, userService, logger);
+    strategy = new JwtRefreshTokenStrategy(configService, userService);
   });
 
   describe('Validation', () => {
@@ -227,7 +223,9 @@ describe('JwtRefreshTokenStrategy', () => {
     });
 
     it('throws when no refresh token provided', async () => {
-      userService.user.mockResolvedValue(baseUser as unknown as Awaited<ReturnType<UserService['user']>>);
+      userService.user.mockResolvedValue(
+        baseUser as unknown as Awaited<ReturnType<UserService['user']>>,
+      );
 
       const req = {
         cookies: {},
@@ -262,35 +260,35 @@ describe('JwtRefreshTokenStrategy', () => {
         refreshTokenHash: currentHash,
       } as unknown as Awaited<ReturnType<UserService['user']>>);
 
-      compareSpy = jest.spyOn(RefreshTokenHelper, 'compare').mockReturnValue(false);
+      compareSpy = jest
+        .spyOn(RefreshTokenHelper, 'compare')
+        .mockReturnValue(false);
 
       const req = {
         cookies: { refresh_token: staleToken },
       } as unknown as Request;
 
-      await expect(
-        strategy.validate(req, {
+      try {
+        await strategy.validate(req, {
           id: 'user-1',
           email: 'user@example.com',
           jti: 'some-jti',
-        }),
-      ).rejects.toThrow(UnauthorizedException);
+        });
+        throw new Error('Expected UnauthorizedException');
+      } catch (e: unknown) {
+        expect(e).toBeInstanceOf(UnauthorizedException);
 
-      const thrownError = await strategy
-        .validate(req, {
-          id: 'user-1',
-          email: 'user@example.com',
-          jti: 'some-jti',
-        })
-        .catch((e) => e);
+        if (e instanceof UnauthorizedException) {
+          const response = e.getResponse();
+          expect(response).toMatchObject({
+            message: 'Refresh token reuse detected',
+            code: 'REFRESH_REUSE_DETECTED',
+          });
+        }
+      }
 
-      expect(thrownError).toBeInstanceOf(UnauthorizedException);
-      expect(thrownError.getResponse()).toMatchObject({
-        message: 'Refresh token reuse detected',
-        code: 'REFRESH_REUSE_DETECTED',
-      });
-
-      expect(userService.updateRefreshTokenHash).toHaveBeenCalledWith('user-1', null);
+      const updateRefreshTokenHash = userService.updateRefreshTokenHash;
+      expect(updateRefreshTokenHash).toHaveBeenCalledWith('user-1', null);
     });
   });
 

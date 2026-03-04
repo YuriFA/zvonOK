@@ -15,9 +15,9 @@ export class RoomCleanupService implements OnModuleDestroy {
 
   private startCleanupJob() {
     this.intervalId = setInterval(() => {
-      this.cleanupOldRooms();
+      void this.cleanupOldRooms();
     }, CLEANUP_INTERVAL_MS);
-    this.cleanupOldRooms();
+    void this.cleanupOldRooms();
   }
 
   private async cleanupOldRooms() {

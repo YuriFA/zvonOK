@@ -163,7 +163,11 @@ describe('JwtStrategy', () => {
       const validPayloads = [
         { id: '123', email: 'test@test.com', tokenVersion: 0 },
         { id: 'abc', email: 'a@b.c' },
-        { id: 'user-with-dash', email: 'user+tag@example.com', tokenVersion: 99 },
+        {
+          id: 'user-with-dash',
+          email: 'user+tag@example.com',
+          tokenVersion: 99,
+        },
       ];
 
       for (const payload of validPayloads) {

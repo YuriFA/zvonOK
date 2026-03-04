@@ -106,7 +106,9 @@ describe('AuthService', () => {
     userService.createUser.mockResolvedValue(baseUser);
 
     jest.spyOn(PasswordHelper, 'hash').mockResolvedValueOnce('hashed-password');
-    jest.spyOn(RefreshTokenHelper, 'hash').mockReturnValueOnce('hashed-refresh');
+    jest
+      .spyOn(RefreshTokenHelper, 'hash')
+      .mockReturnValueOnce('hashed-refresh');
 
     const tokens = await service.registerUser({
       email: 'john@example.com',
@@ -156,7 +158,9 @@ describe('AuthService', () => {
   it('loginUser issues tokens for valid credentials', async () => {
     userService.user.mockResolvedValue(baseUser);
     jest.spyOn(PasswordHelper, 'compare').mockResolvedValue(true);
-    jest.spyOn(RefreshTokenHelper, 'hash').mockReturnValueOnce('hashed-refresh');
+    jest
+      .spyOn(RefreshTokenHelper, 'hash')
+      .mockReturnValueOnce('hashed-refresh');
 
     const tokens = await service.loginUser({
       email: 'john@example.com',
@@ -186,7 +190,9 @@ describe('AuthService', () => {
 
   it('refreshToken returns new access token', async () => {
     userService.user.mockResolvedValue(baseUser);
-    jest.spyOn(RefreshTokenHelper, 'hash').mockReturnValueOnce('hashed-refresh');
+    jest
+      .spyOn(RefreshTokenHelper, 'hash')
+      .mockReturnValueOnce('hashed-refresh');
 
     const result = await service.refreshToken({
       id: baseUser.id,
@@ -208,7 +214,10 @@ describe('AuthService', () => {
       const userWithAttempts = { ...baseUser, failedLoginAttempts: 4 };
       userService.user.mockResolvedValue(userWithAttempts);
       jest.spyOn(PasswordHelper, 'compare').mockResolvedValue(false);
-      userService.updateUser.mockResolvedValue({ ...userWithAttempts, failedLoginAttempts: 5 });
+      userService.updateUser.mockResolvedValue({
+        ...userWithAttempts,
+        failedLoginAttempts: 5,
+      });
 
       await expect(
         service.loginUser({
@@ -243,11 +252,17 @@ describe('AuthService', () => {
 
     it('resets failed attempts after lockout period expires', async () => {
       const pastDate = new Date(Date.now() - 10 * 60 * 1000); // 10 minutes ago
-      const lockedUser = { ...baseUser, lockedUntil: pastDate, failedLoginAttempts: 5 };
+      const lockedUser = {
+        ...baseUser,
+        lockedUntil: pastDate,
+        failedLoginAttempts: 5,
+      };
 
       userService.user.mockResolvedValue(lockedUser);
       jest.spyOn(PasswordHelper, 'compare').mockResolvedValue(true);
-      jest.spyOn(RefreshTokenHelper, 'hash').mockReturnValueOnce('hashed-refresh');
+      jest
+        .spyOn(RefreshTokenHelper, 'hash')
+        .mockReturnValueOnce('hashed-refresh');
       userService.updateUser.mockResolvedValue(baseUser);
 
       await service.loginUser({
@@ -268,7 +283,9 @@ describe('AuthService', () => {
       const userWithAttempts = { ...baseUser, failedLoginAttempts: 3 };
       userService.user.mockResolvedValue(userWithAttempts);
       jest.spyOn(PasswordHelper, 'compare').mockResolvedValue(true);
-      jest.spyOn(RefreshTokenHelper, 'hash').mockReturnValueOnce('hashed-refresh');
+      jest
+        .spyOn(RefreshTokenHelper, 'hash')
+        .mockReturnValueOnce('hashed-refresh');
       userService.updateUser.mockResolvedValue(baseUser);
 
       await service.loginUser({
@@ -308,7 +325,9 @@ describe('AuthService', () => {
     it('refreshToken includes current tokenVersion in new tokens', async () => {
       const userWithVersion = { ...baseUser, tokenVersion: 5 };
       userService.user.mockResolvedValue(userWithVersion);
-      jest.spyOn(RefreshTokenHelper, 'hash').mockReturnValueOnce('hashed-refresh');
+      jest
+        .spyOn(RefreshTokenHelper, 'hash')
+        .mockReturnValueOnce('hashed-refresh');
 
       const result = await service.refreshToken({
         id: baseUser.id,
@@ -329,7 +348,9 @@ describe('AuthService', () => {
       const userWithVersion = { ...baseUser, tokenVersion: 3 };
       userService.user.mockResolvedValue(userWithVersion);
       jest.spyOn(PasswordHelper, 'compare').mockResolvedValue(true);
-      jest.spyOn(RefreshTokenHelper, 'hash').mockReturnValueOnce('hashed-refresh');
+      jest
+        .spyOn(RefreshTokenHelper, 'hash')
+        .mockReturnValueOnce('hashed-refresh');
 
       await service.loginUser({
         email: 'john@example.com',
@@ -367,9 +388,14 @@ describe('AuthService', () => {
     });
 
     it('handles user with null tokenVersion', async () => {
-      const userWithoutVersion = { ...baseUser, tokenVersion: null as unknown as number };
+      const userWithoutVersion = {
+        ...baseUser,
+        tokenVersion: null as unknown as number,
+      };
       userService.user.mockResolvedValue(userWithoutVersion);
-      jest.spyOn(RefreshTokenHelper, 'hash').mockReturnValueOnce('hashed-refresh');
+      jest
+        .spyOn(RefreshTokenHelper, 'hash')
+        .mockReturnValueOnce('hashed-refresh');
 
       const result = await service.refreshToken({
         id: baseUser.id,
@@ -383,10 +409,15 @@ describe('AuthService', () => {
     });
 
     it('handles user with undefined tokenVersion', async () => {
-      const userWithoutVersion = { ...baseUser, tokenVersion: undefined as unknown as number };
+      const userWithoutVersion = {
+        ...baseUser,
+        tokenVersion: undefined as unknown as number,
+      };
       userService.user.mockResolvedValue(userWithoutVersion);
       jest.spyOn(PasswordHelper, 'compare').mockResolvedValue(true);
-      jest.spyOn(RefreshTokenHelper, 'hash').mockReturnValueOnce('hashed-refresh');
+      jest
+        .spyOn(RefreshTokenHelper, 'hash')
+        .mockReturnValueOnce('hashed-refresh');
 
       const result = await service.loginUser({
         email: 'john@example.com',

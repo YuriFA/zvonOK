@@ -12,7 +12,6 @@ jest.mock('node:crypto', () => ({
 describe('TokenHelper', () => {
   let tokenHelper: TokenHelper;
   let jwtService: jest.Mocked<JwtService>;
-  let configService: jest.Mocked<ConfigService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -43,12 +42,16 @@ describe('TokenHelper', () => {
 
     tokenHelper = module.get<TokenHelper>(TokenHelper);
     jwtService = module.get(JwtService);
-    configService = module.get(ConfigService);
+    module.get(ConfigService);
   });
 
   describe('generateAccessToken', () => {
     it('creates JWT with correct payload and options', () => {
-      const payload = { id: 'user-1', email: 'user@example.com', tokenVersion: 0 };
+      const payload = {
+        id: 'user-1',
+        email: 'user@example.com',
+        tokenVersion: 0,
+      };
       jwtService.sign.mockReturnValue('access-token');
 
       const result = tokenHelper.generateAccessToken(payload);
@@ -91,7 +94,11 @@ describe('TokenHelper', () => {
 
   describe('generateRefreshToken', () => {
     it('creates JWT with jti (JWT ID)', () => {
-      const payload = { id: 'user-1', email: 'user@example.com', tokenVersion: 0 };
+      const payload = {
+        id: 'user-1',
+        email: 'user@example.com',
+        tokenVersion: 0,
+      };
       jwtService.sign.mockReturnValue('refresh-token');
 
       const result = tokenHelper.generateRefreshToken(payload);
@@ -165,7 +172,11 @@ describe('TokenHelper', () => {
     });
 
     it('includes tokenVersion in payload when provided', () => {
-      const payload = { id: 'user-1', email: 'user@example.com', tokenVersion: 5 };
+      const payload = {
+        id: 'user-1',
+        email: 'user@example.com',
+        tokenVersion: 5,
+      };
       jwtService.sign.mockReturnValue('token');
 
       tokenHelper.generateAccessToken(payload);

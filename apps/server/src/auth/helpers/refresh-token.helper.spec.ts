@@ -72,8 +72,12 @@ describe('RefreshTokenHelper', () => {
       // These should all complete without throwing, regardless of where
       // the mismatch occurs in the string
       expect(() => RefreshTokenHelper.compare('a', hash)).not.toThrow();
-      expect(() => RefreshTokenHelper.compare('aaaaaaaaaaaaaaaaaaaa', hash)).not.toThrow();
-      expect(() => RefreshTokenHelper.compare(sampleToken.slice(0, 5), hash)).not.toThrow();
+      expect(() =>
+        RefreshTokenHelper.compare('aaaaaaaaaaaaaaaaaaaa', hash),
+      ).not.toThrow();
+      expect(() =>
+        RefreshTokenHelper.compare(sampleToken.slice(0, 5), hash),
+      ).not.toThrow();
     });
   });
 

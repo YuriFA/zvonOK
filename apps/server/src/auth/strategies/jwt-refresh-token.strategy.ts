@@ -62,7 +62,10 @@ export class JwtRefreshTokenStrategy extends PassportStrategy(
     }
 
     // Validate token version
-    if (payload.tokenVersion !== undefined && payload.tokenVersion !== user.tokenVersion) {
+    if (
+      payload.tokenVersion !== undefined &&
+      payload.tokenVersion !== user.tokenVersion
+    ) {
       this.logger.warn('Invalid token version', {
         userId: user.id,
         email: user.email,

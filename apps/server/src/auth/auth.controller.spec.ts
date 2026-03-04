@@ -373,10 +373,7 @@ describe('AuthController', () => {
         clearCookie: jest.fn(),
       } as unknown as Response;
 
-      await controller.logout(
-        { id: 'user-1', email: 'user@example.com' },
-        res,
-      );
+      await controller.logout({ id: 'user-1', email: 'user@example.com' }, res);
 
       expect(res.clearCookie).toHaveBeenCalledWith(
         'access_token',
