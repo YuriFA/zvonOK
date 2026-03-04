@@ -35,8 +35,9 @@ All tasks are listed in the [Roadmap](../roadmap.md), organized by stage:
 - **Stage 0.5** — Frontend Auth ✅
 - **Stage 1** — Backend ✅
 - **Stage 2** — Signalling Server ✅
-- **Stage 2.5** — Socket.io Client 🚧
-- **Stage 3-11** — Planned
+- **Stage 2.5** — Socket.io Client ✅
+- **Stage 3** — WebRTC P2P ✅
+- **Stage 4-11** — Planned
 
 ### Task Format
 

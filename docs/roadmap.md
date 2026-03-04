@@ -104,83 +104,83 @@ Tasks:
 
 ---
 
-## Stage 4 — Screen Share
-
-**Status:** Planned
-**Goal:** Desktop/application window sharing
-
-Tasks:
-- [task-1](./tasks/stage-4/TASK-001-screen-share.md) — getDisplayMedia + replaceTrack
-- [task-2](./tasks/stage-4/TASK-002-screen-share-ui.md) — Screen share button, status indicator, error handling
-
-**Result:** Screen sharing capability
-
----
-
-## Stage 5 — Device Management
+## Stage 4 — Device Management
 
 **Status:** Planned
 **Goal:** Switch between cameras, microphones, speakers
 
 Tasks:
-- [task-1](./tasks/stage-5/TASK-001-device-enumeration.md) — enumerateDevices API
-- [task-2](./tasks/stage-5/TASK-002-device-switching.md) — Switch camera/mic/speaker
-- [task-3](./tasks/stage-5/TASK-003-device-permissions.md) — Handle device permissions
-- [task-4](./tasks/stage-5/TASK-004-device-selector-ui.md) — Device selector dropdown/settings panel
-- [task-5](./tasks/stage-5/TASK-005-active-device-display.md) — Display currently active devices
+- [task-1](./tasks/stage-4/TASK-001-device-enumeration.md) — enumerateDevices API
+- [task-2](./tasks/stage-4/TASK-002-device-switching.md) — Switch camera/mic/speaker
+- [task-3](./tasks/stage-4/TASK-003-device-permissions.md) — Handle device permissions
+- [task-4](./tasks/stage-4/TASK-004-device-selector-ui.md) — Device selector dropdown/settings panel
+- [task-5](./tasks/stage-4/TASK-005-active-device-display.md) — Display currently active devices
 
 **Result:** User can select input/output devices
 
 ---
 
-## Stage 6 — Chat
-
-**Status:** Planned
-**Goal:** Real-time text chat with history
-
-Tasks:
-- [task-1](./tasks/stage-6/TASK-001-chat-model.md) — Message data model
-- [task-2](./tasks/stage-6/TASK-002-chat-api.md) — Chat API endpoints
-- [task-3](./tasks/stage-6/TASK-003-chat-websocket.md) — Real-time chat via WebSocket
-- [task-4](./tasks/stage-6/TASK-004-chat-ui.md) — Chat container layout
-- [task-5](./tasks/stage-6/TASK-005-message-list.md) — Message list component
-- [task-6](./tasks/stage-6/TASK-006-message-input.md) — Message input component
-- [task-7](./tasks/stage-6/TASK-007-chat-integration.md) — Chat integration in room page
-
-**Result:** Working chat with history
-
----
-
-## Stage 7 — SFU (Group Calls)
+## Stage 5 — SFU (Group Calls)
 
 **Status:** Planned
 **Goal:** Scalable group calls (3-10+ participants) via mediasoup
 
 Tasks:
-- [task-1](./tasks/stage-7/TASK-001-mediasoup-worker.md) — mediasoup Worker setup
-- [task-2](./tasks/stage-7/TASK-002-mediasoup-router.md) — Router per room
-- [task-3](./tasks/stage-7/TASK-003-mediasoup-transport.md) — Transport creation
-- [task-4](./tasks/stage-7/TASK-004-mediasoup-producer.md) — Producer for incoming tracks
-- [task-5](./tasks/stage-7/TASK-005-mediasoup-consumer.md) — Consumer for outgoing tracks
-- [task-6](./tasks/stage-7/TASK-006-sfu-signalling.md) — SFU signalling protocol
-- [task-7](./tasks/stage-7/TASK-007-sfu-client.md) — Client-side SFU integration
-- [task-8](./tasks/stage-7/TASK-008-sfu-participants.md) — Participants list UI
-- [task-9](./tasks/stage-7/TASK-009-sfu-quality-indicator.md) — Connection quality indicator
+- [task-1](./tasks/stage-5/TASK-001-mediasoup-worker.md) — mediasoup Worker setup
+- [task-2](./tasks/stage-5/TASK-002-mediasoup-router.md) — Router per room
+- [task-3](./tasks/stage-5/TASK-003-mediasoup-transport.md) — Transport creation
+- [task-4](./tasks/stage-5/TASK-004-mediasoup-producer.md) — Producer for incoming tracks
+- [task-5](./tasks/stage-5/TASK-005-mediasoup-consumer.md) — Consumer for outgoing tracks
+- [task-6](./tasks/stage-5/TASK-006-sfu-signalling.md) — SFU signalling protocol
+- [task-7](./tasks/stage-5/TASK-007-sfu-client.md) — Client-side SFU integration
+- [task-8](./tasks/stage-5/TASK-008-sfu-participants.md) — Participants list UI
+- [task-9](./tasks/stage-5/TASK-009-sfu-quality-indicator.md) — Connection quality indicator
 
 **Result:** Group video calls working
 
 ---
 
-## Stage 8 — Video Grid
+## Stage 6 — Video Grid
 
 **Status:** Planned
 **Goal:** Adaptive video layout with speaker detection
 
 Tasks:
-- [task-1](./tasks/stage-8/TASK-001-video-grid-layout.md) — CSS Grid adaptive layout
-- [task-2](./tasks/stage-8/TASK-002-speaker-detection.md) — Active speaker detection
+- [task-1](./tasks/stage-6/TASK-001-video-grid-layout.md) — CSS Grid adaptive layout
+- [task-2](./tasks/stage-6/TASK-002-speaker-detection.md) — Active speaker detection
 
 **Result:** Video tiles auto-arrange based on participant count
+
+---
+
+## Stage 7 — Screen Share
+
+**Status:** Planned
+**Goal:** Desktop/application window sharing
+
+Tasks:
+- [task-1](./tasks/stage-7/TASK-001-screen-share.md) — getDisplayMedia + replaceTrack
+- [task-2](./tasks/stage-7/TASK-002-screen-share-ui.md) — Screen share button, status indicator, error handling
+
+**Result:** Screen sharing capability
+
+---
+
+## Stage 8 — Chat
+
+**Status:** Planned
+**Goal:** Real-time text chat with history
+
+Tasks:
+- [task-1](./tasks/stage-8/TASK-001-chat-model.md) — Message data model
+- [task-2](./tasks/stage-8/TASK-002-chat-api.md) — Chat API endpoints
+- [task-3](./tasks/stage-8/TASK-003-chat-websocket.md) — Real-time chat via WebSocket
+- [task-4](./tasks/stage-8/TASK-004-chat-ui.md) — Chat container layout
+- [task-5](./tasks/stage-8/TASK-005-message-list.md) — Message list component
+- [task-6](./tasks/stage-8/TASK-006-message-input.md) — Message input component
+- [task-7](./tasks/stage-8/TASK-007-chat-integration.md) — Chat integration in room page
+
+**Result:** Working chat with history
 
 ---
 
@@ -244,9 +244,9 @@ Tasks:
 | Stage 2.5 | Completed | 1 day |
 | Stage 3 | Completed | 3-4 days |
 | Stage 4 | Planned | 1-2 days |
-| Stage 5 | Planned | 1-2 days |
+| Stage 5 | Planned | 5-7 days |
 | Stage 6 | Planned | 2-3 days |
-| Stage 7 | Planned | 5-7 days |
+| Stage 7 | Planned | 1-2 days |
 | Stage 8 | Planned | 2-3 days |
 | Stage 9 | Planned | 2-3 days |
 | Stage 10 | Planned | 2-3 days |
@@ -254,13 +254,13 @@ Tasks:
 
 **Total:** 3-6 weeks for full implementation
 
-**MVP Path:** Stages 0-6 + basic deploy = 1-2 weeks
+**MVP Path:** Stages 0-6 + basic deploy = 2-3 weeks
 
 ---
 
 ## Next Steps
 
-1. **Stage 3** (WebRTC P2P) — 1-on-1 video calls
+1. **Stage 4** (Device Management) — Camera/mic selection
 2. Follow task files in numerical order
 3. Update task status as work progresses
 4. Refer to [SDD](./SDD.md) for architecture and design decisions
