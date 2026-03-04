@@ -1,7 +1,7 @@
 # TASK-029 — Device Switching
 
 ## Status
-planned
+completed
 
 ## Priority
 medium
@@ -67,8 +67,56 @@ try {
 
 ## Implementation Guide
 
+### Files Created/Modified
+
+1. **`apps/client/src/lib/webrtc/manager.ts`**
+   - Added `replaceTrack(kind, newTrack)` - replaces track in all peer connections
+   - Added `getVideoTrack()` and `getAudioTrack()` - get current tracks
+
+2. **`apps/client/src/lib/media/manager.ts`**
+   - Added `switchVideoDevice(deviceId)` - switch camera with fallback
+   - Added `switchAudioDevice(deviceId)` - switch microphone with fallback
+   - Added `onDeviceSwitch(callback)` - subscribe to device switch events
+   - Added `getVideoDeviceId()` and `getAudioDeviceId()` - get current device IDs
+
+3. **`apps/client/src/features/media/hooks/use-device-switching.ts`** (new)
+   - `useDeviceSwitching()` hook for device switching in React components
+   - `useDeviceLostHandler()` hook for handling device disconnection
+   - Integrates MediaStreamManager with WebRTCManager for seamless switching
+
+### Usage Example
+
+```tsx
+import { useDeviceSwitching, useDeviceLostHandler } from '@/features/media/hooks';
+
+function RoomPage() {
+  const { switchVideoDevice, switchAudioDevice, switchSpeakerDevice, isSpeakerSwitchSupported } = useDeviceSwitching();
+
+  // Handle device lost (e.g., camera unplugged)
+  useDeviceLostHandler((kind) => {
+    console.log(`${kind} device was disconnected`);
+    // Optionally switch to default device
+  });
+
+  const handleCameraChange = async (deviceId: string) => {
+    const success = await switchVideoDevice(deviceId);
+    if (!success) {
+      // Handle error
+    }
+  };
+
+  const handleSpeakerChange = async (deviceId: string) => {
+    const videoElement = document.querySelector('video');
+    await switchSpeakerDevice(videoElement, deviceId);
+  };
+}
+```
+
 ## Related Files
-- `apps/client/src/hooks/use-media-devices.ts`
+- `apps/client/src/features/media/hooks/use-media-devices.ts`
+- `apps/client/src/features/media/hooks/use-device-switching.ts`
+- `apps/client/src/lib/media/manager.ts`
+- `apps/client/src/lib/webrtc/manager.ts`
 
 ## Next Task
 TASK-030 — Device Permissions

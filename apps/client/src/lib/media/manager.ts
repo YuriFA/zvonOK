@@ -20,11 +20,14 @@ const defaultConstraints: MediaStreamConstraints = {
   },
 };
 
+export type DeviceSwitchCallback = (kind: 'video' | 'audio', deviceId: string) => void;
+
 export class MediaStreamManager {
   private localStream: MediaStream | null = null;
   private status: MediaStatus = 'idle';
   private statusCallbacks: Set<MediaStatusCallback> = new Set();
   private error: Error | null = null;
+  private deviceSwitchCallbacks: Set<DeviceSwitchCallback> = new Set();
 
   async startStream(constraints?: MediaStreamConstraints): Promise<MediaStream> {
     if (this.localStream) {
@@ -115,6 +118,136 @@ export class MediaStreamManager {
 
   hasActiveStream(): boolean {
     return this.localStream !== null && this.status === 'active';
+  }
+
+  /**
+   * Switch video input device (camera).
+   * Returns the new track or null on failure.
+   */
+  async switchVideoDevice(deviceId: string): Promise<MediaStreamTrack | null> {
+    if (!this.localStream) {
+      console.error('[Media] No active stream to switch video device');
+      return null;
+    }
+
+    // Try with exact deviceId first
+    let newStream: MediaStream;
+    try {
+      newStream = await navigator.mediaDevices.getUserMedia({
+        video: { deviceId: { exact: deviceId } },
+      });
+    } catch {
+      // Fallback to default video device
+      console.warn('[Media] Failed to get video device, falling back to default');
+      try {
+        newStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      } catch (err) {
+        console.error('[Media] Failed to get any video device:', err);
+        return null;
+      }
+    }
+
+    const newTrack = newStream.getVideoTracks()[0];
+    if (!newTrack) {
+      console.error('[Media] No video track in new stream');
+      newStream.getTracks().forEach((t) => t.stop());
+      return null;
+    }
+
+    // Stop old video tracks
+    this.localStream.getVideoTracks().forEach((track) => track.stop());
+
+    // Remove old video tracks and add new one
+    this.localStream.getVideoTracks().forEach((track) => {
+      this.localStream!.removeTrack(track);
+    });
+    this.localStream.addTrack(newTrack);
+
+    // Clean up the temporary stream (we only needed the track)
+    newStream.getAudioTracks().forEach((t) => t.stop());
+
+    // Notify listeners
+    this.deviceSwitchCallbacks.forEach((cb) => cb('video', newTrack.getSettings().deviceId || deviceId));
+
+    return newTrack;
+  }
+
+  /**
+   * Switch audio input device (microphone).
+   * Returns the new track or null on failure.
+   */
+  async switchAudioDevice(deviceId: string): Promise<MediaStreamTrack | null> {
+    if (!this.localStream) {
+      console.error('[Media] No active stream to switch audio device');
+      return null;
+    }
+
+    // Try with exact deviceId first
+    let newStream: MediaStream;
+    try {
+      newStream = await navigator.mediaDevices.getUserMedia({
+        audio: { deviceId: { exact: deviceId } },
+      });
+    } catch {
+      // Fallback to default audio device
+      console.warn('[Media] Failed to get audio device, falling back to default');
+      try {
+        newStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch (err) {
+        console.error('[Media] Failed to get any audio device:', err);
+        return null;
+      }
+    }
+
+    const newTrack = newStream.getAudioTracks()[0];
+    if (!newTrack) {
+      console.error('[Media] No audio track in new stream');
+      newStream.getTracks().forEach((t) => t.stop());
+      return null;
+    }
+
+    // Stop old audio tracks
+    this.localStream.getAudioTracks().forEach((track) => track.stop());
+
+    // Remove old audio tracks and add new one
+    this.localStream.getAudioTracks().forEach((track) => {
+      this.localStream!.removeTrack(track);
+    });
+    this.localStream.addTrack(newTrack);
+
+    // Clean up the temporary stream (we only needed the track)
+    newStream.getVideoTracks().forEach((t) => t.stop());
+
+    // Notify listeners
+    this.deviceSwitchCallbacks.forEach((cb) => cb('audio', newTrack.getSettings().deviceId || deviceId));
+
+    return newTrack;
+  }
+
+  /**
+   * Subscribe to device switch events.
+   */
+  onDeviceSwitch(callback: DeviceSwitchCallback): () => void {
+    this.deviceSwitchCallbacks.add(callback);
+    return () => {
+      this.deviceSwitchCallbacks.delete(callback);
+    };
+  }
+
+  /**
+   * Get the current video track's device ID.
+   */
+  getVideoDeviceId(): string | null {
+    const track = this.localStream?.getVideoTracks()[0];
+    return track?.getSettings().deviceId ?? null;
+  }
+
+  /**
+   * Get the current audio track's device ID.
+   */
+  getAudioDeviceId(): string | null {
+    const track = this.localStream?.getAudioTracks()[0];
+    return track?.getSettings().deviceId ?? null;
   }
 }
 

@@ -8,3 +8,6 @@ export type {
   SelectedDevices,
   UseMediaDevicesReturn,
 } from './use-media-devices';
+
+export { useDeviceSwitching, useDeviceLostHandler } from './use-device-switching';
+export type { UseDeviceSwitchingReturn } from './use-device-switching';

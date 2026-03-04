@@ -375,6 +375,43 @@ export class WebRTCManager {
       }
     }
   }
+
+  /**
+   * Replace a track in all peer connections.
+   * Used when switching camera/microphone without renegotiation.
+   */
+  async replaceTrack(kind: 'video' | 'audio', newTrack: MediaStreamTrack): Promise<boolean> {
+    let success = true;
+
+    for (const [peerId, pc] of this.peerConnections) {
+      const sender = pc.getSenders().find((s) => s.track?.kind === kind);
+
+      if (sender) {
+        try {
+          await sender.replaceTrack(newTrack);
+        } catch (error) {
+          console.error(`[WebRTC] Failed to replace ${kind} track for peer ${peerId}:`, error);
+          success = false;
+        }
+      }
+    }
+
+    return success;
+  }
+
+  /**
+   * Get the current video sender track.
+   */
+  getVideoTrack(): MediaStreamTrack | null {
+    return this.localStream?.getVideoTracks()[0] ?? null;
+  }
+
+  /**
+   * Get the current audio sender track.
+   */
+  getAudioTrack(): MediaStreamTrack | null {
+    return this.localStream?.getAudioTracks()[0] ?? null;
+  }
 }
 
 export const webrtcManager = new WebRTCManager();
