@@ -4,25 +4,25 @@ import { MediaStreamManager } from '../manager';
 // Mock navigator.mediaDevices
 const mockGetUserMedia = vi.fn();
 const mockTrackStop = vi.fn();
-const mockVideoTrack = {
-  id: 'video-track-1',
-  kind: 'video',
-  enabled: true,
-  stop: mockTrackStop,
-} as unknown as MediaStreamTrack;
 
-const mockAudioTrack = {
-  id: 'audio-track-1',
-  kind: 'audio',
+const createMockTrack = (id: string, kind: 'video' | 'audio', deviceId?: string) => ({
+  id,
+  kind,
   enabled: true,
   stop: mockTrackStop,
-} as unknown as MediaStreamTrack;
+  getSettings: () => ({ deviceId: deviceId || `${kind}-device-${id}` }),
+});
+
+const mockVideoTrack = createMockTrack('video-track-1', 'video', 'video-device-1') as unknown as MediaStreamTrack;
+const mockAudioTrack = createMockTrack('audio-track-1', 'audio', 'audio-device-1') as unknown as MediaStreamTrack;
 
 const mockStream = {
   id: 'stream-1',
   getVideoTracks: () => [mockVideoTrack],
   getAudioTracks: () => [mockAudioTrack],
   getTracks: () => [mockVideoTrack, mockAudioTrack],
+  removeTrack: vi.fn(),
+  addTrack: vi.fn(),
 } as unknown as MediaStream;
 
 vi.stubGlobal('navigator', {
@@ -353,6 +353,217 @@ describe('MediaStreamManager', () => {
 
       expect(callback1).toHaveBeenCalled();
       expect(callback2).toHaveBeenCalled();
+    });
+  });
+
+  describe('device switching', () => {
+    describe('switchVideoDevice', () => {
+      it('should return null when no active stream exists', async () => {
+        const result = await manager.switchVideoDevice('new-device-id');
+
+        expect(result).toBeNull();
+      });
+
+      it('should call getUserMedia with exact deviceId', async () => {
+        await manager.startStream();
+
+        const newVideoTrack = createMockTrack('new-video', 'video', 'new-video-device');
+        const newStream = {
+          getVideoTracks: () => [newVideoTrack],
+          getAudioTracks: () => [],
+          getTracks: () => [newVideoTrack],
+        };
+
+        mockGetUserMedia.mockResolvedValueOnce(newStream);
+
+        await manager.switchVideoDevice('new-video-device');
+
+        expect(mockGetUserMedia).toHaveBeenCalledWith({
+          video: { deviceId: { exact: 'new-video-device' } },
+        });
+      });
+
+      it('should fallback to default device on exact deviceId failure', async () => {
+        await manager.startStream();
+
+        const newVideoTrack = createMockTrack('new-video', 'video', 'default-video');
+        const newStream = {
+          getVideoTracks: () => [newVideoTrack],
+          getAudioTracks: () => [],
+          getTracks: () => [newVideoTrack],
+        };
+
+        mockGetUserMedia
+          .mockRejectedValueOnce(new Error('Device not found'))
+          .mockResolvedValueOnce(newStream);
+
+        const result = await manager.switchVideoDevice('invalid-device');
+
+        expect(mockGetUserMedia).toHaveBeenLastCalledWith({ video: true });
+        expect(result).toBe(newVideoTrack);
+      });
+
+      it('should return null when fallback also fails', async () => {
+        await manager.startStream();
+
+        mockGetUserMedia
+          .mockRejectedValueOnce(new Error('Device not found'))
+          .mockRejectedValueOnce(new Error('No video device'));
+
+        const result = await manager.switchVideoDevice('invalid-device');
+
+        expect(result).toBeNull();
+      });
+
+      it('should return null when new stream has no video track', async () => {
+        await manager.startStream();
+
+        const newStream = {
+          getVideoTracks: () => [],
+          getAudioTracks: () => [],
+          getTracks: () => [],
+        };
+
+        mockGetUserMedia.mockResolvedValueOnce(newStream);
+
+        const result = await manager.switchVideoDevice('some-device');
+
+        expect(result).toBeNull();
+      });
+
+      it('should notify device switch callbacks', async () => {
+        await manager.startStream();
+
+        const newVideoTrack = createMockTrack('new-video', 'video', 'new-video-device');
+        const newStream = {
+          getVideoTracks: () => [newVideoTrack],
+          getAudioTracks: () => [],
+          getTracks: () => [newVideoTrack],
+        };
+
+        mockGetUserMedia.mockResolvedValueOnce(newStream);
+
+        const callback = vi.fn();
+        manager.onDeviceSwitch(callback);
+
+        await manager.switchVideoDevice('new-video-device');
+
+        expect(callback).toHaveBeenCalledWith('video', 'new-video-device');
+      });
+    });
+
+    describe('switchAudioDevice', () => {
+      it('should return null when no active stream exists', async () => {
+        const result = await manager.switchAudioDevice('new-device-id');
+
+        expect(result).toBeNull();
+      });
+
+      it('should call getUserMedia with exact deviceId', async () => {
+        await manager.startStream();
+
+        const newAudioTrack = createMockTrack('new-audio', 'audio', 'new-audio-device');
+        const newStream = {
+          getVideoTracks: () => [],
+          getAudioTracks: () => [newAudioTrack],
+          getTracks: () => [newAudioTrack],
+        };
+
+        mockGetUserMedia.mockResolvedValueOnce(newStream);
+
+        await manager.switchAudioDevice('new-audio-device');
+
+        expect(mockGetUserMedia).toHaveBeenCalledWith({
+          audio: { deviceId: { exact: 'new-audio-device' } },
+        });
+      });
+
+      it('should fallback to default device on exact deviceId failure', async () => {
+        await manager.startStream();
+
+        const newAudioTrack = createMockTrack('new-audio', 'audio', 'default-audio');
+        const newStream = {
+          getVideoTracks: () => [],
+          getAudioTracks: () => [newAudioTrack],
+          getTracks: () => [newAudioTrack],
+        };
+
+        mockGetUserMedia
+          .mockRejectedValueOnce(new Error('Device not found'))
+          .mockResolvedValueOnce(newStream);
+
+        const result = await manager.switchAudioDevice('invalid-device');
+
+        expect(mockGetUserMedia).toHaveBeenLastCalledWith({ audio: true });
+        expect(result).toBe(newAudioTrack);
+      });
+
+      it('should notify device switch callbacks', async () => {
+        await manager.startStream();
+
+        const newAudioTrack = createMockTrack('new-audio', 'audio', 'new-audio-device');
+        const newStream = {
+          getVideoTracks: () => [],
+          getAudioTracks: () => [newAudioTrack],
+          getTracks: () => [newAudioTrack],
+        };
+
+        mockGetUserMedia.mockResolvedValueOnce(newStream);
+
+        const callback = vi.fn();
+        manager.onDeviceSwitch(callback);
+
+        await manager.switchAudioDevice('new-audio-device');
+
+        expect(callback).toHaveBeenCalledWith('audio', 'new-audio-device');
+      });
+    });
+
+    describe('onDeviceSwitch', () => {
+      it('should return unsubscribe function', async () => {
+        await manager.startStream();
+
+        const newVideoTrack = createMockTrack('new-video', 'video', 'new-device');
+        const newStream = {
+          getVideoTracks: () => [newVideoTrack],
+          getAudioTracks: () => [],
+          getTracks: () => [newVideoTrack],
+        };
+
+        mockGetUserMedia.mockResolvedValueOnce(newStream);
+
+        const callback = vi.fn();
+        const unsubscribe = manager.onDeviceSwitch(callback);
+        unsubscribe();
+
+        await manager.switchVideoDevice('new-device');
+
+        expect(callback).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('getVideoDeviceId', () => {
+      it('should return null when no stream exists', () => {
+        expect(manager.getVideoDeviceId()).toBeNull();
+      });
+
+      it('should return device ID from video track settings', async () => {
+        await manager.startStream();
+
+        expect(manager.getVideoDeviceId()).toBe('video-device-1');
+      });
+    });
+
+    describe('getAudioDeviceId', () => {
+      it('should return null when no stream exists', () => {
+        expect(manager.getAudioDeviceId()).toBeNull();
+      });
+
+      it('should return device ID from audio track settings', async () => {
+        await manager.startStream();
+
+        expect(manager.getAudioDeviceId()).toBe('audio-device-1');
+      });
     });
   });
 });
