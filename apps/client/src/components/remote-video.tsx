@@ -6,6 +6,7 @@ export interface RemoteVideoProps {
   username?: string;
   isVideoEnabled?: boolean;
   isAudioEnabled?: boolean;
+  onMediaElement?: (element: HTMLVideoElement | null) => void;
   className?: string;
 }
 
@@ -14,6 +15,7 @@ export function RemoteVideo({
   username,
   isVideoEnabled = true,
   isAudioEnabled = true,
+  onMediaElement,
   className,
 }: RemoteVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -24,6 +26,13 @@ export function RemoteVideo({
     }
   }, [stream]);
 
+  useEffect(() => {
+    onMediaElement?.(videoRef.current);
+    return () => {
+      onMediaElement?.(null);
+    };
+  }, [onMediaElement]);
+
   return (
     <div className={cn('relative overflow-hidden rounded-lg bg-black', className)}>
       <video
@@ -31,7 +40,9 @@ export function RemoteVideo({
         autoPlay
         playsInline
         className="h-full w-full object-cover"
-      />
+      >
+        <track kind="captions" />
+      </video>
 
       {/* Username overlay */}
       {username && (

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { useRoom, useEndRoom } from '@/features/room/hooks';
@@ -12,6 +12,7 @@ import { LocalVideo } from '@/components/local-video';
 import { RemoteVideo } from '@/components/remote-video';
 import { useMediaControls } from '@/features/media/hooks';
 import { MediaControls } from '@/features/media/components/media-controls';
+import { DeviceSettingsPanel } from '@/features/media/components/device-settings-panel';
 
 export const RoomPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -27,7 +28,6 @@ export const RoomPage = () => {
   // WebSocket state
   const [wsStatus, setWsStatus] = useState<ConnectionStatus>('disconnected');
   const [peers, setPeers] = useState<PeerInfo[]>([]);
-  const [_myPeerId, setMyPeerId] = useState<string | null>(null);
 
   // Media state
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
@@ -40,6 +40,21 @@ export const RoomPage = () => {
   const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
   const [peerStates, setPeerStates] = useState<Map<string, PeerConnectionState>>(new Map());
   const [peerMediaStates, setPeerMediaStates] = useState<Map<string, { isVideoEnabled: boolean; isAudioEnabled: boolean }>>(new Map());
+  const [remoteMediaElements, setRemoteMediaElements] = useState<Map<string, HTMLVideoElement>>(new Map());
+
+  const handleRemoteMediaElement = useCallback((peerId: string, element: HTMLVideoElement | null) => {
+    setRemoteMediaElements((prev) => {
+      const next = new Map(prev);
+      if (element) {
+        next.set(peerId, element);
+      } else {
+        next.delete(peerId);
+      }
+      return next;
+    });
+  }, []);
+
+  const primaryRemoteMediaElement = remoteMediaElements.values().next().value ?? null;
 
   const handleEndRoom = () => {
     if (!room || !user || room.ownerId !== user.id) return;
@@ -77,7 +92,6 @@ export const RoomPage = () => {
     // NOTE: We do NOT create offers here - existing peers will send us offers
     const handleRoomJoined = (data: { peerId: string; peers: PeerInfo[] }) => {
       console.log('[WS] Room joined:', data);
-      setMyPeerId(data.peerId);
       setPeers(data.peers);
       // Create peer connections for existing peers (they will send us offers)
       data.peers.forEach((peer) => {
@@ -298,15 +312,23 @@ export const RoomPage = () => {
               <p className="text-sm text-muted-foreground">Code: {room.slug}</p>
             </div>
           </div>
-          {isOwner && (
-            <Button
-              variant="destructive"
-              onClick={handleEndRoom}
-              disabled={endRoom.isPending}
-            >
-              {endRoom.isPending ? 'Ending...' : 'End Room'}
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            <DeviceSettingsPanel
+              variant="popover"
+              remoteVideoElement={primaryRemoteMediaElement}
+              isVideoEnabled={mediaControls.isVideoEnabled}
+              isAudioEnabled={mediaControls.isAudioEnabled}
+            />
+            {isOwner && (
+              <Button
+                variant="destructive"
+                onClick={handleEndRoom}
+                disabled={endRoom.isPending}
+              >
+                {endRoom.isPending ? 'Ending...' : 'End Room'}
+              </Button>
+            )}
+          </div>
         </div>
       </header>
 
@@ -378,6 +400,7 @@ export const RoomPage = () => {
                   username={peer.userInfo.username}
                   isVideoEnabled={peerMediaState?.isVideoEnabled ?? true}
                   isAudioEnabled={peerMediaState?.isAudioEnabled ?? true}
+                  onMediaElement={(element) => handleRemoteMediaElement(peer.id, element)}
                   className="w-full aspect-video"
                 />
                 {/* Connection state indicator */}

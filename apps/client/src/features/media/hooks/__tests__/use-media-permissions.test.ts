@@ -26,14 +26,16 @@ describe('useMediaPermissions', () => {
     getTracks: () => [],
   } as unknown as MediaStream;
 
+  const defaultPermissionStatus = {
+    hasVideo: true,
+    hasAudio: true,
+    videoPermission: 'granted' as const,
+    audioPermission: 'granted' as const,
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
-    mockCheckPermissions.mockResolvedValue({
-      hasVideo: true,
-      hasAudio: true,
-      videoPermission: 'granted',
-      audioPermission: 'granted',
-    });
+    mockCheckPermissions.mockResolvedValue(defaultPermissionStatus);
     mockStartStreamWithFallback.mockResolvedValue({
       stream: mockStream,
       isAudioOnly: false,
@@ -47,40 +49,53 @@ describe('useMediaPermissions', () => {
   });
 
   describe('initial state', () => {
-    it('should have null permission status initially', () => {
+    it('should have null permission status initially', async () => {
       const { result } = renderHook(() => useMediaPermissions());
 
       expect(result.current.permissionStatus).toBeNull();
+
+      // Flush the auto-check effect to avoid act warnings.
+      await waitFor(() => expect(mockCheckPermissions).toHaveBeenCalled());
     });
 
-    it('should not be loading initially', () => {
+    it('should not be loading initially', async () => {
       const { result } = renderHook(() => useMediaPermissions());
 
       expect(result.current.isLoading).toBe(false);
+
+      await waitFor(() => expect(mockCheckPermissions).toHaveBeenCalled());
     });
 
-    it('should have null stream initially', () => {
+    it('should have null stream initially', async () => {
       const { result } = renderHook(() => useMediaPermissions());
 
       expect(result.current.stream).toBeNull();
+
+      await waitFor(() => expect(mockCheckPermissions).toHaveBeenCalled());
     });
 
-    it('should have null error initially', () => {
+    it('should have null error initially', async () => {
       const { result } = renderHook(() => useMediaPermissions());
 
       expect(result.current.error).toBeNull();
+
+      await waitFor(() => expect(mockCheckPermissions).toHaveBeenCalled());
     });
 
-    it('should not be in audio-only mode initially', () => {
+    it('should not be in audio-only mode initially', async () => {
       const { result } = renderHook(() => useMediaPermissions());
 
       expect(result.current.isAudioOnly).toBe(false);
+
+      await waitFor(() => expect(mockCheckPermissions).toHaveBeenCalled());
     });
 
-    it('should have null video unavailable reason initially', () => {
+    it('should have null video unavailable reason initially', async () => {
       const { result } = renderHook(() => useMediaPermissions());
 
       expect(result.current.videoUnavailableReason).toBeNull();
+
+      await waitFor(() => expect(mockCheckPermissions).toHaveBeenCalled());
     });
   });
 
@@ -156,8 +171,11 @@ describe('useMediaPermissions', () => {
   });
 
   describe('stopMedia', () => {
-    it('should call mediaManager.stopStream', () => {
+    it('should call mediaManager.stopStream', async () => {
       const { result } = renderHook(() => useMediaPermissions());
+
+      // Let mount effect finish to avoid act warnings.
+      await waitFor(() => expect(mockCheckPermissions).toHaveBeenCalled());
 
       act(() => {
         result.current.stopMedia();
@@ -247,10 +265,10 @@ describe('useMediaPermissions', () => {
   });
 
   describe('auto-check permissions on mount', () => {
-    it('should check permissions on mount', () => {
+    it('should check permissions on mount', async () => {
       renderHook(() => useMediaPermissions());
 
-      expect(mockCheckPermissions).toHaveBeenCalled();
+      await waitFor(() => expect(mockCheckPermissions).toHaveBeenCalled());
     });
   });
 });

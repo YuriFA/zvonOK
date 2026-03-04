@@ -1,160 +1,28 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Video, VideoOff, Mic, MicOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LocalVideo } from '@/components/local-video';
-
-interface MediaDeviceInfo {
-  deviceId: string;
-  kind: MediaDeviceKind;
-  label: string;
-}
+import { useMediaControls, useMediaPermissions } from '../hooks';
+import { DeviceSettingsPanel } from './device-settings-panel';
 
 interface DeviceSelectorProps {
   className?: string;
 }
 
 export function DeviceSelector({ className }: DeviceSelectorProps) {
-  const [stream, setStream] = useState<MediaStream | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const [videoEnabled, setVideoEnabled] = useState(true);
-  const [audioEnabled, setAudioEnabled] = useState(true);
-  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
-  const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
-  const [selectedVideoDevice, setSelectedVideoDevice] = useState<string>('');
-  const [selectedAudioDevice, setSelectedAudioDevice] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { stream, startMedia, stopMedia, isLoading, error } = useMediaPermissions();
+  const mediaControls = useMediaControls();
 
-  // Get initial media stream
-  const getStream = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      });
-
-      streamRef.current = mediaStream;
-      setStream(mediaStream);
-
-      // Get device list
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoInputDevices = devices
-        .filter((d) => d.kind === 'videoinput')
-        .map((d, index) => ({
-          deviceId: d.deviceId,
-          kind: d.kind as MediaDeviceKind,
-          label: d.label || `Camera ${index + 1}`,
-        }));
-
-      const audioInputDevices = devices
-        .filter((d) => d.kind === 'audioinput')
-        .map((d, index) => ({
-          deviceId: d.deviceId,
-          kind: d.kind as MediaDeviceKind,
-          label: d.label || `Microphone ${index + 1}`,
-        }));
-
-      setVideoDevices(videoInputDevices);
-      setAudioDevices(audioInputDevices);
-
-      // Set default devices
-      if (videoInputDevices.length > 0) {
-        setSelectedVideoDevice(videoInputDevices[0].deviceId);
-      }
-      if (audioInputDevices.length > 0) {
-        setSelectedAudioDevice(audioInputDevices[0].deviceId);
-      }
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'Failed to access camera/microphone'
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  // Change video device
-  const changeVideoDevice = async (deviceId: string) => {
-    if (!stream) return;
-
-    try {
-      // Stop current video tracks
-      stream.getVideoTracks().forEach((track) => track.stop());
-
-      // Get new stream with selected device
-      const newStream = await navigator.mediaDevices.getUserMedia({
-        video: { deviceId: { exact: deviceId } },
-        audio: { deviceId: { exact: selectedAudioDevice } },
-      });
-
-      streamRef.current = newStream;
-      setStream(newStream);
-      setSelectedVideoDevice(deviceId);
-    } catch (err) {
-      console.error('Failed to change video device:', err);
-    }
-  };
-
-  // Change audio device
-  const changeAudioDevice = async (deviceId: string) => {
-    if (!stream) return;
-
-    try {
-      // Stop current audio tracks
-      stream.getAudioTracks().forEach((track) => track.stop());
-
-      // Get new stream with selected device
-      const newStream = await navigator.mediaDevices.getUserMedia({
-        video: { deviceId: { exact: selectedVideoDevice } },
-        audio: { deviceId: { exact: deviceId } },
-      });
-
-      streamRef.current = newStream;
-      setStream(newStream);
-      setSelectedAudioDevice(deviceId);
-    } catch (err) {
-      console.error('Failed to change audio device:', err);
-    }
-  };
-
-  // Toggle video
-  const toggleVideo = () => {
-    if (!stream) return;
-    const videoTrack = stream.getVideoTracks()[0];
-    if (videoTrack) {
-      videoTrack.enabled = !videoTrack.enabled;
-      setVideoEnabled(videoTrack.enabled);
-    }
-  };
-
-  // Toggle audio
-  const toggleAudio = () => {
-    if (!stream) return;
-    const audioTrack = stream.getAudioTracks()[0];
-    if (audioTrack) {
-      audioTrack.enabled = !audioTrack.enabled;
-      setAudioEnabled(audioTrack.enabled);
-    }
-  };
-
-  // Get stream on mount
   useEffect(() => {
-    getStream();
+    startMedia().catch(() => {
+      // error state is exposed by the hook
+    });
 
     return () => {
-      // Clean up stream on unmount using ref to avoid stale closure
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-        streamRef.current = null;
-      }
+      stopMedia();
     };
-  }, []);
+  }, [startMedia, stopMedia]);
 
   return (
     <div className={cn('space-y-4', className)}>
@@ -167,14 +35,14 @@ export function DeviceSelector({ className }: DeviceSelectorProps) {
         )}
         {error && (
           <div className="flex h-full items-center justify-center">
-            <p className="text-sm text-destructive">{error}</p>
+            <p className="text-sm text-destructive">{error.message}</p>
           </div>
         )}
         {!isLoading && !error && stream && (
           <LocalVideo
             stream={stream}
-            isVideoEnabled={videoEnabled}
-            isAudioEnabled={audioEnabled}
+            isVideoEnabled={mediaControls.isVideoEnabled}
+            isAudioEnabled={mediaControls.isAudioEnabled}
             className="h-full"
             showControls={false}
           />
@@ -186,10 +54,10 @@ export function DeviceSelector({ className }: DeviceSelectorProps) {
             type="button"
             variant="secondary"
             size="icon"
-            onClick={toggleVideo}
+            onClick={mediaControls.toggleVideo}
             disabled={!stream || !!error}
           >
-            {videoEnabled ? (
+            {mediaControls.isVideoEnabled ? (
               <Video className="size-5" />
             ) : (
               <VideoOff className="size-5" />
@@ -199,10 +67,10 @@ export function DeviceSelector({ className }: DeviceSelectorProps) {
             type="button"
             variant="secondary"
             size="icon"
-            onClick={toggleAudio}
+            onClick={mediaControls.toggleAudio}
             disabled={!stream || !!error}
           >
-            {audioEnabled ? (
+            {mediaControls.isAudioEnabled ? (
               <Mic className="size-5" />
             ) : (
               <MicOff className="size-5" />
@@ -211,42 +79,11 @@ export function DeviceSelector({ className }: DeviceSelectorProps) {
         </div>
       </div>
 
-      {/* Device Selection */}
-      {videoDevices.length > 1 && (
-        <div className="space-y-2">
-          <Label htmlFor="video-device">Camera</Label>
-          <select
-            id="video-device"
-            value={selectedVideoDevice}
-            onChange={(e) => changeVideoDevice(e.target.value)}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {videoDevices.map((device) => (
-              <option key={device.deviceId} value={device.deviceId}>
-                {device.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {audioDevices.length > 1 && (
-        <div className="space-y-2">
-          <Label htmlFor="audio-device">Microphone</Label>
-          <select
-            id="audio-device"
-            value={selectedAudioDevice}
-            onChange={(e) => changeAudioDevice(e.target.value)}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {audioDevices.map((device) => (
-              <option key={device.deviceId} value={device.deviceId}>
-                {device.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
+      <DeviceSettingsPanel
+        variant="inline"
+        isVideoEnabled={mediaControls.isVideoEnabled}
+        isAudioEnabled={mediaControls.isAudioEnabled}
+      />
     </div>
   );
 }
