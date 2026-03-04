@@ -79,7 +79,9 @@ export function useMediaDevices(): UseMediaDevicesReturn {
     try {
       // Request permissions if not already granted
       if (!isPermissionGranted) {
-        await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        // Stop all tracks immediately — we only need the permission prompt
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        stream.getTracks().forEach((t) => t.stop());
         setIsPermissionGranted(true);
       }
 
