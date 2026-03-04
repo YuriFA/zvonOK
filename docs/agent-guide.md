@@ -11,6 +11,7 @@ Guidelines for AI agents working on the WebRTC Chat codebase.
 - Each feature should have a corresponding task in `/docs/tasks/TASK-XXX-<slug>.md`
 - Update task status when starting and finishing work
 - Mark tasks as `in_progress` when starting, `completed` when done
+- After completing a task, update the roadmap and SDD if necessary, and commit changes with a message referencing the task ID (e.g., `TASK-123: Implement user registration endpoint`)
 
 ### 2. Architecture Adherence
 - **Follow architecture in [SDD](./SDD.md)**
