@@ -1,7 +1,7 @@
 # TASK-028 — Device Enumeration
 
 ## Status
-planned
+completed
 
 ## Priority
 medium

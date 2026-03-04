@@ -106,7 +106,7 @@ Tasks:
 
 ## Stage 4 — Device Management
 
-**Status:** Planned
+**Status:** In Progress
 **Goal:** Switch between cameras, microphones, speakers
 
 Tasks:
