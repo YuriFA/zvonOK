@@ -87,8 +87,8 @@ export interface WebRTCIceEvent {
 }
 
 export interface ErrorPayload {
+  code: string;
   message: string;
-  code?: string;
 }
 
 // Media state sync

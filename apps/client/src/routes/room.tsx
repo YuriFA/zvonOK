@@ -127,7 +127,7 @@ export const RoomPage = () => {
     };
 
     // Handle errors
-    const handleError = (data: { message: string }) => {
+    const handleError = (data: { code: string; message: string }) => {
       console.error('[WS] Error:', data);
     };
 

@@ -9,7 +9,11 @@ import {
   MessageBody,
 } from '@nestjs/websockets';
 import { Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import { Server, Socket } from 'socket.io';
+import { RoomService } from '../room/room.service';
+import { PrismaService } from '../prisma/prisma.service';
 import type {
   PeerInfo,
   RoomJoinedPayload,
@@ -25,6 +29,17 @@ import type {
   MediaStatePayload,
   MediaStateChangedPayload,
 } from './interfaces/room.interface';
+
+interface JwtPayload {
+  id: string;
+  email: string;
+}
+
+interface AuthenticatedUser {
+  id: string;
+  email: string;
+  username: string;
+}
 
 @WebSocketGateway({
   cors: {
@@ -45,13 +60,100 @@ export class WebrtcGateway
   private peerRooms: Map<string, string> = new Map();
   private peerInfo: Map<string, PeerInfo> = new Map();
 
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
+    private readonly roomService: RoomService,
+    private readonly prisma: PrismaService,
+  ) {}
+
   afterInit(): void {
     this.logger.log('WebSocket Gateway initialized');
   }
 
-  handleConnection(client: Socket): void {
+  private extractTokenFromCookies(
+    cookieHeader: string | undefined,
+    cookieName: string,
+  ): string | null {
+    if (!cookieHeader) return null;
+    const cookies = cookieHeader.split(';').map((c) => c.trim());
+    const targetCookie = cookies.find((c) => c.startsWith(`${cookieName}=`));
+    // Use slice instead of split('=')[1] to handle base64 padding ('=') in JWT tokens
+    return targetCookie ? targetCookie.slice(cookieName.length + 1) : null;
+  }
+
+  async handleConnection(client: Socket): Promise<void> {
     this.logger.log(`Client connected: ${client.id}`);
-    this.peerInfo.set(client.id, { id: client.id });
+
+    // Extract and verify JWT
+    const token = this.extractTokenFromCookies(
+      client.handshake.headers.cookie,
+      'access_token',
+    );
+
+    if (!token) {
+      this.logger.warn(`No access_token cookie for client ${client.id}`);
+      client.emit('error', {
+        code: 'UNAUTHORIZED',
+        message: 'Authentication required',
+      });
+      client.disconnect(true);
+      return;
+    }
+
+    try {
+      const secret = this.configService.get<string>('JWT_ACCESS_SECRET')!;
+      const payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
+        secret,
+      });
+
+      // Fetch user to get username
+      const user = await this.prisma.user.findUnique({
+        where: { id: payload.id },
+        select: { id: true, email: true, username: true },
+      });
+
+      if (!user) {
+        this.logger.warn(
+          `User ${payload.id} not found for client ${client.id}`,
+        );
+        client.emit('error', {
+          code: 'UNAUTHORIZED',
+          message: 'User not found',
+        });
+        client.disconnect(true);
+        return;
+      }
+
+      // Store user data in socket
+      const authenticatedUser: AuthenticatedUser = {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+      };
+
+      (client.data as { user: AuthenticatedUser }).user = authenticatedUser;
+
+      // Initialize peer info with user data
+      this.peerInfo.set(client.id, {
+        id: client.id,
+        userInfo: {
+          userId: user.id,
+          username: user.username,
+        },
+      });
+
+      this.logger.log(
+        `Client ${client.id} authenticated as user ${user.username}`,
+      );
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        `Authentication failed for client ${client.id}: ${message}`,
+      );
+      client.emit('error', { code: 'UNAUTHORIZED', message: 'Invalid token' });
+      client.disconnect(true);
+    }
   }
 
   handleDisconnect(client: Socket): void {
@@ -67,16 +169,36 @@ export class WebrtcGateway
   }
 
   @SubscribeMessage('join:room')
-  handleJoinRoom(
+  async handleJoinRoom(
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: JoinRoomPayload,
-  ): RoomJoinedPayload {
+  ): Promise<void> {
     const { roomCode } = payload;
     const roomId = `room:${roomCode}`;
 
     this.logger.log(`Client ${client.id} joining room ${roomCode}`);
 
-    const peerData = this.peerInfo.get(client.id) || { id: client.id };
+    // Validate room exists in database
+    try {
+      await this.roomService.findBySlug(roomCode);
+    } catch {
+      this.logger.warn(`Room ${roomCode} not found for client ${client.id}`);
+      client.emit('error', {
+        code: 'ROOM_NOT_FOUND',
+        message: 'Room not found',
+      });
+      return;
+    }
+
+    const peerData = this.peerInfo.get(client.id);
+    if (!peerData) {
+      this.logger.warn(`No peer info for client ${client.id}`);
+      client.emit('error', {
+        code: 'UNAUTHORIZED',
+        message: 'Peer not authenticated',
+      });
+      return;
+    }
 
     if (!this.rooms.has(roomId)) {
       this.rooms.set(roomId, new Set());
@@ -94,21 +216,22 @@ export class WebrtcGateway
 
     room.add(client.id);
     this.peerRooms.set(client.id, roomId);
-    client.join(roomId);
+    void client.join(roomId);
 
+    // Broadcast peer joined to others in room
     const peerJoinedPayload: PeerJoinedPayload = {
       peerId: client.id,
-      userInfo: { username: peerData.username },
+      userInfo: { username: peerData.userInfo.username },
     };
     client.to(roomId).emit('peer:joined', peerJoinedPayload);
 
+    // Emit room:joined to the joining client (instead of returning)
     const response: RoomJoinedPayload = {
       roomId,
       peerId: client.id,
       peers: existingPeers,
     };
-
-    return response;
+    client.emit('room:joined', response);
   }
 
   @SubscribeMessage('leave:room')
@@ -130,7 +253,7 @@ export class WebrtcGateway
     }
 
     this.peerRooms.delete(client.id);
-    client.leave(roomId);
+    void client.leave(roomId);
 
     const peerLeftPayload: PeerLeftPayload = { peerId: client.id };
     client.to(roomId).emit('peer:left', peerLeftPayload);
@@ -147,9 +270,9 @@ export class WebrtcGateway
     const targetSocket = this.server.sockets.sockets.get(targetPeerId);
     if (!targetSocket) {
       this.logger.warn(`Target peer ${targetPeerId} not found for offer`);
-      client.emit('webrtc:error', {
-        error: 'Target peer not found',
-        targetPeerId,
+      client.emit('error', {
+        code: 'PEER_NOT_FOUND',
+        message: 'Target peer not found',
       });
       return;
     }
@@ -172,9 +295,9 @@ export class WebrtcGateway
     const targetSocket = this.server.sockets.sockets.get(targetPeerId);
     if (!targetSocket) {
       this.logger.warn(`Target peer ${targetPeerId} not found for answer`);
-      client.emit('webrtc:error', {
-        error: 'Target peer not found',
-        targetPeerId,
+      client.emit('error', {
+        code: 'PEER_NOT_FOUND',
+        message: 'Target peer not found',
       });
       return;
     }
@@ -197,9 +320,9 @@ export class WebrtcGateway
     const targetSocket = this.server.sockets.sockets.get(targetPeerId);
     if (!targetSocket) {
       this.logger.warn(`Target peer ${targetPeerId} not found for ICE`);
-      client.emit('webrtc:error', {
-        error: 'Target peer not found',
-        targetPeerId,
+      client.emit('error', {
+        code: 'PEER_NOT_FOUND',
+        message: 'Target peer not found',
       });
       return;
     }

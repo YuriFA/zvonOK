@@ -1,7 +1,9 @@
 export interface PeerInfo {
   id: string;
-  userId?: string;
-  username?: string;
+  userInfo: {
+    userId?: string;
+    username: string;
+  };
 }
 
 export interface RoomJoinedPayload {
@@ -12,7 +14,7 @@ export interface RoomJoinedPayload {
 
 export interface PeerJoinedPayload {
   peerId: string;
-  userInfo: { username?: string };
+  userInfo: { username: string };
 }
 
 export interface PeerLeftPayload {
@@ -54,8 +56,14 @@ export interface RtcIceEvent {
   candidate: RTCIceCandidateInit;
 }
 
+export interface ErrorPayload {
+  code: string;
+  message: string;
+}
+
 export interface RtcErrorPayload {
-  error: string;
+  code: 'PEER_NOT_FOUND';
+  message: string;
   targetPeerId?: string;
 }
 
