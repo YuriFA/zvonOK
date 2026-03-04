@@ -245,9 +245,11 @@ const roomKeys = {
 | `room:joined` | `{ roomId, peerId, peers[] }` | Room join success |
 | `peer:joined` | `{ peerId, userInfo }` | New peer arrived |
 | `peer:left` | `{ peerId }` | Peer departed |
-| `webrtc:offer` | `{ from, offer }` | Incoming offer |
-| `webrtc:answer` | `{ from, answer }` | Incoming answer |
-| `webrtc:ice` | `{ from, candidate }` | ICE candidate |
+| `webrtc:offer` | `{ fromPeerId, offer }` | Incoming offer |
+| `webrtc:answer` | `{ fromPeerId, answer }` | Incoming answer |
+| `webrtc:ice` | `{ fromPeerId, candidate }` | ICE candidate |
+| `media:state_changed` | `{ peerId, isVideoEnabled, isAudioEnabled }` | Peer media state |
+| `error` | `{ code, message }` | Error notification |
 
 ---
 

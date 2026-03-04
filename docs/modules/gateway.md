@@ -44,9 +44,14 @@ WebSocket server for real-time WebRTC signalling. Manages room membership and ex
 | `room:joined` | Server → Client | `{ roomId, peerId, peers[] }` | Room joined confirmation |
 | `peer:joined` | Server → Client | `{ peerId, userInfo }` | New peer joined |
 | `peer:left` | Server → Client | `{ peerId }` | Peer left room |
-| `webrtc:offer` | Bidirectional | `{ targetPeerId, offer }` | WebRTC offer |
-| `webrtc:answer` | Bidirectional | `{ targetPeerId, answer }` | WebRTC answer |
-| `webrtc:ice` | Bidirectional | `{ targetPeerId, candidate }` | ICE candidate |
+| `webrtc:offer` | Client → Server | `{ targetPeerId, offer }` | WebRTC offer (send) |
+| `webrtc:offer` | Server → Client | `{ fromPeerId, offer }` | WebRTC offer (receive) |
+| `webrtc:answer` | Client → Server | `{ targetPeerId, answer }` | WebRTC answer (send) |
+| `webrtc:answer` | Server → Client | `{ fromPeerId, answer }` | WebRTC answer (receive) |
+| `webrtc:ice` | Client → Server | `{ targetPeerId, candidate }` | ICE candidate (send) |
+| `webrtc:ice` | Server → Client | `{ fromPeerId, candidate }` | ICE candidate (receive) |
+| `media:state` | Client → Server | `{ isVideoEnabled, isAudioEnabled }` | Broadcast media state |
+| `media:state_changed` | Server → Client | `{ peerId, isVideoEnabled, isAudioEnabled }` | Peer media state changed |
 
 ### Payload Examples
 

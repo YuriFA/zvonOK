@@ -343,9 +343,14 @@ Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800
 | `room:joined` | Server → Client | `{ roomId, peerId, peers[] }` | Room joined confirmation |
 | `peer:joined` | Server → Client | `{ peerId, userInfo }` | New peer joined |
 | `peer:left` | Server → Client | `{ peerId }` | Peer left room |
-| `webrtc:offer` | Bidirectional | `{ targetPeerId, offer }` | WebRTC offer |
-| `webrtc:answer` | Bidirectional | `{ targetPeerId, answer }` | WebRTC answer |
-| `webrtc:ice` | Bidirectional | `{ targetPeerId, candidate }` | ICE candidate |
+| `webrtc:offer` | Client → Server | `{ targetPeerId, offer }` | WebRTC offer (send) |
+| `webrtc:offer` | Server → Client | `{ fromPeerId, offer }` | WebRTC offer (receive) |
+| `webrtc:answer` | Client → Server | `{ targetPeerId, answer }` | WebRTC answer (send) |
+| `webrtc:answer` | Server → Client | `{ fromPeerId, answer }` | WebRTC answer (receive) |
+| `webrtc:ice` | Client → Server | `{ targetPeerId, candidate }` | ICE candidate (send) |
+| `webrtc:ice` | Server → Client | `{ fromPeerId, candidate }` | ICE candidate (receive) |
+| `media:state` | Client → Server | `{ isVideoEnabled, isAudioEnabled }` | Broadcast media state |
+| `media:state_changed` | Server → Client | `{ peerId, isVideoEnabled, isAudioEnabled }` | Peer media state changed |
 
 **SFU Events**
 
@@ -744,19 +749,19 @@ sequenceDiagram
 
     Note over A: create RTCPeerConnection()
     A->>A: createOffer()
-    A->>S: webrtc:offer {target: "bob", offer}
+    A->>S: webrtc:offer {targetPeerId: "bob", offer}
 
-    S->>B: webrtc:offer {from: "alice", offer}
+    S->>B: webrtc:offer {fromPeerId: "alice", offer}
     Note over B: create RTCPeerConnection()
     B->>B: setRemoteDescription(offer)
     B->>B: createAnswer()
-    B->>S: webrtc:answer {target: "alice", answer}
+    B->>S: webrtc:answer {targetPeerId: "alice", answer}
 
-    S->>A: webrtc:answer {from: "bob", answer}
+    S->>A: webrtc:answer {fromPeerId: "bob", answer}
     A->>A: setRemoteDescription(answer)
 
-    A->>S: webrtc:ice {target: "bob", candidate}
-    S->>B: webrtc:ice {from: "alice", candidate}
+    A->>S: webrtc:ice {targetPeerId: "bob", candidate}
+    S->>B: webrtc:ice {fromPeerId: "alice", candidate}
 
     B->>S: webrtc:ice {target: "alice", candidate}
     S->>A: webrtc:ice {from: "bob", candidate}
