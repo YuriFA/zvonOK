@@ -1,7 +1,7 @@
 # TASK-030 — Device Permissions Handling
 
 ## Status
-planned
+completed
 
 ## Priority
 medium
@@ -61,8 +61,66 @@ const initializeMedia = async () => {
 
 ## Implementation Guide
 
+### Files Created/Modified
+
+1. **`apps/client/src/lib/media/manager.ts`**
+   - Added `startStreamWithFallback()` - starts media with graceful degradation
+   - Added `checkPermissions()` - checks available devices and permission states
+   - Added `isAudioOnly()` - checks if running in audio-only mode
+   - Added `getVideoUnavailableReason()` - gets reason for video unavailability
+   - Added `MediaPermissionStatus` and `StartStreamResult` types
+
+2. **`apps/client/src/features/media/hooks/use-media-permissions.ts`** (new)
+   - `useMediaPermissions()` hook for permission handling in React components
+   - `checkPermissions()` - check permission status
+   - `startMedia()` - start media with fallback
+   - `stopMedia()` - stop media stream
+   - `retry(maxRetries)` - retry with exponential backoff
+
+3. **`apps/client/src/routes/room.tsx`**
+   - Updated to use `startStreamWithFallback()` for graceful degradation
+   - Added audio-only mode warning banner with `VideoOff` icon
+   - Shows video unavailable reason when in audio-only mode
+
+### Usage Example
+
+```tsx
+import { useMediaPermissions } from '@/features/media/hooks';
+
+function MediaSetup() {
+  const {
+    permissionStatus,
+    startMedia,
+    isAudioOnly,
+    videoUnavailableReason,
+    error,
+    retry,
+  } = useMediaPermissions();
+
+  const handleStart = async () => {
+    try {
+      const result = await startMedia();
+      if (result.isAudioOnly) {
+        console.log('Running in audio-only mode:', result.videoError);
+      }
+    } catch (err) {
+      // Handle error
+    }
+  };
+
+  const handleRetry = async () => {
+    const result = await retry(3); // Retry up to 3 times
+    if (!result) {
+      // All retries failed
+    }
+  };
+}
+```
+
 ## Related Files
-- `apps/client/src/hooks/use-local-media.ts`
+- `apps/client/src/lib/media/manager.ts`
+- `apps/client/src/features/media/hooks/use-media-permissions.ts`
+- `apps/client/src/routes/room.tsx`
 
 ## Next Task
-TASK-031 — Chat Model
+TASK-031 — Device Selector UI

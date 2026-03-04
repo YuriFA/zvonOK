@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { useRoom, useEndRoom } from '@/features/room/hooks';
 import { useAuth } from '@/features/auth/contexts/auth.context';
-import { ArrowLeft, Users, Calendar, Wifi, WifiOff } from 'lucide-react';
+import { ArrowLeft, Users, Calendar, Wifi, WifiOff, VideoOff } from 'lucide-react';
 import { Link } from 'react-router';
 import { wsManager, type ConnectionStatus, type PeerInfo, type WebRTCOfferEvent, type WebRTCAnswerEvent, type WebRTCIceEvent, type MediaStateChangedPayload } from '@/lib/websocket';
 import { mediaManager } from '@/lib/media';
@@ -32,6 +32,8 @@ export const RoomPage = () => {
   // Media state
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [mediaError, setMediaError] = useState<string | null>(null);
+  const [isAudioOnly, setIsAudioOnly] = useState(false);
+  const [videoUnavailableReason, setVideoUnavailableReason] = useState<string | null>(null);
   const mediaControls = useMediaControls();
 
   // WebRTC state
@@ -181,9 +183,15 @@ export const RoomPage = () => {
   useEffect(() => {
     const startMedia = async () => {
       try {
-        const stream = await mediaManager.startStream();
-        setLocalStream(stream);
-        webrtcManager.setLocalStream(stream);
+        const result = await mediaManager.startStreamWithFallback();
+        setLocalStream(result.stream);
+        setIsAudioOnly(result.isAudioOnly);
+        setVideoUnavailableReason(result.videoError ?? null);
+        webrtcManager.setLocalStream(result.stream);
+
+        if (result.isAudioOnly) {
+          console.log('[Room] Running in audio-only mode:', result.videoError);
+        }
       } catch (err) {
         const message =
           err instanceof Error ? err.message : 'Failed to access camera/microphone';
@@ -197,6 +205,8 @@ export const RoomPage = () => {
     return () => {
       mediaManager.stopStream();
       setLocalStream(null);
+      setIsAudioOnly(false);
+      setVideoUnavailableReason(null);
       webrtcManager.closeAll();
     };
   }, []);
@@ -314,6 +324,18 @@ export const RoomPage = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
             Camera/microphone unavailable: {mediaError}
+          </div>
+        </div>
+      )}
+
+      {/* Audio-only mode warning */}
+      {isAudioOnly && !mediaError && (
+        <div className="container mx-auto px-4 py-4">
+          <div className="rounded-md bg-yellow-500/15 p-3 text-sm text-yellow-600 dark:text-yellow-400 flex items-center gap-2">
+            <VideoOff className="size-4" />
+            <span>
+              {videoUnavailableReason || 'Camera unavailable'}. Running in audio-only mode.
+            </span>
           </div>
         </div>
       )}

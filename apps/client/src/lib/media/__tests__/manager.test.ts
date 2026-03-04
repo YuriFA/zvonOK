@@ -3,6 +3,8 @@ import { MediaStreamManager } from '../manager';
 
 // Mock navigator.mediaDevices
 const mockGetUserMedia = vi.fn();
+const mockEnumerateDevices = vi.fn();
+const mockPermissionsQuery = vi.fn();
 const mockTrackStop = vi.fn();
 
 const createMockTrack = (id: string, kind: 'video' | 'audio', deviceId?: string) => ({
@@ -28,6 +30,10 @@ const mockStream = {
 vi.stubGlobal('navigator', {
   mediaDevices: {
     getUserMedia: mockGetUserMedia,
+    enumerateDevices: mockEnumerateDevices,
+  },
+  permissions: {
+    query: mockPermissionsQuery,
   },
 });
 
@@ -141,7 +147,7 @@ describe('MediaStreamManager', () => {
     it('should wrap non-Error failures', async () => {
       mockGetUserMedia.mockRejectedValue('Unknown error');
 
-      await expect(manager.startStream()).rejects.toThrow('Failed to get media stream');
+      await expect(manager.startStream()).rejects.toThrow('Unknown error');
     });
 
     it('should notify status callbacks on success', async () => {
@@ -563,6 +569,173 @@ describe('MediaStreamManager', () => {
         await manager.startStream();
 
         expect(manager.getAudioDeviceId()).toBe('audio-device-1');
+      });
+    });
+  });
+
+  describe('graceful degradation', () => {
+    describe('startStreamWithFallback', () => {
+      it('should return stream with isAudioOnly false on success', async () => {
+        const result = await manager.startStreamWithFallback();
+
+        expect(result.stream).toBe(mockStream);
+        expect(result.isAudioOnly).toBe(false);
+        expect(result.videoError).toBeUndefined();
+      });
+
+      it('should fallback to audio-only when video permission denied', async () => {
+        const notAllowedError = new Error('Permission denied');
+        notAllowedError.name = 'NotAllowedError';
+
+        const audioOnlyStream = {
+          id: 'audio-only-stream',
+          getVideoTracks: () => [],
+          getAudioTracks: () => [mockAudioTrack],
+          getTracks: () => [mockAudioTrack],
+        } as unknown as MediaStream;
+
+        mockGetUserMedia
+          .mockRejectedValueOnce(notAllowedError)
+          .mockResolvedValueOnce(audioOnlyStream);
+
+        const result = await manager.startStreamWithFallback();
+
+        expect(result.stream).toBe(audioOnlyStream);
+        expect(result.isAudioOnly).toBe(true);
+        expect(result.videoError).toBe('Camera permission denied or unavailable');
+      });
+
+      it('should throw error when both video and audio fail', async () => {
+        const notAllowedError = new Error('Permission denied');
+        notAllowedError.name = 'NotAllowedError';
+
+        mockGetUserMedia
+          .mockRejectedValueOnce(notAllowedError)
+          .mockRejectedValueOnce(new Error('Audio permission denied'));
+
+        await expect(manager.startStreamWithFallback()).rejects.toThrow(
+          'Camera and microphone permissions denied'
+        );
+      });
+
+      it('should return existing stream if already started', async () => {
+        const result1 = await manager.startStreamWithFallback();
+        const result2 = await manager.startStreamWithFallback();
+
+        expect(result1.stream).toBe(result2.stream);
+        expect(mockGetUserMedia).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    describe('isAudioOnly', () => {
+      it('should return false initially', () => {
+        expect(manager.isAudioOnly()).toBe(false);
+      });
+
+      it('should return true when in audio-only mode', async () => {
+        const notAllowedError = new Error('Permission denied');
+        notAllowedError.name = 'NotAllowedError';
+
+        const audioOnlyStream = {
+          id: 'audio-only-stream',
+          getVideoTracks: () => [],
+          getAudioTracks: () => [mockAudioTrack],
+          getTracks: () => [mockAudioTrack],
+        } as unknown as MediaStream;
+
+        mockGetUserMedia
+          .mockRejectedValueOnce(notAllowedError)
+          .mockResolvedValueOnce(audioOnlyStream);
+
+        await manager.startStreamWithFallback();
+
+        expect(manager.isAudioOnly()).toBe(true);
+      });
+
+      it('should return false after stopStream', async () => {
+        await manager.startStream();
+        manager.stopStream();
+
+        expect(manager.isAudioOnly()).toBe(false);
+      });
+    });
+
+    describe('getVideoUnavailableReason', () => {
+      it('should return null initially', () => {
+        expect(manager.getVideoUnavailableReason()).toBeNull();
+      });
+
+      it('should return reason when in audio-only mode', async () => {
+        const notAllowedError = new Error('Permission denied');
+        notAllowedError.name = 'NotAllowedError';
+
+        const audioOnlyStream = {
+          id: 'audio-only-stream',
+          getVideoTracks: () => [],
+          getAudioTracks: () => [mockAudioTrack],
+          getTracks: () => [mockAudioTrack],
+        } as unknown as MediaStream;
+
+        mockGetUserMedia
+          .mockRejectedValueOnce(notAllowedError)
+          .mockResolvedValueOnce(audioOnlyStream);
+
+        await manager.startStreamWithFallback();
+
+        expect(manager.getVideoUnavailableReason()).toBe(
+          'Camera permission denied or unavailable'
+        );
+      });
+
+      it('should return null after stopStream', async () => {
+        await manager.startStream();
+        manager.stopStream();
+
+        expect(manager.getVideoUnavailableReason()).toBeNull();
+      });
+    });
+  });
+
+  describe('permission checking', () => {
+    describe('checkPermissions', () => {
+      it('should return permission status with devices', async () => {
+        mockEnumerateDevices.mockResolvedValue([
+          { kind: 'videoinput', deviceId: 'video-1' },
+          { kind: 'audioinput', deviceId: 'audio-1' },
+        ]);
+        mockPermissionsQuery.mockResolvedValue({ state: 'granted' });
+
+        const status = await manager.checkPermissions();
+
+        expect(status.hasVideo).toBe(true);
+        expect(status.hasAudio).toBe(true);
+        expect(status.videoPermission).toBe('granted');
+        expect(status.audioPermission).toBe('granted');
+      });
+
+      it('should return unknown when permissions API not supported', async () => {
+        mockEnumerateDevices.mockResolvedValue([
+          { kind: 'videoinput', deviceId: 'video-1' },
+          { kind: 'audioinput', deviceId: 'audio-1' },
+        ]);
+        mockPermissionsQuery.mockRejectedValue(new Error('Not supported'));
+
+        const status = await manager.checkPermissions();
+
+        expect(status.hasVideo).toBe(true);
+        expect(status.hasAudio).toBe(true);
+        expect(status.videoPermission).toBe('unknown');
+        expect(status.audioPermission).toBe('unknown');
+      });
+
+      it('should handle no devices available', async () => {
+        mockEnumerateDevices.mockResolvedValue([]);
+        mockPermissionsQuery.mockResolvedValue({ state: 'prompt' });
+
+        const status = await manager.checkPermissions();
+
+        expect(status.hasVideo).toBe(false);
+        expect(status.hasAudio).toBe(false);
       });
     });
   });

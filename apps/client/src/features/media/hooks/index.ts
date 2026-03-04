@@ -11,3 +11,6 @@ export type {
 
 export { useDeviceSwitching, useDeviceLostHandler } from './use-device-switching';
 export type { UseDeviceSwitchingReturn } from './use-device-switching';
+
+export { useMediaPermissions } from './use-media-permissions';
+export type { UseMediaPermissionsReturn } from './use-media-permissions';

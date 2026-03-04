@@ -4,4 +4,6 @@ export {
   type MediaStatus,
   type MediaStatusCallback,
   type MediaStreamConstraints,
+  type MediaPermissionStatus,
+  type StartStreamResult,
 } from './manager';

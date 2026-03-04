@@ -7,6 +7,19 @@ export interface MediaStreamConstraints {
   audio?: boolean | MediaTrackConstraints;
 }
 
+export interface MediaPermissionStatus {
+  hasVideo: boolean;
+  hasAudio: boolean;
+  videoPermission: PermissionState | 'unknown';
+  audioPermission: PermissionState | 'unknown';
+}
+
+export interface StartStreamResult {
+  stream: MediaStream;
+  isAudioOnly: boolean;
+  videoError?: string;
+}
+
 const defaultConstraints: MediaStreamConstraints = {
   video: {
     width: { ideal: 1280 },
@@ -28,28 +41,118 @@ export class MediaStreamManager {
   private statusCallbacks: Set<MediaStatusCallback> = new Set();
   private error: Error | null = null;
   private deviceSwitchCallbacks: Set<DeviceSwitchCallback> = new Set();
+  private isAudioOnlyMode = false;
+  private videoUnavailableReason: string | null = null;
 
   async startStream(constraints?: MediaStreamConstraints): Promise<MediaStream> {
+    const result = await this.startStreamWithFallback(constraints);
+    return result.stream;
+  }
+
+  /**
+   * Start media stream with graceful degradation.
+   * Falls back to audio-only if video is unavailable.
+   */
+  async startStreamWithFallback(constraints?: MediaStreamConstraints): Promise<StartStreamResult> {
     if (this.localStream) {
-      return this.localStream;
+      return {
+        stream: this.localStream,
+        isAudioOnly: this.isAudioOnlyMode,
+        videoError: this.videoUnavailableReason ?? undefined,
+      };
     }
 
     this.setStatus('starting');
     this.error = null;
+    this.isAudioOnlyMode = false;
+    this.videoUnavailableReason = null;
 
     const mergedConstraints: MediaStreamConstraints = {
       video: constraints?.video ?? defaultConstraints.video,
       audio: constraints?.audio ?? defaultConstraints.audio,
     };
 
+    // Try video + audio first
     try {
       this.localStream = await navigator.mediaDevices.getUserMedia(mergedConstraints);
       this.setStatus('active');
-      return this.localStream;
-    } catch (err) {
-      this.error = err instanceof Error ? err : new Error('Failed to get media stream');
-      this.setStatus('error');
-      throw this.error;
+      return { stream: this.localStream, isAudioOnly: false };
+    } catch (videoAudioError) {
+      const err = videoAudioError instanceof Error ? videoAudioError : new Error('Unknown error');
+      console.warn('[Media] Failed to get video+audio stream:', err.message);
+
+      // Check if it's a permission denial
+      if (err.name === 'NotAllowedError') {
+        // Try audio only - user might have denied camera but allowed mic
+        try {
+          this.localStream = await navigator.mediaDevices.getUserMedia({
+            audio: mergedConstraints.audio,
+          });
+          this.isAudioOnlyMode = true;
+          this.videoUnavailableReason = 'Camera permission denied or unavailable';
+          this.setStatus('active');
+          console.log('[Media] Running in audio-only mode');
+          return {
+            stream: this.localStream,
+            isAudioOnly: true,
+            videoError: this.videoUnavailableReason,
+          };
+        } catch (audioError) {
+          // Both video and audio failed - likely all permissions denied
+          this.error = new Error('Camera and microphone permissions denied');
+          this.setStatus('error');
+          throw this.error;
+        }
+      }
+
+      // Check if it's a device not found error
+      if (err.name === 'NotFoundError' || err.name === 'OverconstrainedError') {
+        // Try with default constraints (no specific device)
+        try {
+          this.localStream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: true,
+          });
+          this.setStatus('active');
+          return { stream: this.localStream, isAudioOnly: false };
+        } catch {
+          // Try audio only
+          try {
+            this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            this.isAudioOnlyMode = true;
+            this.videoUnavailableReason = 'No camera found';
+            this.setStatus('active');
+            return {
+              stream: this.localStream,
+              isAudioOnly: true,
+              videoError: this.videoUnavailableReason,
+            };
+          } catch (audioError) {
+            this.error = new Error('No camera or microphone found');
+            this.setStatus('error');
+            throw this.error;
+          }
+        }
+      }
+
+      // Other errors (NotReadableError, etc.) - try audio only
+      try {
+        this.localStream = await navigator.mediaDevices.getUserMedia({
+          audio: mergedConstraints.audio,
+        });
+        this.isAudioOnlyMode = true;
+        this.videoUnavailableReason = err.message;
+        this.setStatus('active');
+        return {
+          stream: this.localStream,
+          isAudioOnly: true,
+          videoError: this.videoUnavailableReason,
+        };
+      } catch (audioError) {
+        this.error = err;
+        this.setStatus('error');
+        throw this.error;
+      }
     }
   }
 
@@ -58,6 +161,8 @@ export class MediaStreamManager {
       this.localStream.getTracks().forEach((track) => track.stop());
       this.localStream = null;
     }
+    this.isAudioOnlyMode = false;
+    this.videoUnavailableReason = null;
     this.setStatus('stopped');
   }
 
@@ -93,6 +198,63 @@ export class MediaStreamManager {
   isAudioEnabled(): boolean {
     const tracks = this.getAudioTracks();
     return tracks.length > 0 && tracks.every((track) => track.enabled);
+  }
+
+  /**
+   * Check if currently running in audio-only mode.
+   */
+  isAudioOnly(): boolean {
+    return this.isAudioOnlyMode;
+  }
+
+  /**
+   * Get the reason why video is unavailable (if in audio-only mode).
+   */
+  getVideoUnavailableReason(): string | null {
+    return this.videoUnavailableReason;
+  }
+
+  /**
+   * Check available media devices and their permission states.
+   */
+  async checkPermissions(): Promise<MediaPermissionStatus> {
+    let hasVideo = false;
+    let hasAudio = false;
+    let videoPermission: PermissionState | 'unknown' = 'unknown';
+    let audioPermission: PermissionState | 'unknown' = 'unknown';
+
+    // Try to use the Permissions API (not supported in all browsers)
+    if (navigator.permissions) {
+      try {
+        const videoStatus = await navigator.permissions.query({ name: 'camera' as PermissionName });
+        videoPermission = videoStatus.state;
+      } catch {
+        // Permissions API not supported for camera
+      }
+
+      try {
+        const audioStatus = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+        audioPermission = audioStatus.state;
+      } catch {
+        // Permissions API not supported for microphone
+      }
+    }
+
+    // Check for available devices
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      hasVideo = devices.some((d) => d.kind === 'videoinput');
+      hasAudio = devices.some((d) => d.kind === 'audioinput');
+    } catch {
+      // enumerateDevices failed
+    }
+
+    return {
+      hasVideo,
+      hasAudio,
+      videoPermission,
+      audioPermission,
+    };
   }
 
   private setStatus(status: MediaStatus): void {
