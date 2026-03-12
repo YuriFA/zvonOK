@@ -59,7 +59,7 @@ The WebRTC Chat application provides:
 | REQ-002 | User profile access via `/api/users/me` and public lookup via `/api/users/:id` without sensitive fields. | Completed |
 | REQ-003 | Room management via REST with slug-based invite codes. | Completed |
 | REQ-004 | WebSocket signalling for join/leave and offer/answer/ICE exchange. | Completed |
-| REQ-005 | SFU signalling for group calls (mediasoup). | Planned |
+| REQ-005 | SFU signalling for group calls (mediasoup). | In Progress |
 | REQ-006 | Client UI with lobby/auth/room routes consuming REST + WebSocket APIs. | Completed |
 | REQ-007 | Security baseline: bcrypt hashing, env-based JWT secrets, timing-safe refresh validation. | Completed |
 | REQ-008 | Performance targets and monitoring for media and UI. | Planned |
