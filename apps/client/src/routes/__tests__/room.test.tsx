@@ -9,6 +9,7 @@ const mockStartStreamWithFallback = vi.hoisted(() => vi.fn());
 const mockStopStream = vi.hoisted(() => vi.fn());
 const mockUseMediaControls = vi.hoisted(() => vi.fn());
 const mockUseMediasoup = vi.hoisted(() => vi.fn());
+const mockKickPeer = vi.hoisted(() => vi.fn());
 
 vi.mock('@/features/room/hooks/use-room', () => ({
   useRoom: mockUseRoom,
@@ -116,6 +117,8 @@ describe('RoomPage', () => {
         },
       ],
       syncProducerState,
+      kickPeer: mockKickPeer,
+      wasKicked: false,
     });
   });
 
@@ -136,6 +139,7 @@ describe('RoomPage', () => {
     expect(screen.getByText('Alpha Room')).toBeInTheDocument();
     expect(screen.getByText('Code: alpha')).toBeInTheDocument();
     expect(screen.getByText('Connected')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /participants/i })).toHaveTextContent('2');
 
     await waitFor(() => {
       expect(mockStartStreamWithFallback).toHaveBeenCalled();
@@ -163,5 +167,19 @@ describe('RoomPage', () => {
     expect(syncProducerState).toHaveBeenCalledWith('video', false);
     expect(syncProducerState).toHaveBeenCalledWith('audio', false);
     expect(mutate).toHaveBeenCalledWith('room-1');
+  });
+
+  it('allows the room owner to kick a remote participant from the participants list', async () => {
+    renderRoomPage();
+
+    await waitFor(() => {
+      expect(mockStartStreamWithFallback).toHaveBeenCalled();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Kick bob' }));
+    });
+
+    expect(mockKickPeer).toHaveBeenCalledWith('user-2');
   });
 });
