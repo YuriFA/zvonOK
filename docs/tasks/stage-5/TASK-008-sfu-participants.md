@@ -1,7 +1,7 @@
 # TASK-059 — SFU Participants List UI
 
 ## Status
-planned
+completed
 
 ## Priority
 high
@@ -48,14 +48,14 @@ interface Participant {
 ```
 
 ## Acceptance Criteria
-- [ ] Participants list component created
-- [ ] Shows all participants in room
-- [ ] Displays mute/unmute status
-- [ ] Displays video on/off status
-- [ ] Shows connection status
-- [ ] Updates in real-time
-- [ ] Kick button for room owner
-- [ ] Responsive design
+- [x] Participants list component created
+- [x] Shows all participants in room
+- [x] Displays mute/unmute status
+- [x] Displays video on/off status
+- [x] Shows connection status
+- [x] Updates in real-time
+- [x] Kick button for room owner
+- [x] Responsive design
 
 ## Definition of Done
 - Acceptance criteria satisfied
