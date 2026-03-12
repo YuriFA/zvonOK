@@ -14,6 +14,7 @@ import { useMediaControls } from '@/features/media/hooks/use-media-controls';
 import { MediaControls } from '@/features/media/components/media-controls';
 import { DeviceSettingsPanel } from '@/features/media/components/device-settings-panel';
 import { useMediasoup, type RemotePeerMedia } from '@/hooks/use-mediasoup';
+import { useQualityStats } from '@/hooks/use-quality-stats';
 
 export const RoomPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -29,6 +30,7 @@ export const RoomPage = () => {
   // Media state
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [mediaError, setMediaError] = useState<string | null>(null);
+  const [isMediaInitialized, setIsMediaInitialized] = useState(false);
   const [isAudioOnly, setIsAudioOnly] = useState(false);
   const [videoUnavailableReason, setVideoUnavailableReason] = useState<string | null>(null);
   const mediaControls = useMediaControls();
@@ -52,8 +54,10 @@ export const RoomPage = () => {
     roomId: room?.id,
     roomOwnerId: room?.ownerId,
     localStream,
-    enabled: !!room,
+    enabled: !!room && isMediaInitialized,
   });
+
+  const { peerStats } = useQualityStats({ enabled: sfuState.connectionState === 'connected' });
 
   const handleEndRoom = () => {
     if (!room || !user || room.ownerId !== user.id) return;
@@ -84,17 +88,22 @@ export const RoomPage = () => {
       isConnected: sfuState.connectionState === 'connected',
     };
 
-    const remoteParticipants: Participant[] = remotePeers.map((peer: RemotePeerMedia) => ({
-      id: peer.userId,
-      userId: peer.userId,
-      username: peer.username,
-      isMuted: !peer.isAudioEnabled,
-      isVideoOff: !peer.isVideoEnabled,
-      isConnected: true,
-    }));
+    const remoteParticipants: Participant[] = remotePeers.map((peer: RemotePeerMedia) => {
+      const qualityData = peerStats.get(peer.userId);
+      return {
+        id: peer.userId,
+        userId: peer.userId,
+        username: peer.username,
+        isMuted: !peer.isAudioEnabled,
+        isVideoOff: !peer.isVideoEnabled,
+        isConnected: true,
+        qualityScore: qualityData?.score,
+        qualityStats: qualityData?.stats,
+      };
+    });
 
     return [localParticipant, ...remoteParticipants];
-  }, [user?.id, user?.username, mediaControls.isAudioEnabled, mediaControls.isVideoEnabled, sfuState.connectionState, remotePeers]);
+  }, [user?.id, user?.username, mediaControls.isAudioEnabled, mediaControls.isVideoEnabled, sfuState.connectionState, remotePeers, peerStats]);
 
   const handleKickParticipant = (participantId: string) => {
     kickPeer(participantId);
@@ -113,9 +122,20 @@ export const RoomPage = () => {
 
   // Media stream - start on mount, stop on unmount
   useEffect(() => {
+    let isCancelled = false;
+
     const startMedia = async () => {
+      setIsMediaInitialized(false);
+      setMediaError(null);
+
       try {
         const result = await mediaManager.startStreamWithFallback();
+
+        if (isCancelled) {
+          mediaManager.stopStream();
+          return;
+        }
+
         setLocalStream(result.stream);
         setIsAudioOnly(result.isAudioOnly);
         setVideoUnavailableReason(result.videoError ?? null);
@@ -124,18 +144,29 @@ export const RoomPage = () => {
           console.log('[Room] Running in audio-only mode:', result.videoError);
         }
       } catch (err) {
+        if (isCancelled) {
+          return;
+        }
+
         const message =
           err instanceof Error ? err.message : 'Failed to access camera/microphone';
         setMediaError(message);
         console.error('Failed to start media stream:', err);
+      } finally {
+        if (!isCancelled) {
+          setIsMediaInitialized(true);
+        }
       }
     };
 
-    startMedia();
+    void startMedia();
 
     return () => {
+      isCancelled = true;
       mediaManager.stopStream();
       setLocalStream(null);
+      setMediaError(null);
+      setIsMediaInitialized(false);
       setIsAudioOnly(false);
       setVideoUnavailableReason(null);
     };

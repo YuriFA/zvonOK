@@ -1,6 +1,8 @@
 import { Mic, MicOff, Video, VideoOff, UserX, Circle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { QualityIndicator } from './QualityIndicator';
+import type { QualityScore, QualityStats } from '@/lib/sfu/types';
 
 export interface ParticipantItemProps {
   id: string;
@@ -12,6 +14,8 @@ export interface ParticipantItemProps {
   isLocalUser?: boolean;
   canKick?: boolean;
   onKick?: (id: string) => void;
+  qualityScore?: QualityScore;
+  qualityStats?: QualityStats;
 }
 
 export function ParticipantItem({
@@ -24,6 +28,8 @@ export function ParticipantItem({
   isLocalUser,
   canKick,
   onKick,
+  qualityScore,
+  qualityStats,
 }: ParticipantItemProps) {
   const initial = username.charAt(0).toUpperCase() || '?';
 
@@ -87,6 +93,15 @@ export function ParticipantItem({
           <Video className="size-4 text-green-500" aria-label="Camera on" />
         )}
       </div>
+
+      {/* Quality indicator - only show for remote users with quality data */}
+      {!isLocalUser && qualityScore && (
+        <QualityIndicator
+          score={qualityScore}
+          stats={qualityStats}
+          compact
+        />
+      )}
 
       {canKick && onKick && !isLocalUser && (
         <Button

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Users, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ParticipantItem } from './ParticipantItem';
+import type { QualityScore, QualityStats } from '@/lib/sfu/types';
 
 export interface Participant {
   id: string;
@@ -11,6 +12,8 @@ export interface Participant {
   isVideoOff: boolean;
   isConnected: boolean;
   isSpeaking?: boolean;
+  qualityScore?: QualityScore;
+  qualityStats?: QualityStats;
 }
 
 export interface ParticipantsListProps {

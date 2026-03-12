@@ -199,7 +199,7 @@ export function useMediasoup({ roomId, roomOwnerId, localStream, enabled = true 
   }, [enabled, identity.userId, identity.username, roomId, roomOwnerId, state.connectionState]);
 
   useEffect(() => {
-    if (!localStream || !state.sendTransportConnected) {
+    if (!localStream || !state.isSendTransportCreated) {
       return;
     }
 
@@ -216,7 +216,7 @@ export function useMediasoup({ roomId, roomOwnerId, localStream, enabled = true 
         });
       }
     }
-  }, [localStream, state.sendTransportConnected]);
+  }, [localStream, state.isSendTransportCreated]);
 
   const syncProducerState = useCallback((kind: 'audio' | 'video', enabled: boolean) => {
     const producer = sfuManager.getProducerByKind(kind);

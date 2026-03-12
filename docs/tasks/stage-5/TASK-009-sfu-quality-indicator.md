@@ -1,7 +1,7 @@
 # TASK-060 — SFU Connection Quality Indicator
 
 ## Status
-planned
+completed
 
 ## Priority
 medium
@@ -48,18 +48,19 @@ function calculateQuality(stats: QualityStats): QualityScore {
 ```
 
 ## Acceptance Criteria
-- [ ] Quality stats collected from mediasoup
-- [ ] Quality indicator component created
-- [ ] Visual quality badges displayed
-- [ ] Detailed stats on hover
-- [ ] Updates in real-time
-- [ ] Works for each participant
+- [x] Quality stats collected from mediasoup
+- [x] Quality indicator component created
+- [x] Visual quality badges displayed
+- [x] Detailed stats on hover
+- [x] Updates in real-time
+- [x] Works for each participant
 
 ## Definition of Done
-- Acceptance criteria satisfied
-- No TODOs in component code
-- TypeScript types are strict
-- Performance optimized (throttle updates)
+- [x] Acceptance criteria satisfied
+- [x] No TODOs in component code
+- [x] TypeScript types are strict
+- [x] Performance optimized (throttle updates)
+- [x] Tests pass
 
 ## Related Files
 - `apps/client/src/components/room/QualityIndicator.tsx`

@@ -19,6 +19,8 @@ export function RemoteVideo({
   className,
 }: RemoteVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const onMediaElementRef = useRef(onMediaElement);
+  onMediaElementRef.current = onMediaElement;
 
   useEffect(() => {
     if (videoRef.current && stream) {
@@ -27,11 +29,12 @@ export function RemoteVideo({
   }, [stream]);
 
   useEffect(() => {
-    onMediaElement?.(videoRef.current);
+    onMediaElementRef.current?.(videoRef.current);
     return () => {
-      onMediaElement?.(null);
+      onMediaElementRef.current?.(null);
     };
-  }, [onMediaElement]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className={cn('relative overflow-hidden rounded-lg bg-black', className)}>

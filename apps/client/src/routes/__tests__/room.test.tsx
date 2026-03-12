@@ -131,6 +131,44 @@ describe('RoomPage', () => {
       </MemoryRouter>
     );
 
+  it('waits for media initialization before enabling the SFU connection', async () => {
+    let resolveStartStream: ((value: {
+      stream: { id: string };
+      isAudioOnly: boolean;
+      videoError: null;
+    }) => void) | null = null;
+
+    mockStartStreamWithFallback.mockImplementation(
+      () => new Promise((resolve) => {
+        resolveStartStream = resolve;
+      })
+    );
+
+    renderRoomPage();
+
+    expect(mockUseMediasoup).toHaveBeenCalledWith(
+      expect.objectContaining({
+        enabled: false,
+      })
+    );
+
+    await act(async () => {
+      resolveStartStream?.({
+        stream: { id: 'local-stream' },
+        isAudioOnly: false,
+        videoError: null,
+      });
+    });
+
+    await waitFor(() => {
+      expect(mockUseMediasoup).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          enabled: true,
+        })
+      );
+    });
+  });
+
   it('renders room details, starts media, and shows remote SFU peers', async () => {
     await act(async () => {
       renderRoomPage();

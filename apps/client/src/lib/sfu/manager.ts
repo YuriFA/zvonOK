@@ -24,9 +24,69 @@ import type {
   SfuTrackCallback,
   SfuPeerCallback,
   SfuPeerInfo,
+  QualityStats,
+  QualityScore,
+  PeerQualityStats,
+  QualityStatsCallback,
 } from './types';
 
 const SOCKET_URL = (import.meta.env as { VITE_SOCKET_URL?: string }).VITE_SOCKET_URL ?? 'http://localhost:3000';
+
+// Quality score calculation based on stats
+function calculateQualityScore(stats: QualityStats): QualityScore {
+  let score = 100;
+
+  // Packet loss penalty (most important)
+  if (stats.packetLoss > 10) {
+    score -= 40;
+  } else if (stats.packetLoss > 5) {
+    score -= 25;
+  } else if (stats.packetLoss > 2) {
+    score -= 10;
+  } else if (stats.packetLoss > 0.5) {
+    score -= 5;
+  }
+
+  // RTT penalty
+  if (stats.rtt > 500) {
+    score -= 25;
+  } else if (stats.rtt > 300) {
+    score -= 15;
+  } else if (stats.rtt > 150) {
+    score -= 5;
+  }
+
+  // Resolution bonus/penalty (for video)
+  if (stats.width > 0 && stats.height > 0) {
+    if (stats.width >= 1280 && stats.height >= 720) {
+      score += 5; // HD bonus
+    } else if (stats.width < 320 || stats.height < 240) {
+      score -= 10; // Low resolution penalty
+    }
+  }
+
+  // FPS penalty (for video)
+  if (stats.fps > 0 && stats.fps < 15) {
+    score -= 10;
+  }
+
+  // Clamp score
+  score = Math.max(0, Math.min(100, score));
+
+  // Determine level
+  let level: QualityScore['level'];
+  if (score >= 80) {
+    level = 'excellent';
+  } else if (score >= 60) {
+    level = 'good';
+  } else if (score >= 40) {
+    level = 'fair';
+  } else {
+    level = 'poor';
+  }
+
+  return { level, score };
+}
 
 export class SfuManager {
   private socket: Socket | null = null;
@@ -40,6 +100,7 @@ export class SfuManager {
   private state: SfuState = {
     connectionState: 'disconnected',
     isDeviceLoaded: false,
+    isSendTransportCreated: false,
     sendTransportConnected: false,
     recvTransportConnected: false,
     audioProducerId: null,
@@ -51,6 +112,9 @@ export class SfuManager {
   private peerJoinedCallbacks: Set<SfuPeerCallback> = new Set();
   private peerLeftCallbacks: Set<(userId: string) => void> = new Set();
   private kickedCallbacks: Set<(payload: SfuKickedPayload) => void> = new Set();
+  private qualityStatsCallbacks: Set<QualityStatsCallback> = new Set();
+  private pendingNewProducers: SfuNewProducerPayload[] = [];
+  private statsInterval: ReturnType<typeof setInterval> | null = null;
 
   // Connect to SFU namespace
   connect(): void {
@@ -74,6 +138,7 @@ export class SfuManager {
 
   // Disconnect from SFU namespace
   disconnect(): void {
+    this.stopStatsCollection();
     this.closeAll();
     if (this.socket) {
       this.socket.disconnect();
@@ -89,9 +154,11 @@ export class SfuManager {
     this.producers.clear();
     this.consumers.clear();
     this.peers.clear();
+    this.pendingNewProducers = [];
     this.state = {
       connectionState: 'disconnected',
       isDeviceLoaded: false,
+      isSendTransportCreated: false,
       sendTransportConnected: false,
       recvTransportConnected: false,
       audioProducerId: null,
@@ -257,6 +324,7 @@ export class SfuManager {
 
     if (payload.direction === 'send') {
       this.sendTransport = this.device.createSendTransport(transportOptions);
+      this.updateState({ isSendTransportCreated: true });
 
       this.sendTransport.on('connect', async ({ dtlsParameters }: { dtlsParameters: DtlsParameters }, callback: () => void, errback: (error: Error) => void) => {
         try {
@@ -302,6 +370,15 @@ export class SfuManager {
       });
     } else {
       this.recvTransport = this.device.createRecvTransport(transportOptions);
+
+      // Replay any producers that arrived before the recv transport was ready
+      if (this.pendingNewProducers.length > 0) {
+        const pending = this.pendingNewProducers.splice(0);
+        console.log('[SFU] Processing', pending.length, 'buffered new-producer(s)');
+        for (const pendingPayload of pending) {
+          void this.consumeProducer(pendingPayload);
+        }
+      }
 
       this.recvTransport.on('connect', async ({ dtlsParameters }: { dtlsParameters: DtlsParameters }, callback: () => void, errback: (error: Error) => void) => {
         try {
@@ -354,7 +431,8 @@ export class SfuManager {
   // Consume a remote producer
   private async consumeProducer(payload: SfuNewProducerPayload): Promise<void> {
     if (!this.socket || !this.device || !this.recvTransport) {
-      console.error('[SFU] Not ready to consume');
+      console.warn('[SFU] Recv transport not ready, buffering new-producer:', payload.producerId);
+      this.pendingNewProducers.push(payload);
       return;
     }
 
@@ -554,6 +632,136 @@ export class SfuManager {
   onKicked(callback: (payload: SfuKickedPayload) => void): () => void {
     this.kickedCallbacks.add(callback);
     return () => this.kickedCallbacks.delete(callback);
+  }
+
+  // Quality stats collection
+  onQualityStats(callback: QualityStatsCallback): () => void {
+    this.qualityStatsCallbacks.add(callback);
+    return () => this.qualityStatsCallbacks.delete(callback);
+  }
+
+  startStatsCollection(intervalMs: number = 2000): void {
+    if (this.statsInterval) {
+      return;
+    }
+
+    this.statsInterval = setInterval(() => {
+      this.collectStats();
+    }, intervalMs);
+  }
+
+  stopStatsCollection(): void {
+    if (this.statsInterval) {
+      clearInterval(this.statsInterval);
+      this.statsInterval = null;
+    }
+  }
+
+  private async collectStats(): Promise<void> {
+    if (!this.recvTransport || this.consumers.size === 0) {
+      return;
+    }
+
+    const statsMap = new Map<string, PeerQualityStats>();
+
+    for (const [consumerId, consumer] of this.consumers) {
+      try {
+        const stats = await this.getConsumerStats(consumer);
+        if (!stats) continue;
+
+        // Find the userId for this consumer
+        let userId = '';
+        for (const [uid, peer] of this.peers) {
+          if (peer.producers.has(consumer.producerId)) {
+            userId = uid;
+            break;
+          }
+        }
+
+        if (!userId) continue;
+
+        // Merge stats for the same user (video + audio)
+        const existing = statsMap.get(userId);
+        if (existing) {
+          // Prefer video stats for quality display, merge with existing
+          if (consumer.kind === 'video') {
+            existing.stats = {
+              ...existing.stats,
+              bitrate: stats.bitrate || existing.stats.bitrate,
+              width: stats.width || existing.stats.width,
+              height: stats.height || existing.stats.height,
+              fps: stats.fps || existing.stats.fps,
+              rtt: stats.rtt || existing.stats.rtt,
+              packetLoss: stats.packetLoss || existing.stats.packetLoss,
+            };
+            existing.score = calculateQualityScore(existing.stats);
+          }
+        } else {
+          const score = calculateQualityScore(stats);
+          statsMap.set(userId, { userId, stats, score });
+        }
+      } catch (error) {
+        console.error('[SFU] Failed to get stats for consumer:', consumerId, error);
+      }
+    }
+
+    if (statsMap.size > 0) {
+      this.qualityStatsCallbacks.forEach((callback) => {
+        callback(statsMap);
+      });
+    }
+  }
+
+  private async getConsumerStats(consumer: Consumer): Promise<QualityStats | null> {
+    try {
+      const transportStats = await this.recvTransport!.getStats();
+      let rtt = 0;
+      let packetLoss = 0;
+
+      for (const stat of transportStats.values()) {
+        if (stat.type === 'candidate-pair' && stat.state === 'succeeded') {
+          rtt = stat.currentRoundTripTime ? stat.currentRoundTripTime * 1000 : 0;
+          if (stat.packetsReceived !== undefined && stat.packetsLost !== undefined) {
+            const total = stat.packetsReceived + stat.packetsLost;
+            packetLoss = total > 0 ? (stat.packetsLost / total) * 100 : 0;
+          }
+          break;
+        }
+      }
+
+      // Get video-specific stats if available
+      let bitrate = 0;
+      let width = 0;
+      let height = 0;
+      let fps = 0;
+
+      if (consumer.kind === 'video') {
+        const consumerStats = await consumer.getStats();
+        for (const stat of consumerStats.values()) {
+          if (stat.type === 'inbound-rtp' && stat.kind === 'video') {
+            bitrate = stat.bitrate ? stat.bitrate / 1000 : 0; // Convert to kbps
+            width = stat.frameWidth || 0;
+            height = stat.frameHeight || 0;
+            fps = stat.framesPerSecond || 0;
+            break;
+          }
+        }
+      } else {
+        // For audio, just get bitrate
+        const consumerStats = await consumer.getStats();
+        for (const stat of consumerStats.values()) {
+          if (stat.type === 'inbound-rtp' && stat.kind === 'audio') {
+            bitrate = stat.bitrate ? stat.bitrate / 1000 : 0;
+            break;
+          }
+        }
+      }
+
+      return { bitrate, packetLoss, rtt, width, height, fps };
+    } catch (error) {
+      console.error('[SFU] Error getting consumer stats:', error);
+      return null;
+    }
   }
 }
 

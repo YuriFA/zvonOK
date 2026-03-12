@@ -118,6 +118,7 @@ export type SfuConnectionState =
 export interface SfuState {
   connectionState: SfuConnectionState;
   isDeviceLoaded: boolean;
+  isSendTransportCreated: boolean;
   sendTransportConnected: boolean;
   recvTransportConnected: boolean;
   audioProducerId: string | null;
@@ -128,3 +129,28 @@ export interface SfuState {
 export type SfuTrackCallback = (track: MediaStreamTrack, kind: 'audio' | 'video', userId: string) => void;
 export type SfuPeerCallback = (peer: SfuPeerInfo) => void;
 export type SfuStateCallback = (state: SfuState) => void;
+
+// Quality stats types
+export interface QualityStats {
+  bitrate: number;        // kbps
+  packetLoss: number;     // percentage
+  rtt: number;            // ms
+  width: number;
+  height: number;
+  fps: number;
+}
+
+export type QualityLevel = 'excellent' | 'good' | 'fair' | 'poor';
+
+export interface QualityScore {
+  level: QualityLevel;
+  score: number;          // 0-100
+}
+
+export interface PeerQualityStats {
+  userId: string;
+  stats: QualityStats;
+  score: QualityScore;
+}
+
+export type QualityStatsCallback = (stats: Map<string, PeerQualityStats>) => void;
