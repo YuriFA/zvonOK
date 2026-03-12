@@ -44,4 +44,4 @@ const audioLevel = stats.audioLevel; // 0-127 (dBov)
 - `apps/client/src/hooks/use-active-speaker.ts`
 
 ## Next Task
-TASK-044 — HTTPS with Caddy
+TASK-063 — Pre-Join Lobby Before Call Connection

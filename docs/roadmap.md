@@ -149,6 +149,7 @@ Tasks:
 Tasks:
 - [task-1](./tasks/stage-6/TASK-001-video-grid-layout.md) — CSS Grid adaptive layout
 - [task-2](./tasks/stage-6/TASK-002-speaker-detection.md) — Active speaker detection
+- [task-3](./tasks/stage-6/TASK-003-pre-join-lobby.md) — Pre-join lobby before call connection
 
 **Result:** Video tiles auto-arrange based on participant count
 
