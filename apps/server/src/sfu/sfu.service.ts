@@ -1,4 +1,5 @@
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import type { OnModuleDestroy } from '@nestjs/common';
 import type { Socket } from 'socket.io';
 import { WorkerManager } from './worker-manager';
 import type {
@@ -18,7 +19,9 @@ export class SfuService implements OnModuleDestroy {
   private peers: Map<string, Peer> = new Map();
   private rooms: Map<string, Set<string>> = new Map();
 
-  constructor(private readonly workerManager: WorkerManager) {}
+  constructor(private readonly workerManager: WorkerManager) {
+    void WorkerManager;
+  }
 
   async onModuleDestroy(): Promise<void> {
     this.logger.log('Closing SFU Service...');
@@ -66,6 +69,23 @@ export class SfuService implements OnModuleDestroy {
       iceCandidates: transport.iceCandidates,
       dtlsParameters: transport.dtlsParameters,
     });
+  }
+
+  private emitNewProducer(target: Socket, producer: Producer, peer: Peer): void {
+    target.emit('sfu:new-producer', {
+      producerId: producer.id,
+      userId: peer.userId,
+      username: peer.username,
+      kind: producer.kind,
+    });
+  }
+
+  private notifyPeerLeft(roomId: string, userId: string, excludedSocketId: string): void {
+    for (const roomPeer of this.getRoomPeers(roomId)) {
+      if (roomPeer.id !== excludedSocketId) {
+        roomPeer.socket.emit('sfu:peer-left', { userId });
+      }
+    }
   }
 
   private getTransport(
@@ -130,6 +150,7 @@ export class SfuService implements OnModuleDestroy {
     peer.sendTransport?.close();
     peer.recvTransport?.close();
     this.peers.delete(socket.id);
+    this.notifyPeerLeft(roomId, peer.userId, socket.id);
     this.logger.log(`Peer ${socket.id} left SFU room ${roomId}`);
 
     if (this.rooms.get(roomId)?.size === 0) {
@@ -178,6 +199,20 @@ export class SfuService implements OnModuleDestroy {
     peer.recvTransport = transport;
 
     this.emitTransportCreated(socket, 'recv', transport);
+
+    if (!roomId) {
+      return;
+    }
+
+    for (const roomPeer of this.getRoomPeers(roomId)) {
+      if (roomPeer.id === socket.id) {
+        continue;
+      }
+
+      for (const producer of roomPeer.producers.values()) {
+        this.emitNewProducer(socket, producer as Producer, roomPeer);
+      }
+    }
   }
 
   async connectTransport(
@@ -320,6 +355,7 @@ export class SfuService implements OnModuleDestroy {
     peer.sendTransport?.close();
     peer.recvTransport?.close();
     this.peers.delete(socket.id);
+    this.notifyPeerLeft(roomId, peer.userId, socket.id);
 
     if (this.rooms.get(roomId)?.size === 0) {
       await this.workerManager.closeRouter(roomId);
@@ -334,11 +370,7 @@ export class SfuService implements OnModuleDestroy {
 
     for (const roomPeer of this.getRoomPeers(roomId)) {
       if (roomPeer.id !== socket.id && roomPeer.recvTransport) {
-        roomPeer.socket.emit('sfu:new-producer', {
-          producerId: producer.id,
-          userId: peer.userId,
-          kind: producer.kind,
-        });
+        this.emitNewProducer(roomPeer.socket, producer, peer);
       }
     }
   }

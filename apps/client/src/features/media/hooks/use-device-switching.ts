@@ -1,5 +1,6 @@
 import { useCallback, useRef, useEffect } from 'react';
 import { mediaManager } from '@/lib/media/manager';
+import { sfuManager } from '@/lib/sfu/manager';
 import { webrtcManager } from '@/lib/webrtc/manager';
 
 export interface UseDeviceSwitchingReturn {
@@ -37,13 +38,18 @@ export function useDeviceSwitching(): UseDeviceSwitchingReturn {
       }
 
       // Replace track in all WebRTC peer connections
-      const success = await webrtcManager.replaceTrack('video', newTrack);
+      const [webrtcSuccess, sfuSuccess] = await Promise.all([
+        webrtcManager.replaceTrack('video', newTrack),
+        sfuManager.replaceTrack('video', newTrack),
+      ]);
+
+      const success = webrtcSuccess && sfuSuccess;
 
       if (!success) {
         console.warn('[DeviceSwitching] Some peer connections failed to update video track');
       }
 
-      return true;
+      return success;
     } catch (error) {
       console.error('[DeviceSwitching] Failed to switch video device:', error);
       return false;
@@ -73,13 +79,18 @@ export function useDeviceSwitching(): UseDeviceSwitchingReturn {
       }
 
       // Replace track in all WebRTC peer connections
-      const success = await webrtcManager.replaceTrack('audio', newTrack);
+      const [webrtcSuccess, sfuSuccess] = await Promise.all([
+        webrtcManager.replaceTrack('audio', newTrack),
+        sfuManager.replaceTrack('audio', newTrack),
+      ]);
+
+      const success = webrtcSuccess && sfuSuccess;
 
       if (!success) {
         console.warn('[DeviceSwitching] Some peer connections failed to update audio track');
       }
 
-      return true;
+      return success;
     } catch (error) {
       console.error('[DeviceSwitching] Failed to switch audio device:', error);
       return false;

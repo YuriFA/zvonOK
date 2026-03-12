@@ -1,7 +1,7 @@
 # TASK-042 — SFU Client Integration
 
 ## Status
-planned
+completed
 
 ## Priority
 high

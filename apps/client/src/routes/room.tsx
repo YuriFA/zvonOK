@@ -6,16 +6,13 @@ import { useEndRoom } from '@/features/room/hooks/use-end-room';
 import { useAuth } from '@/features/auth/contexts/auth.context';
 import { ArrowLeft, Users, Calendar, Wifi, WifiOff, VideoOff } from 'lucide-react';
 import { Link } from 'react-router';
-import { wsManager } from '@/lib/websocket/manager';
-import type { ConnectionStatus, PeerInfo, WebRTCOfferEvent, WebRTCAnswerEvent, WebRTCIceEvent, MediaStateChangedPayload } from '@/lib/websocket/types';
 import { mediaManager } from '@/lib/media/manager';
-import { webrtcManager } from '@/lib/webrtc/manager';
-import type { PeerConnectionState } from '@/lib/webrtc/manager';
 import { LocalVideo } from '@/components/local-video';
 import { RemoteVideo } from '@/components/remote-video';
 import { useMediaControls } from '@/features/media/hooks/use-media-controls';
 import { MediaControls } from '@/features/media/components/media-controls';
 import { DeviceSettingsPanel } from '@/features/media/components/device-settings-panel';
+import { useMediasoup } from '@/hooks/use-mediasoup';
 
 export const RoomPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -28,21 +25,12 @@ export const RoomPage = () => {
     onSuccess: () => navigate('/'),
   });
 
-  // WebSocket state
-  const [wsStatus, setWsStatus] = useState<ConnectionStatus>('disconnected');
-  const [peers, setPeers] = useState<PeerInfo[]>([]);
-
   // Media state
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [mediaError, setMediaError] = useState<string | null>(null);
   const [isAudioOnly, setIsAudioOnly] = useState(false);
   const [videoUnavailableReason, setVideoUnavailableReason] = useState<string | null>(null);
   const mediaControls = useMediaControls();
-
-  // WebRTC state
-  const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
-  const [peerStates, setPeerStates] = useState<Map<string, PeerConnectionState>>(new Map());
-  const [peerMediaStates, setPeerMediaStates] = useState<Map<string, { isVideoEnabled: boolean; isAudioEnabled: boolean }>>(new Map());
   const [remoteMediaElements, setRemoteMediaElements] = useState<Map<string, HTMLVideoElement>>(new Map());
 
   const handleRemoteMediaElement = useCallback((peerId: string, element: HTMLVideoElement | null) => {
@@ -59,6 +47,12 @@ export const RoomPage = () => {
 
   const primaryRemoteMediaElement = remoteMediaElements.values().next().value ?? null;
 
+  const { state: sfuState, remotePeers, syncProducerState } = useMediasoup({
+    roomId: room?.id,
+    localStream,
+    enabled: !!room,
+  });
+
   const handleEndRoom = () => {
     if (!room || !user || room.ownerId !== user.id) return;
     endRoom.mutate(room.id);
@@ -66,135 +60,16 @@ export const RoomPage = () => {
 
   // Toggle handlers with media state sync
   const handleToggleVideo = () => {
+    const nextVideoEnabled = !mediaControls.isVideoEnabled;
     mediaControls.toggleVideo();
-    wsManager.emit('media:state', {
-      isVideoEnabled: !mediaControls.isVideoEnabled,
-      isAudioEnabled: mediaControls.isAudioEnabled,
-    });
+    syncProducerState('video', nextVideoEnabled);
   };
 
   const handleToggleAudio = () => {
+    const nextAudioEnabled = !mediaControls.isAudioEnabled;
     mediaControls.toggleAudio();
-    wsManager.emit('media:state', {
-      isVideoEnabled: mediaControls.isVideoEnabled,
-      isAudioEnabled: !mediaControls.isAudioEnabled,
-    });
+    syncProducerState('audio', nextAudioEnabled);
   };
-
-  // WebSocket connection
-  useEffect(() => {
-    if (!room) return;
-
-    // Connect to WebSocket
-    wsManager.connect();
-
-    // Subscribe to status changes
-    const unsubscribeStatus = wsManager.onStatusChange(setWsStatus);
-
-    // Handle room joined - create peer connections for existing peers
-    // NOTE: We do NOT create offers here - existing peers will send us offers
-    const handleRoomJoined = (data: { peerId: string; peers: PeerInfo[] }) => {
-      console.log('[WS] Room joined:', data);
-      setPeers(data.peers);
-      // Create peer connections for existing peers (they will send us offers)
-      data.peers.forEach((peer) => {
-        webrtcManager.createPeerConnection(peer.id);
-      });
-    };
-
-    // Handle peer joined - create peer connection and initiate offer
-    // We (existing peer) create the offer to the new peer
-    const handlePeerJoined = async (data: { peerId: string; userInfo: { username: string } }) => {
-      console.log('[WS] Peer joined:', data);
-      setPeers((prev) => [...prev, { id: data.peerId, userInfo: data.userInfo }]);
-      // Create peer connection for new peer
-      webrtcManager.createPeerConnection(data.peerId);
-      // As existing peer, we initiate the offer
-      await webrtcManager.createOffer(data.peerId);
-    };
-
-    // Handle peer left - close peer connection
-    const handlePeerLeft = (data: { peerId: string }) => {
-      console.log('[WS] Peer left:', data);
-      setPeers((prev) => prev.filter((p) => p.id !== data.peerId));
-      // Close peer connection
-      webrtcManager.closePeerConnection(data.peerId);
-      // Remove remote stream
-      setRemoteStreams((prev) => {
-        const next = new Map(prev);
-        next.delete(data.peerId);
-        return next;
-      });
-    };
-
-    // Handle incoming ICE candidates from server
-    const handleIceCandidate = async (data: WebRTCIceEvent) => {
-      console.log('[WS] ICE candidate received from:', data.fromPeerId);
-      await webrtcManager.addIceCandidate(data.fromPeerId, data.candidate);
-    };
-
-    // Handle incoming offer from peer
-    const handleOffer = async (data: WebRTCOfferEvent) => {
-      console.log('[WS] Offer received from:', data.fromPeerId);
-      await webrtcManager.handleOffer(data.fromPeerId, data.offer);
-    };
-
-    // Handle incoming answer from peer
-    const handleAnswer = async (data: WebRTCAnswerEvent) => {
-      console.log('[WS] Answer received from:', data.fromPeerId);
-      await webrtcManager.handleAnswer(data.fromPeerId, data.answer);
-    };
-
-    // Handle errors
-    const handleError = (data: { code: string; message: string }) => {
-      console.error('[WS] Error:', data);
-    };
-
-    // Handle media state changes from other peers
-    const handleMediaStateChanged = (data: MediaStateChangedPayload) => {
-      console.log('[WS] Media state changed from:', data.peerId, data);
-      setPeerMediaStates((prev) =>
-        new Map(prev).set(data.peerId, {
-          isVideoEnabled: data.isVideoEnabled,
-          isAudioEnabled: data.isAudioEnabled,
-        })
-      );
-    };
-
-    // Subscribe to events
-    wsManager.on('room:joined', handleRoomJoined);
-    wsManager.on('peer:joined', handlePeerJoined);
-    wsManager.on('peer:left', handlePeerLeft);
-    wsManager.on('webrtc:ice', handleIceCandidate);
-    wsManager.on('webrtc:offer', handleOffer);
-    wsManager.on('webrtc:answer', handleAnswer);
-    wsManager.on('media:state_changed', handleMediaStateChanged);
-    wsManager.on('error', handleError);
-
-    // Join room when connected
-    const joinWhenConnected = () => {
-      if (wsManager.isConnected()) {
-        wsManager.joinRoom(room.slug);
-      } else {
-        setTimeout(joinWhenConnected, 100);
-      }
-    };
-    joinWhenConnected();
-
-    // Cleanup on unmount
-    return () => {
-      unsubscribeStatus();
-      wsManager.off('room:joined', handleRoomJoined);
-      wsManager.off('peer:joined', handlePeerJoined);
-      wsManager.off('peer:left', handlePeerLeft);
-      wsManager.off('webrtc:ice', handleIceCandidate);
-      wsManager.off('webrtc:offer', handleOffer);
-      wsManager.off('webrtc:answer', handleAnswer);
-      wsManager.off('media:state_changed', handleMediaStateChanged);
-      wsManager.off('error', handleError);
-      wsManager.leaveRoom();
-    };
-  }, [room]);
 
   // Media stream - start on mount, stop on unmount
   useEffect(() => {
@@ -204,7 +79,6 @@ export const RoomPage = () => {
         setLocalStream(result.stream);
         setIsAudioOnly(result.isAudioOnly);
         setVideoUnavailableReason(result.videoError ?? null);
-        webrtcManager.setLocalStream(result.stream);
 
         if (result.isAudioOnly) {
           console.log('[Room] Running in audio-only mode:', result.videoError);
@@ -224,57 +98,6 @@ export const RoomPage = () => {
       setLocalStream(null);
       setIsAudioOnly(false);
       setVideoUnavailableReason(null);
-      webrtcManager.closeAll();
-    };
-  }, []);
-
-  // WebRTC manager event handlers
-  useEffect(() => {
-    // Handle remote streams
-    const unsubRemoteStream = webrtcManager.onRemoteStream(({ peerId, stream }) => {
-      console.log('[WebRTC] Remote stream received from:', peerId);
-      setRemoteStreams((prev) => new Map(prev).set(peerId, stream));
-    });
-
-    // Handle ICE candidates - send to server
-    const unsubIceCandidate = webrtcManager.onIceCandidate(({ peerId, candidate }) => {
-      console.log('[WebRTC] ICE candidate for:', peerId);
-      wsManager.emit('webrtc:ice', {
-        targetPeerId: peerId,
-        candidate,
-      });
-    });
-
-    // Handle peer connection state changes
-    const unsubPeerState = webrtcManager.onPeerStateChange((peerId, state) => {
-      console.log('[WebRTC] Peer', peerId, 'state:', state);
-      setPeerStates((prev) => new Map(prev).set(peerId, state));
-    });
-
-    // Handle offer creation - send to server for forwarding
-    const unsubOffer = webrtcManager.onOffer(({ peerId, offer }) => {
-      console.log('[WebRTC] Offer created for:', peerId);
-      wsManager.emit('webrtc:offer', {
-        targetPeerId: peerId,
-        offer,
-      });
-    });
-
-    // Handle answer creation - send to server for forwarding
-    const unsubAnswer = webrtcManager.onAnswer(({ peerId, answer }) => {
-      console.log('[WebRTC] Answer created for:', peerId);
-      wsManager.emit('webrtc:answer', {
-        targetPeerId: peerId,
-        answer,
-      });
-    });
-
-    return () => {
-      unsubRemoteStream();
-      unsubIceCandidate();
-      unsubPeerState();
-      unsubOffer();
-      unsubAnswer();
     };
   }, []);
 
@@ -392,24 +215,20 @@ export const RoomPage = () => {
           )}
 
           {/* Remote videos */}
-          {peers.map((peer) => {
-            const stream = remoteStreams.get(peer.id);
-            const state = peerStates.get(peer.id);
-            const peerMediaState = peerMediaStates.get(peer.id);
+          {remotePeers.map((peer) => {
             return (
-              <div key={peer.id} className="relative">
+              <div key={peer.userId} className="relative">
                 <RemoteVideo
-                  stream={stream ?? null}
-                  username={peer.userInfo.username}
-                  isVideoEnabled={peerMediaState?.isVideoEnabled ?? true}
-                  isAudioEnabled={peerMediaState?.isAudioEnabled ?? true}
-                  onMediaElement={(element) => handleRemoteMediaElement(peer.id, element)}
+                  stream={peer.stream}
+                  username={peer.username}
+                  isVideoEnabled={peer.isVideoEnabled}
+                  isAudioEnabled={peer.isAudioEnabled}
+                  onMediaElement={(element) => handleRemoteMediaElement(peer.userId, element)}
                   className="w-full aspect-video"
                 />
-                {/* Connection state indicator */}
-                {state && state !== 'connected' && (
+                {sfuState.connectionState !== 'connected' && (
                   <div className="absolute top-2 right-2 rounded bg-black/50 px-1.5 py-0.5 text-xs text-white">
-                    {state === 'connecting' ? 'Connecting...' : state}
+                    {sfuState.connectionState === 'connecting' ? 'Connecting...' : sfuState.connectionState}
                   </div>
                 )}
               </div>
@@ -431,37 +250,39 @@ export const RoomPage = () => {
 
         {/* Connection status */}
         <div className="flex items-center gap-1">
-          {wsStatus === 'connected' ? (
+          {sfuState.connectionState === 'connected' ? (
             <Wifi className="size-4 text-green-500" />
-          ) : wsStatus === 'reconnecting' ? (
+          ) : sfuState.connectionState === 'connecting' ? (
             <Wifi className="size-4 animate-pulse text-yellow-500" />
           ) : (
             <WifiOff className="size-4 text-red-500" />
           )}
           <span className="capitalize">
-            {wsStatus === 'connecting'
+            {sfuState.connectionState === 'connecting'
               ? 'Connecting...'
-              : wsStatus === 'connected'
+              : sfuState.connectionState === 'connected'
                 ? 'Connected'
-                : 'Disconnected'}
+                : sfuState.connectionState === 'failed'
+                  ? 'Connection failed'
+                  : 'Disconnected'}
           </span>
         </div>
 
         {/* Peers */}
         <div className="flex items-center gap-1">
           <span className="text-sm">
-            {peers.length === 0
+            {remotePeers.length === 0
               ? 'No peers'
-              : peers.length === 1
+              : remotePeers.length === 1
                 ? '1 peer'
-                : `${peers.length} peers`
+                : `${remotePeers.length} peers`
             }
           </span>
-          {peers.length > 0 && (
+          {remotePeers.length > 0 && (
             <ul className="text-sm">
-              {peers.map((peer) => (
-                <li key={peer.id} className="truncate">
-                  {peer.userInfo.username}
+              {remotePeers.map((peer) => (
+                <li key={peer.userId} className="truncate">
+                  {peer.username}
                 </li>
               ))}
             </ul>

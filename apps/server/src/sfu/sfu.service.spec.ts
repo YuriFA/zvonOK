@@ -18,6 +18,11 @@ describe('SfuService', () => {
     emit: jest.fn(),
   } as unknown as Socket;
 
+  const createSocket = (id: string) => ({
+    id,
+    emit: jest.fn(),
+  }) as unknown as Socket;
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -137,6 +142,104 @@ describe('SfuService', () => {
     expect(resume).toHaveBeenCalled();
     expect(socket.emit).toHaveBeenCalledWith('sfu:consumer-resumed', {
       consumerId: 'consumer-1',
+    });
+  });
+
+  it('announces existing producers when a recv transport is created', async () => {
+    const producer = { id: 'producer-1', kind: 'video' } as never;
+    const recvTransport = {
+      id: 'recv-1',
+      iceParameters: { usernameFragment: 'user', password: 'pass', iceLite: true },
+      iceCandidates: [],
+      dtlsParameters: { fingerprints: [], role: 'auto' },
+    } as unknown as WebRtcTransport;
+    const router = {
+      createWebRtcTransport: jest.fn().mockResolvedValue(recvTransport),
+    } as { createWebRtcTransport: jest.Mock };
+
+    const existingSocket = createSocket('socket-2');
+    const serviceState = service as unknown as {
+      peers: Map<string, {
+        id: string;
+        userId: string;
+        username: string;
+        socket: Socket;
+        recvTransport?: WebRtcTransport;
+        producers: Map<string, typeof producer>;
+        consumers: Map<string, unknown>;
+      }>;
+      rooms: Map<string, Set<string>>;
+    };
+
+    serviceState.peers.set(existingSocket.id, {
+      id: existingSocket.id,
+      userId: 'user-2',
+      username: 'bob',
+      socket: existingSocket,
+      recvTransport,
+      producers: new Map([['producer-1', producer]]),
+      consumers: new Map(),
+    });
+
+    workerManager.createRouter.mockResolvedValue({} as never);
+    workerManager.getRtpCapabilities.mockReturnValue({} as unknown as RtpCapabilities);
+    workerManager.getRouter.mockReturnValue(router as never);
+
+    await service.joinRoom(socket, {
+      roomId: 'room-1',
+      userId: 'user-1',
+      username: 'alice',
+    });
+
+    serviceState.rooms.set('room-1', new Set([socket.id, existingSocket.id]));
+    socket.emit.mockReset();
+
+    await service.createRecvTransport(socket);
+
+    expect(socket.emit).toHaveBeenCalledWith('sfu:new-producer', {
+      producerId: 'producer-1',
+      userId: 'user-2',
+      username: 'bob',
+      kind: 'video',
+    });
+  });
+
+  it('notifies other peers when a peer leaves the room', async () => {
+    const otherSocket = createSocket('socket-2');
+    const serviceState = service as unknown as {
+      peers: Map<string, {
+        id: string;
+        userId: string;
+        username: string;
+        socket: Socket;
+        producers: Map<string, unknown>;
+        consumers: Map<string, unknown>;
+      }>;
+      rooms: Map<string, Set<string>>;
+    };
+
+    serviceState.peers.set(socket.id, {
+      id: socket.id,
+      userId: 'user-1',
+      username: 'alice',
+      socket,
+      producers: new Map(),
+      consumers: new Map(),
+    });
+    serviceState.peers.set(otherSocket.id, {
+      id: otherSocket.id,
+      userId: 'user-2',
+      username: 'bob',
+      socket: otherSocket,
+      producers: new Map(),
+      consumers: new Map(),
+    });
+    serviceState.rooms.set('room-1', new Set([socket.id, otherSocket.id]));
+
+    await service.leaveRoom(socket);
+
+    expect(otherSocket.emit).toHaveBeenCalledWith('sfu:peer-left', {
+      userId: 'user-1',
     });
   });
 });
