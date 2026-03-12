@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { mediaManager } from '@/lib/media';
+import { mediaManager } from '@/lib/media/manager';
 
 export interface MediaControlsState {
   isVideoEnabled: boolean;

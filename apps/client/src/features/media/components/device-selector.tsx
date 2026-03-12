@@ -3,7 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Video, VideoOff, Mic, MicOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LocalVideo } from '@/components/local-video';
-import { useMediaControls, useMediaPermissions } from '../hooks';
+import { useMediaControls } from '../hooks/use-media-controls';
+import { useMediaPermissions } from '../hooks/use-media-permissions';
 import { DeviceSettingsPanel } from './device-settings-panel';
 
 interface DeviceSelectorProps {

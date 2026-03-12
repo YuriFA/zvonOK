@@ -1,9 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import {
-  mediaManager,
-  type MediaPermissionStatus,
-  type StartStreamResult,
-} from '@/lib/media';
+import { mediaManager } from '@/lib/media/manager';
+import type { MediaPermissionStatus, StartStreamResult } from '@/lib/media/manager';
 
 export interface UseMediaPermissionsReturn {
   /** Permission status for camera and microphone */

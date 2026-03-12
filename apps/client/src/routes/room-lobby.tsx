@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from 'react-router';
 import { Button } from '@/components/ui/button';
-import { useRoom } from '@/features/room/hooks';
-import { DeviceSelector } from '@/features/media/components';
+import { useRoom } from '@/features/room/hooks/use-room';
+import { DeviceSelector } from '@/features/media/components/device-selector';
 import { CopyLink } from '@/components/ui/copy-link';
 import { ArrowLeft, Users, Calendar } from 'lucide-react';
 import { Link } from 'react-router';

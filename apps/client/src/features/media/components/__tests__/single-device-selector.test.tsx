@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 
 import { SingleDeviceSelector } from '../single-device-selector';
-import type { MediaDevice } from '../../hooks';
+import type { MediaDevice } from '../../hooks/use-media-devices';
 
 function device(deviceId: string, label: string, kind: MediaDevice['kind']): MediaDevice {
   return { deviceId, label, kind, groupId: 'group-1' };

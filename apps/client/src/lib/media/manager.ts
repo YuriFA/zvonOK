@@ -97,7 +97,8 @@ export class MediaStreamManager {
             isAudioOnly: true,
             videoError: this.videoUnavailableReason,
           };
-        } catch (audioError) {
+        } catch (error) {
+          console.error('[Media] Failed to get audio stream after video permission denied:', error);
           // Both video and audio failed - likely all permissions denied
           this.error = new Error('Camera and microphone permissions denied');
           this.setStatus('error');
@@ -127,7 +128,8 @@ export class MediaStreamManager {
               isAudioOnly: true,
               videoError: this.videoUnavailableReason,
             };
-          } catch (audioError) {
+          } catch (error) {
+            console.error('[Media] Failed to get audio stream after no camera found:', error);
             this.error = new Error('No camera or microphone found');
             this.setStatus('error');
             throw this.error;
@@ -148,7 +150,8 @@ export class MediaStreamManager {
           isAudioOnly: true,
           videoError: this.videoUnavailableReason,
         };
-      } catch (audioError) {
+      } catch (error) {
+        console.error('[Media] Failed to get audio stream after video error:', error);
         this.error = err;
         this.setStatus('error');
         throw this.error;

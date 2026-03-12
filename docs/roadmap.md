@@ -106,15 +106,16 @@ Tasks:
 
 ## Stage 4 — Device Management
 
-**Status:** In Progress
+**Status:** Completed
 **Goal:** Switch between cameras, microphones, speakers
 
 Tasks:
-- [task-1](./tasks/stage-4/TASK-001-device-enumeration.md) — enumerateDevices API
-- [task-2](./tasks/stage-4/TASK-002-device-switching.md) — Switch camera/mic/speaker
-- [task-3](./tasks/stage-4/TASK-003-device-permissions.md) — Handle device permissions
-- [task-4](./tasks/stage-4/TASK-004-device-selector-ui.md) — Device selector dropdown/settings panel
-- [task-5](./tasks/stage-4/TASK-005-active-device-display.md) — Display currently active devices
+- [task-1](./tasks/stage-4/TASK-001-device-enumeration.md) — enumerateDevices API ✅
+- [task-2](./tasks/stage-4/TASK-002-device-switching.md) — Switch camera/mic/speaker ✅
+- [task-3](./tasks/stage-4/TASK-003-device-permissions.md) — Handle device permissions ✅
+- [task-4](./tasks/stage-4/TASK-004-device-selector-ui.md) — Device selector dropdown/settings panel ✅
+- [task-5](./tasks/stage-4/TASK-005-active-device-display.md) — Display currently active devices ✅
+- [task-6](./tasks/stage-4/TASK-006-no-barrel-files.md) — Remove barrel files (index.ts) ✅
 
 **Result:** User can select input/output devices
 
@@ -243,7 +244,7 @@ Tasks:
 | Stage 2 | Completed | 2-3 days |
 | Stage 2.5 | Completed | 1 day |
 | Stage 3 | Completed | 3-4 days |
-| Stage 4 | Planned | 1-2 days |
+| Stage 4 | In Progress | 1-2 days |
 | Stage 5 | Planned | 5-7 days |
 | Stage 6 | Planned | 2-3 days |
 | Stage 7 | Planned | 1-2 days |

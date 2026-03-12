@@ -1,7 +1,7 @@
 import { Video, Mic, Volume2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import type { MediaDevice, DeviceType } from '../hooks';
+import type { MediaDevice, DeviceType } from '../hooks/use-media-devices';
 
 export interface SingleDeviceSelectorProps {
   type: DeviceType;

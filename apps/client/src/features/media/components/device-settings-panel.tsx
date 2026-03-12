@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Settings, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  useMediaDevices,
-  useDeviceSwitching,
-} from '../hooks';
+import { useMediaDevices } from '../hooks/use-media-devices';
+import { useDeviceSwitching } from '../hooks/use-device-switching';
 import { SingleDeviceSelector } from './single-device-selector';
 import { ActiveDeviceDisplay } from './active-device-display';
 import { cn } from '@/lib/utils';

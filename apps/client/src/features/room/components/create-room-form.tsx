@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { createRoomSchema, type CreateRoomInput } from '../validation/create-room.schema';
-import { useCreateRoom } from '../hooks';
+import { useCreateRoom } from '../hooks/use-create-room';
 import { ApiError, ValidationError } from '@/lib/api/api.errors';
 
 interface CreateRoomFormProps {

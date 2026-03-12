@@ -1,6 +1,6 @@
 import { useCallback, useRef, useEffect } from 'react';
-import { mediaManager } from '@/lib/media';
-import { webrtcManager } from '@/lib/webrtc';
+import { mediaManager } from '@/lib/media/manager';
+import { webrtcManager } from '@/lib/webrtc/manager';
 
 export interface UseDeviceSwitchingReturn {
   switchVideoDevice: (deviceId: string) => Promise<boolean>;

@@ -50,20 +50,31 @@ apps/client/src/
 - Use HTTP-only cookies for JWT tokens
 - Return consistent error responses
 
-### 6. Security Requirements
+### 6. No Barrel Files
+
+- **Do not create barrel files (index.ts)** that re-exports
+- Import directly from source files: `import { X } from '@/lib/webrtc/manager'`
+- Barrel files cause tree-shaking issues for bundlers
+- They hide circular dependencies
+- They hurt IDE performance and TypeScript server speed
+- Exception: Some deeply nested library directories may use index files (e.g., `@radix-ui/react`)
+
+### 7. Security Requirements
 - Passwords must be hashed with bcrypt
 - JWT secrets must come from environment variables
 - Refresh tokens must be hashed in database
 - Use timing-safe comparison for token validation
 - Never expose sensitive data in API responses
 
-### 7. Testing Requirements
+### 8. Testing Requirements
 - Write tests for new services
 - Test authentication flows
 - Test error cases
 - Update tests when modifying existing code
 
-### 8. Git Conventions
+- Respect the "No Barrel Files" rule when writing imports in tests
+
+### 9. Git Conventions
 - Commit messages should reference task IDs: `TASK-XXX: description`
 - Make atomic commits (one logical change per commit)
 - Do not mix refactoring with new features

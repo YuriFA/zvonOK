@@ -1,7 +1,7 @@
 # TASK-005 — Active Device Display
 
 ## Status
-pending
+completed
 
 ## Priority
 low

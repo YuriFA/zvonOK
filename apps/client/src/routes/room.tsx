@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { Button } from '@/components/ui/button';
-import { useRoom, useEndRoom } from '@/features/room/hooks';
+import { useRoom } from '@/features/room/hooks/use-room';
+import { useEndRoom } from '@/features/room/hooks/use-end-room';
 import { useAuth } from '@/features/auth/contexts/auth.context';
 import { ArrowLeft, Users, Calendar, Wifi, WifiOff, VideoOff } from 'lucide-react';
 import { Link } from 'react-router';
-import { wsManager, type ConnectionStatus, type PeerInfo, type WebRTCOfferEvent, type WebRTCAnswerEvent, type WebRTCIceEvent, type MediaStateChangedPayload } from '@/lib/websocket';
-import { mediaManager } from '@/lib/media';
-import { webrtcManager, type PeerConnectionState } from '@/lib/webrtc';
+import { wsManager } from '@/lib/websocket/manager';
+import type { ConnectionStatus, PeerInfo, WebRTCOfferEvent, WebRTCAnswerEvent, WebRTCIceEvent, MediaStateChangedPayload } from '@/lib/websocket/types';
+import { mediaManager } from '@/lib/media/manager';
+import { webrtcManager } from '@/lib/webrtc/manager';
+import type { PeerConnectionState } from '@/lib/webrtc/manager';
 import { LocalVideo } from '@/components/local-video';
 import { RemoteVideo } from '@/components/remote-video';
-import { useMediaControls } from '@/features/media/hooks';
+import { useMediaControls } from '@/features/media/hooks/use-media-controls';
 import { MediaControls } from '@/features/media/components/media-controls';
 import { DeviceSettingsPanel } from '@/features/media/components/device-settings-panel';
 
