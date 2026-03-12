@@ -1,7 +1,7 @@
-# TASK-036 — mediasoup Router per Room
+# TASK-002 — mediasoup Router per Room
 
 ## Status
-planned
+completed
 
 ## Priority
 high
@@ -9,35 +9,58 @@ high
 ## Description
 Create mediasoup Router for each room to manage media routing in SFU architecture.
 
-## Scope
-- Create Router on room creation
-- Router media codecs configuration
-- Router lifecycle management
-- Store Router in room state
+## Implementation
 
-## Technical Design
+### Files
+- `apps/server/src/sfu/worker-manager.ts` - Router management (lines 58-97)
+- `apps/server/src/sfu/config/mediasoup.config.ts` - Media codecs configuration
+
+### Key Features
+- Router creation per room with `createRouter(roomId)`
+- Router retrieval via `getRouter(roomId)`
+- RTP capabilities via `getRtpCapabilities(roomId)`
+- Router cleanup via `closeRouter(roomId)`
+- Idempotent router creation (returns existing if not closed)
 
 ### Router Creation
 ```typescript
-const router = await worker.createRouter({
+// worker-manager.ts
+async createRouter(roomId: string): Promise<MediasoupRouter> {
+  const existingRouter = this.routers.get(roomId);
+  if (existingRouter && !existingRouter.closed) {
+    return existingRouter;
+  }
+
+  const router = await this.worker.createRouter({
+    mediaCodecs: config.router.mediaCodecs,
+  });
+  this.routers.set(roomId, router);
+  return router;
+}
+```
+
+### Media Codecs Configuration
+```typescript
+// config/mediasoup.config.ts
+router: {
   mediaCodecs: [
     { kind: 'audio', mimeType: 'audio/opus', clockRate: 48000, channels: 2 },
     { kind: 'video', mimeType: 'video/VP8', clockRate: 90000 },
+    { kind: 'video', mimeType: 'video/VP9', clockRate: 90000 },
+    { kind: 'video', mimeType: 'video/h264', clockRate: 90000 },
   ],
-});
+}
 ```
 
 ## Acceptance Criteria
-- Router created per room
-- Codecs configured
-- Router accessible via room ID
+- [x] Router created per room
+- [x] Codecs configured (Opus, VP8, VP9, H264)
+- [x] Router accessible via room ID
+- [x] Router lifecycle management (create, get, close)
 
 ## Definition of Done
-- Router creation working
-- Room-to-Router mapping functional
-
-## Related Files
-- `apps/server/src/sfu/router-manager.ts`
+- [x] Router creation working
+- [x] Room-to-Router mapping functional
 
 ## Next Task
-TASK-037 — mediasoup Transport
+TASK-003 — mediasoup Transport

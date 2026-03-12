@@ -1,7 +1,7 @@
 # TASK-040 — SFU Signalling Protocol
 
 ## Status
-planned
+completed
 
 ## Priority
 high

@@ -1,7 +1,7 @@
 # TASK-039 — mediasoup Consumer
 
 ## Status
-planned
+completed
 
 ## Priority
 high
