@@ -55,12 +55,19 @@ Worker (OS process)
 
 | Event | Direction | Payload | Description |
 |-------|-----------|---------|-------------|
-| `sfu:join` | Client → Server | `{ roomId, rtpCapabilities }` | Join SFU room |
-| `sfu:joined` | Server → Client | `{ sendTransport, recvTransport }` | SFU room joined |
+| `sfu:join` | Client → Server | `{ roomId, userId, username }` | Join SFU room |
+| `sfu:joined` | Server → Client | `{ routerRtpCapabilities }` | SFU room joined |
+| `sfu:create-send-transport` | Client → Server | `{}` | Create the peer send transport |
+| `sfu:create-recv-transport` | Client → Server | `{}` | Create the peer receive transport |
+| `sfu:transport-created` | Server → Client | `{ direction, transportId, iceParameters, iceCandidates, dtlsParameters }` | Transport parameters ready for the client |
+| `sfu:connect-transport` | Client → Server | `{ transportId, dtlsParameters }` | Complete DTLS handshake for a transport |
+| `sfu:transport-connected` | Server → Client | `{ transportId }` | Transport handshake completed |
 | `sfu:produce` | Client → Server | `{ transportId, kind, rtpParameters }` | Create producer |
 | `sfu:producer-created` | Server → Client | `{ producerId, userId, kind }` | New producer |
+| `sfu:new-producer` | Server → Client | `{ producerId, userId, kind }` | Notify peers that a consumable producer is available |
 | `sfu:consume` | Client → Server | `{ producerId, rtpCapabilities }` | Create consumer |
-| `sfu:consumer-created` | Server → Client | `{ consumerId, ...params }` | Consumer ready |
+| `sfu:consumer-created` | Server → Client | `{ consumerId, producerId, kind, rtpParameters }` | Consumer created in paused state |
+| `sfu:resume-consumer` | Client → Server | `{ consumerId }` | Resume a paused consumer after client setup |
 | `sfu:pause-producer` | Client → Server | `{ producerId }` | Pause producer |
 | `sfu:resume-producer` | Client → Server | `{ producerId }` | Resume producer |
 
@@ -154,4 +161,4 @@ Worker (OS process)
 - `apps/server/src/sfu/sfu.gateway.ts` — WebSocket handler
 - `apps/server/src/sfu/sfu.module.ts` — Module definition
 - `apps/server/src/sfu/interfaces/` — Type definitions
-- `apps/server/config/mediasoup.config.ts` — mediasoup configuration
+- `apps/server/src/sfu/config/mediasoup.config.ts` — mediasoup configuration

@@ -123,7 +123,7 @@ Tasks:
 
 ## Stage 5 — SFU (Group Calls)
 
-**Status:** Planned
+**Status:** In Progress
 **Goal:** Scalable group calls (3-10+ participants) via mediasoup
 
 Tasks:

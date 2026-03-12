@@ -72,7 +72,7 @@ The WebRTC Chat application provides:
 | REQ-002 | [modules/user.md](./modules/user.md), SDD 4.1 | stage-1/TASK-001, TASK-003 |
 | REQ-003 | SDD 3.1, SDD 4.1 | stage-1/TASK-004, TASK-005 |
 | REQ-004 | [modules/gateway.md](./modules/gateway.md), SDD 4.2 | stage-1.5/TASK-001, stage-2/TASK-001, TASK-002 |
-| REQ-005 | [modules/sfu.md](./modules/sfu.md), SDD 4.2 | stage-7/TASK-001 to TASK-007 |
+| REQ-005 | [modules/sfu.md](./modules/sfu.md), SDD 4.2 | stage-5/TASK-001 to TASK-009 |
 | REQ-006 | [modules/client.md](./modules/client.md), SDD 4.3 | stage-0.5/TASK-001 to TASK-009, stage-2/TASK-003, stage-3/TASK-001 to TASK-005 |
 | REQ-007 | SDD 6 | stage-1/TASK-002, TASK-003 |
 | REQ-008 | SDD 7 | stage-9/TASK-003, stage-10/TASK-001 |
@@ -356,12 +356,19 @@ Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800
 
 | Event | Direction | Payload | Description |
 |-------|-----------|---------|-------------|
-| `sfu:join` | Client → Server | `{ roomId, rtpCapabilities }` | Join SFU room |
-| `sfu:joined` | Server → Client | `{ sendTransport, recvTransport }` | SFU room joined |
+| `sfu:join` | Client → Server | `{ roomId, userId, username }` | Join SFU room |
+| `sfu:joined` | Server → Client | `{ routerRtpCapabilities }` | SFU room joined |
+| `sfu:create-send-transport` | Client → Server | `{}` | Create the peer send transport |
+| `sfu:create-recv-transport` | Client → Server | `{}` | Create the peer receive transport |
+| `sfu:transport-created` | Server → Client | `{ direction, transportId, iceParameters, iceCandidates, dtlsParameters }` | Transport parameters ready for the client |
+| `sfu:connect-transport` | Client → Server | `{ transportId, dtlsParameters }` | Complete DTLS handshake for a transport |
+| `sfu:transport-connected` | Server → Client | `{ transportId }` | Transport handshake completed |
 | `sfu:produce` | Client → Server | `{ transportId, kind, rtpParameters }` | Create producer |
 | `sfu:producer-created` | Server → Client | `{ producerId, userId, kind }` | New producer |
+| `sfu:new-producer` | Server → Client | `{ producerId, userId, kind }` | Notify peers that a consumable producer is available |
 | `sfu:consume` | Client → Server | `{ producerId, rtpCapabilities }` | Create consumer |
-| `sfu:consumer-created` | Server → Client | `{ consumerId, ...params }` | Consumer ready |
+| `sfu:consumer-created` | Server → Client | `{ consumerId, producerId, kind, rtpParameters }` | Consumer created in paused state |
+| `sfu:resume-consumer` | Client → Server | `{ consumerId }` | Resume a paused consumer after client setup |
 | `sfu:pause-producer` | Client → Server | `{ producerId }` | Pause producer |
 | `sfu:resume-producer` | Client → Server | `{ producerId }` | Resume producer |
 
@@ -455,7 +462,7 @@ Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800
 - Producer/Consumer coordination for group calls
 - Scaling across multiple Workers (one per CPU core)
 
-**Status:** Planned (Stage 7)
+**Status:** In Progress (Stage 5)
 
 **See:** [modules/sfu.md](./modules/sfu.md)
 

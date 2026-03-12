@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RoomModule } from './room/room.module';
 import { WebrtcModule } from './gateway/webrtc.module';
+import { SfuModule } from './sfu/sfu.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { WebrtcModule } from './gateway/webrtc.module';
     UserModule,
     RoomModule,
     WebrtcModule,
+    SfuModule,
   ],
   controllers: [],
   providers: [],
