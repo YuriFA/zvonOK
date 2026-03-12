@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { useRoom } from '@/features/room/hooks/use-room';
@@ -9,10 +9,11 @@ import { Link } from 'react-router';
 import { mediaManager } from '@/lib/media/manager';
 import { LocalVideo } from '@/components/local-video';
 import { RemoteVideo } from '@/components/remote-video';
+import { ParticipantsList, type Participant } from '@/components/room/ParticipantsList';
 import { useMediaControls } from '@/features/media/hooks/use-media-controls';
 import { MediaControls } from '@/features/media/components/media-controls';
 import { DeviceSettingsPanel } from '@/features/media/components/device-settings-panel';
-import { useMediasoup } from '@/hooks/use-mediasoup';
+import { useMediasoup, type RemotePeerMedia } from '@/hooks/use-mediasoup';
 
 export const RoomPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -47,8 +48,9 @@ export const RoomPage = () => {
 
   const primaryRemoteMediaElement = remoteMediaElements.values().next().value ?? null;
 
-  const { state: sfuState, remotePeers, syncProducerState } = useMediasoup({
+  const { state: sfuState, remotePeers, syncProducerState, kickPeer, wasKicked } = useMediasoup({
     roomId: room?.id,
+    roomOwnerId: room?.ownerId,
     localStream,
     enabled: !!room,
   });
@@ -70,6 +72,44 @@ export const RoomPage = () => {
     mediaControls.toggleAudio();
     syncProducerState('audio', nextAudioEnabled);
   };
+
+  // Build participants list from local user + remote peers
+  const participants: Participant[] = useMemo(() => {
+    const localParticipant: Participant = {
+      id: user?.id ?? 'local',
+      userId: user?.id,
+      username: user?.username ?? 'You',
+      isMuted: !mediaControls.isAudioEnabled,
+      isVideoOff: !mediaControls.isVideoEnabled,
+      isConnected: sfuState.connectionState === 'connected',
+    };
+
+    const remoteParticipants: Participant[] = remotePeers.map((peer: RemotePeerMedia) => ({
+      id: peer.userId,
+      userId: peer.userId,
+      username: peer.username,
+      isMuted: !peer.isAudioEnabled,
+      isVideoOff: !peer.isVideoEnabled,
+      isConnected: true,
+    }));
+
+    return [localParticipant, ...remoteParticipants];
+  }, [user?.id, user?.username, mediaControls.isAudioEnabled, mediaControls.isVideoEnabled, sfuState.connectionState, remotePeers]);
+
+  const handleKickParticipant = (participantId: string) => {
+    kickPeer(participantId);
+  };
+
+  useEffect(() => {
+    if (!wasKicked) {
+      return;
+    }
+
+    mediaManager.stopStream();
+    setLocalStream(null);
+    setIsAudioOnly(false);
+    setVideoUnavailableReason(null);
+  }, [wasKicked]);
 
   // Media stream - start on mount, stop on unmount
   useEffect(() => {
@@ -188,10 +228,20 @@ export const RoomPage = () => {
         </div>
       )}
 
+      {wasKicked && (
+        <div className="container mx-auto px-4 py-4">
+          <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
+            You were removed from the room by the owner.
+          </div>
+        </div>
+      )}
+
       {/* Main content */}
       <main className="flex flex-1 flex-col p-4">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
+          <div className="min-w-0">
         {/* Video grid */}
-        <div className="mb-4 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+        <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
           {/* Local video */}
           {localStream && (
             <div className="relative">
@@ -268,25 +318,17 @@ export const RoomPage = () => {
           </span>
         </div>
 
-        {/* Peers */}
-        <div className="flex items-center gap-1">
-          <span className="text-sm">
-            {remotePeers.length === 0
-              ? 'No peers'
-              : remotePeers.length === 1
-                ? '1 peer'
-                : `${remotePeers.length} peers`
-            }
-          </span>
-          {remotePeers.length > 0 && (
-            <ul className="text-sm">
-              {remotePeers.map((peer) => (
-                <li key={peer.userId} className="truncate">
-                  {peer.username}
-                </li>
-              ))}
-            </ul>
-          )}
+          </div>
+
+          <aside className="min-w-0">
+            <ParticipantsList
+              participants={participants}
+              currentUserId={user?.id}
+              roomOwnerId={room.ownerId}
+              onKickParticipant={handleKickParticipant}
+              className="lg:sticky lg:top-4"
+            />
+          </aside>
         </div>
       </main>
     </div>
