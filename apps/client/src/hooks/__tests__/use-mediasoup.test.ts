@@ -47,11 +47,13 @@ const sfuMock = vi.hoisted(() => {
   const trackListeners = new Set<(track: MediaStreamTrack, kind: 'audio' | 'video', userId: string) => void>();
   const peerJoinedListeners = new Set<(peer: { userId: string; username: string; producers: Map<string, { kind: 'audio' | 'video' }> }) => void>();
   const peerLeftListeners = new Set<(userId: string) => void>();
+  const kickedListeners = new Set<(payload: { roomId: string }) => void>();
 
   return {
     connect: vi.fn(),
     disconnect: vi.fn(),
     leaveRoom: vi.fn(),
+    kickPeer: vi.fn(),
     joinRoom: vi.fn().mockResolvedValue(undefined),
     produce: vi.fn().mockImplementation(async (track: MediaStreamTrack) => ({
       id: `${track.kind}-producer`,
@@ -79,6 +81,10 @@ const sfuMock = vi.hoisted(() => {
       peerLeftListeners.add(callback);
       return () => peerLeftListeners.delete(callback);
     }),
+    onKicked: vi.fn((callback: (payload: { roomId: string }) => void) => {
+      kickedListeners.add(callback);
+      return () => kickedListeners.delete(callback);
+    }),
     emitState(state: typeof baseState) {
       currentState = state;
       stateListeners.forEach((callback) => {
@@ -100,15 +106,22 @@ const sfuMock = vi.hoisted(() => {
         callback(userId);
       });
     },
+    emitKicked(payload: { roomId: string }) {
+      kickedListeners.forEach((callback) => {
+        callback(payload);
+      });
+    },
     reset() {
       currentState = { ...baseState };
       stateListeners.clear();
       trackListeners.clear();
       peerJoinedListeners.clear();
       peerLeftListeners.clear();
+      kickedListeners.clear();
       this.connect.mockClear();
       this.disconnect.mockClear();
       this.leaveRoom.mockClear();
+      this.kickPeer.mockClear();
       this.joinRoom.mockClear();
       this.produce.mockClear();
       this.pauseProducer.mockClear();
@@ -120,6 +133,7 @@ const sfuMock = vi.hoisted(() => {
       this.onTrack.mockClear();
       this.onPeerJoined.mockClear();
       this.onPeerLeft.mockClear();
+      this.onKicked.mockClear();
     },
   };
 });

@@ -5,6 +5,7 @@ import type { SfuPeerInfo, SfuState } from '@/lib/sfu/types';
 
 export interface UseMediasoupOptions {
   roomId?: string;
+  roomOwnerId?: string;
   localStream: MediaStream | null;
   enabled?: boolean;
 }
@@ -21,6 +22,8 @@ export interface UseMediasoupResult {
   state: SfuState;
   remotePeers: RemotePeerMedia[];
   syncProducerState: (kind: 'audio' | 'video', enabled: boolean) => void;
+  kickPeer: (userId: string) => void;
+  wasKicked: boolean;
 }
 
 type RemotePeerMap = Map<string, RemotePeerMedia>;
@@ -43,10 +46,11 @@ function updateRemotePeer(
   return next;
 }
 
-export function useMediasoup({ roomId, localStream, enabled = true }: UseMediasoupOptions): UseMediasoupResult {
+export function useMediasoup({ roomId, roomOwnerId, localStream, enabled = true }: UseMediasoupOptions): UseMediasoupResult {
   const { user } = useAuth();
   const [state, setState] = useState<SfuState>(() => sfuManager.getState());
   const [remotePeers, setRemotePeers] = useState<RemotePeerMap>(new Map());
+  const [wasKicked, setWasKicked] = useState(false);
 
   const joinedRef = useRef(false);
   const producedKindsRef = useRef<Set<'audio' | 'video'>>(new Set());
@@ -150,6 +154,12 @@ export function useMediasoup({ roomId, localStream, enabled = true }: UseMediaso
       });
     });
 
+    const unsubscribeKicked = sfuManager.onKicked(() => {
+      joinedRef.current = false;
+      setWasKicked(true);
+      setRemotePeers(new Map());
+    });
+
     sfuManager.connect();
 
     return () => {
@@ -157,8 +167,10 @@ export function useMediasoup({ roomId, localStream, enabled = true }: UseMediaso
       unsubscribePeerJoined();
       unsubscribeTrack();
       unsubscribePeerLeft();
+      unsubscribeKicked();
       producedKindsRef.current.clear();
       joinedRef.current = false;
+      setWasKicked(false);
       setRemotePeers(new Map());
       sfuManager.leaveRoom();
       sfuManager.disconnect();
@@ -171,15 +183,20 @@ export function useMediasoup({ roomId, localStream, enabled = true }: UseMediaso
     }
 
     joinedRef.current = true;
-    void sfuManager.joinRoom({
+    const joinPayload = {
       roomId,
       userId: identity.userId,
       username: identity.username,
+      ...(roomOwnerId ? { roomOwnerId } : {}),
+    };
+
+    void sfuManager.joinRoom({
+      ...joinPayload,
     }).catch((error) => {
       console.error('[SFU] Failed to join room:', error);
       joinedRef.current = false;
     });
-  }, [enabled, identity.userId, identity.username, roomId, state.connectionState]);
+  }, [enabled, identity.userId, identity.username, roomId, roomOwnerId, state.connectionState]);
 
   useEffect(() => {
     if (!localStream || !state.sendTransportConnected) {
@@ -215,10 +232,16 @@ export function useMediasoup({ roomId, localStream, enabled = true }: UseMediaso
     sfuManager.pauseProducer(producer.id);
   }, []);
 
+  const kickPeer = useCallback((userId: string) => {
+    sfuManager.kickPeer(userId);
+  }, []);
+
   return {
     state,
     remotePeers: useMemo(() => Array.from(remotePeers.values()), [remotePeers]),
     syncProducerState,
+    kickPeer,
+    wasKicked,
   };
 }
 
