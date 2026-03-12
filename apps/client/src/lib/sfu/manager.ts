@@ -17,6 +17,8 @@ import type {
   SfuProducerCreatedPayload,
   SfuNewProducerPayload,
   SfuConsumerCreatedPayload,
+  SfuKickPeerPayload,
+  SfuKickedPayload,
   SfuState,
   SfuStateCallback,
   SfuTrackCallback,
@@ -48,6 +50,7 @@ export class SfuManager {
   private trackCallbacks: Set<SfuTrackCallback> = new Set();
   private peerJoinedCallbacks: Set<SfuPeerCallback> = new Set();
   private peerLeftCallbacks: Set<(userId: string) => void> = new Set();
+  private kickedCallbacks: Set<(payload: SfuKickedPayload) => void> = new Set();
 
   // Connect to SFU namespace
   connect(): void {
@@ -178,6 +181,15 @@ export class SfuManager {
       console.log('[SFU] Peer left:', payload.userId);
       this.handlePeerLeft(payload.userId);
     });
+
+    this.socket.on('sfu:kicked', (payload: SfuKickedPayload) => {
+      console.log('[SFU] Kicked from room:', payload.roomId);
+      this.kickedCallbacks.forEach((callback) => {
+        callback(payload);
+      });
+      this.closeAll();
+      this.updateState({ connectionState: 'disconnected' });
+    });
   }
 
   // Join SFU room
@@ -193,6 +205,16 @@ export class SfuManager {
     if (!this.socket) return;
     this.socket.emit('sfu:leave');
     this.closeAll();
+  }
+
+  kickPeer(userId: string): boolean {
+    if (!this.socket) {
+      return false;
+    }
+
+    const payload: SfuKickPeerPayload = { userId };
+    this.socket.emit('sfu:kick-peer', payload);
+    return true;
   }
 
   // Load mediasoup device with router RTP capabilities
@@ -527,6 +549,11 @@ export class SfuManager {
   onPeerLeft(callback: (userId: string) => void): () => void {
     this.peerLeftCallbacks.add(callback);
     return () => this.peerLeftCallbacks.delete(callback);
+  }
+
+  onKicked(callback: (payload: SfuKickedPayload) => void): () => void {
+    this.kickedCallbacks.add(callback);
+    return () => this.kickedCallbacks.delete(callback);
   }
 }
 
