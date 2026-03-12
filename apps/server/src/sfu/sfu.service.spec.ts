@@ -53,6 +53,7 @@ describe('SfuService', () => {
       roomId: 'room-1',
       userId: 'user-1',
       username: 'alice',
+      roomOwnerId: 'user-1',
     });
 
     expect(workerManager.createRouter).toHaveBeenCalledWith('room-1');
@@ -80,6 +81,7 @@ describe('SfuService', () => {
       roomId: 'room-1',
       userId: 'user-1',
       username: 'alice',
+      roomOwnerId: 'user-1',
     });
     socket.emit.mockReset();
 
@@ -216,6 +218,7 @@ describe('SfuService', () => {
         consumers: Map<string, unknown>;
       }>;
       rooms: Map<string, Set<string>>;
+      roomOwners: Map<string, string>;
     };
 
     serviceState.peers.set(socket.id, {
@@ -240,6 +243,52 @@ describe('SfuService', () => {
 
     expect(otherSocket.emit).toHaveBeenCalledWith('sfu:peer-left', {
       userId: 'user-1',
+    });
+  });
+
+  it('allows the room owner to kick another peer', async () => {
+    const ownerSocket = createSocket('socket-owner');
+    const targetSocket = {
+      ...createSocket('socket-target'),
+      disconnect: jest.fn(),
+    } as unknown as Socket & { disconnect: jest.Mock };
+    const serviceState = service as unknown as {
+      peers: Map<string, {
+        id: string;
+        userId: string;
+        username: string;
+        socket: Socket;
+        producers: Map<string, unknown>;
+        consumers: Map<string, unknown>;
+      }>;
+      rooms: Map<string, Set<string>>;
+    };
+
+    serviceState.peers.set(ownerSocket.id, {
+      id: ownerSocket.id,
+      userId: 'user-1',
+      username: 'alice',
+      socket: ownerSocket,
+      producers: new Map(),
+      consumers: new Map(),
+    });
+    serviceState.peers.set(targetSocket.id, {
+      id: targetSocket.id,
+      userId: 'user-2',
+      username: 'bob',
+      socket: targetSocket,
+      producers: new Map(),
+      consumers: new Map(),
+    });
+    serviceState.rooms.set('room-1', new Set([ownerSocket.id, targetSocket.id]));
+    serviceState.roomOwners.set('room-1', 'user-1');
+
+    await service.kickPeer(ownerSocket, 'user-2');
+
+    expect(targetSocket.emit).toHaveBeenCalledWith('sfu:kicked', { roomId: 'room-1' });
+    expect(targetSocket.disconnect).toHaveBeenCalled();
+    expect(ownerSocket.emit).toHaveBeenCalledWith('sfu:peer-left', {
+      userId: 'user-2',
     });
   });
 });

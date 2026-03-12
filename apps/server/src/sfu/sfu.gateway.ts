@@ -16,6 +16,7 @@ import type {
   SfuProducePayload,
   SfuConsumePayload,
   SfuResumeConsumerPayload,
+  SfuKickPeerPayload,
 } from './interfaces/sfu.interface';
 import { OnGatewayInit } from '@nestjs/websockets';
 
@@ -136,5 +137,14 @@ export class SfuGateway
   ): Promise<void> {
     this.logger.log(`Resuming producer ${payload.producerId} for ${client.id}`);
     await this.sfuService.resumeProducer(client, payload.producerId);
+  }
+
+  @SubscribeMessage('sfu:kick-peer')
+  async handleKickPeer(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: SfuKickPeerPayload,
+  ): Promise<void> {
+    this.logger.log(`Kick peer ${payload.userId} requested by ${client.id}`);
+    await this.sfuService.kickPeer(client, payload.userId);
   }
 }

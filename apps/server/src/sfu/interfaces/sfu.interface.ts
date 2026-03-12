@@ -32,6 +32,7 @@ export interface SfuJoinPayload {
   roomId: string;
   userId: string;
   username: string;
+  roomOwnerId?: string;
 }
 
 export interface SfuJoinedPayload {
@@ -91,4 +92,8 @@ export interface SfuPauseProducerPayload {
 
 export interface SfuResumeProducerPayload {
   producerId: string;
+}
+
+export interface SfuKickPeerPayload {
+  userId: string;
 }

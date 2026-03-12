@@ -18,6 +18,7 @@ export class SfuService implements OnModuleDestroy {
   private readonly logger = new Logger(SfuService.name);
   private peers: Map<string, Peer> = new Map();
   private rooms: Map<string, Set<string>> = new Map();
+  private roomOwners: Map<string, string> = new Map();
 
   constructor(private readonly workerManager: WorkerManager) {
     void WorkerManager;
@@ -35,6 +36,7 @@ export class SfuService implements OnModuleDestroy {
     }
     this.peers.clear();
     this.rooms.clear();
+    this.roomOwners.clear();
     this.logger.log('SFU Service closed');
   }
 
@@ -42,11 +44,15 @@ export class SfuService implements OnModuleDestroy {
     return this.peers.get(socketId);
   }
 
-  private getRoomId(socket: Socket): string | undefined {
+  private getRoomIdBySocketId(socketId: string): string | undefined {
     for (const [roomId, peers] of this.rooms) {
-      if (peers.has(socket.id)) return roomId;
+      if (peers.has(socketId)) return roomId;
     }
     return undefined;
+  }
+
+  private getRoomId(socket: Socket): string | undefined {
+    return this.getRoomIdBySocketId(socket.id);
   }
 
   private getRoomPeers(roomId: string): Peer[] {
@@ -107,8 +113,34 @@ export class SfuService implements OnModuleDestroy {
     return peer.consumers.get(consumerId);
   }
 
+  private async removePeer(socketId: string): Promise<{ roomId: string; userId: string } | null> {
+    const peer = this.getPeer(socketId);
+    const roomId = this.getRoomIdBySocketId(socketId);
+
+    if (!peer || !roomId) {
+      return null;
+    }
+
+    this.rooms.get(roomId)?.delete(socketId);
+    peer.sendTransport?.close();
+    peer.recvTransport?.close();
+    this.peers.delete(socketId);
+    this.notifyPeerLeft(roomId, peer.userId, socketId);
+
+    if (this.rooms.get(roomId)?.size === 0) {
+      await this.workerManager.closeRouter(roomId);
+      this.rooms.delete(roomId);
+      this.roomOwners.delete(roomId);
+    }
+
+    return {
+      roomId,
+      userId: peer.userId,
+    };
+  }
+
   async joinRoom(socket: Socket, payload: SfuJoinPayload): Promise<void> {
-    const { roomId, userId, username } = payload;
+    const { roomId, userId, username, roomOwnerId } = payload;
     const peerId = socket.id;
 
     const peer: Peer = {
@@ -131,6 +163,9 @@ export class SfuService implements OnModuleDestroy {
     }
 
     roomPeers.add(peerId);
+    if (roomOwnerId) {
+      this.roomOwners.set(roomId, roomOwnerId);
+    }
     this.logger.log(`Peer ${peerId} joined SFU room ${roomId}`);
 
     await this.workerManager.createRouter(roomId);
@@ -140,22 +175,9 @@ export class SfuService implements OnModuleDestroy {
   }
 
   async leaveRoom(socket: Socket): Promise<void> {
-    const peer = this.getPeer(socket.id);
-    if (!peer) return;
-
-    const roomId = this.getRoomId(socket);
-    if (!roomId) return;
-
-    this.rooms.get(roomId)?.delete(socket.id);
-    peer.sendTransport?.close();
-    peer.recvTransport?.close();
-    this.peers.delete(socket.id);
-    this.notifyPeerLeft(roomId, peer.userId, socket.id);
-    this.logger.log(`Peer ${socket.id} left SFU room ${roomId}`);
-
-    if (this.rooms.get(roomId)?.size === 0) {
-      await this.workerManager.closeRouter(roomId);
-      this.rooms.delete(roomId);
+    const removedPeer = await this.removePeer(socket.id);
+    if (removedPeer) {
+      this.logger.log(`Peer ${socket.id} left SFU room ${removedPeer.roomId}`);
     }
   }
 
@@ -345,22 +367,33 @@ export class SfuService implements OnModuleDestroy {
     await producer.resume();
   }
 
-  async closePeer(socket: Socket): Promise<void> {
-    const peer = this.getPeer(socket.id);
+  async kickPeer(socket: Socket, targetUserId: string): Promise<void> {
+    const requester = this.getPeer(socket.id);
     const roomId = this.getRoomId(socket);
 
-    if (!peer || !roomId) return;
-
-    this.rooms.get(roomId)?.delete(socket.id);
-    peer.sendTransport?.close();
-    peer.recvTransport?.close();
-    this.peers.delete(socket.id);
-    this.notifyPeerLeft(roomId, peer.userId, socket.id);
-
-    if (this.rooms.get(roomId)?.size === 0) {
-      await this.workerManager.closeRouter(roomId);
-      this.rooms.delete(roomId);
+    if (!requester || !roomId) {
+      this.logger.warn(`Kick request from unknown peer ${socket.id}`);
+      return;
     }
+
+    const roomOwnerId = this.roomOwners.get(roomId);
+    if (!roomOwnerId || roomOwnerId !== requester.userId) {
+      this.logger.warn(`Unauthorized kick request from ${requester.userId} in room ${roomId}`);
+      return;
+    }
+
+    const targetPeer = this.getRoomPeers(roomId).find((peer) => peer.userId === targetUserId);
+    if (!targetPeer || targetPeer.id === socket.id) {
+      return;
+    }
+
+    targetPeer.socket.emit('sfu:kicked', { roomId });
+    await this.removePeer(targetPeer.id);
+    targetPeer.socket.disconnect();
+  }
+
+  async closePeer(socket: Socket): Promise<void> {
+    await this.removePeer(socket.id);
   }
 
   private notifyPeersToConsume(socket: Socket, producer: Producer): void {
