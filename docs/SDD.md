@@ -2,7 +2,7 @@
 
 > **Version:** 1.5
 >
-> **Date:** 2025-02-07 / Updated: 2026-03-03
+> **Date:** 2025-02-07 / Updated: 2026-03-13
 >
 > **Status:** Living Document
 
@@ -73,7 +73,7 @@ The WebRTC Chat application provides:
 | REQ-003 | SDD 3.1, SDD 4.1 | stage-1/TASK-004, TASK-005 |
 | REQ-004 | [modules/gateway.md](./modules/gateway.md), SDD 4.2 | stage-1.5/TASK-001, stage-2/TASK-001, TASK-002 |
 | REQ-005 | [modules/sfu.md](./modules/sfu.md), SDD 4.2 | stage-5/TASK-001 to TASK-009 |
-| REQ-006 | [modules/client.md](./modules/client.md), SDD 4.3 | stage-0.5/TASK-001 to TASK-009, stage-2/TASK-003, stage-3/TASK-001 to TASK-005 |
+| REQ-006 | [modules/client.md](./modules/client.md), SDD 4.3 | stage-0.5/TASK-001 to TASK-009, stage-2/TASK-003, stage-3/TASK-001 to TASK-005, stage-6/TASK-003, stage-6/TASK-008 |
 | REQ-007 | SDD 6 | stage-1/TASK-002, TASK-003 |
 | REQ-008 | SDD 7 | stage-7/TASK-003, stage-10/TASK-001 |
 
@@ -401,8 +401,9 @@ Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800
 1. User creates room via dialog on lobby page
 2. Redirect to `/room/:slug`
 3. Room page opens in pre-join state with device setup, video preview, and shareable link
-4. User clicks "Join Room" → room page switches to active call state
-5. When the room is ended, the same route shows the ended state instead of reconnecting
+4. Device selections and local audio/video intent chosen in pre-join are preserved as the source of truth for call entry
+5. User clicks "Join Room" → room page switches to active call state using the preserved media setup
+6. When the room is ended, the same route shows the ended state instead of reconnecting
 
 ---
 
@@ -483,6 +484,7 @@ Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800
 - `AuthContext` — Global auth state with `useAuth()` hook
 - `authApi` — API client with automatic token refresh on 401
 - `ProfileDropdown` — User menu with logout
+- `Room media setup state` — Client-side room entry state that preserves selected input devices and mic/camera enabled intent from pre-join into the active call lifecycle
 
 **UI Components (Radix UI):**
 - `Button` — Primary/secondary/outline/ghost variants
