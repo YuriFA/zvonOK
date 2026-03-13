@@ -213,28 +213,56 @@ export class SfuManager {
       }
     });
 
-    // Handle new producer from peer
-    this.socket.on('sfu:new-producer', async (payload: SfuNewProducerPayload) => {
-      console.log('[SFU] New producer from peer:', payload.userId, payload.kind);
-      const existingPeer = this.peers.get(payload.userId);
-      if (!existingPeer) {
-        const peer = {
+    // Handle peer joined (peer joins room)
+    this.socket.on('sfu:peer-joined', (payload: SfuPeerJoinedPayload) => {
+      console.log('[SFU] Peer joined:', payload.userId, payload.username);
+      let peer = this.peers.get(payload.userId);
+      if (!peer) {
+        peer = {
           userId: payload.userId,
           username: payload.username,
-          producers: new Map<string, { kind: 'audio' | 'video' }>(),
+          producers: new Map(),
         };
         this.peers.set(payload.userId, peer);
+      } else {
+        // Update username if provided
+        if (payload.username) {
+          peer.username = payload.username;
+        }
+      }
+      this.peerJoinedCallbacks.forEach((callback) => {
+        callback(peer);
+      });
+    });
+
+    // Handle existing peers (peers already in room when this client joins)
+    this.socket.on('sfu:existing-peers', (peers: SfuExistingPeersPayload[]) => {
+      console.log('[SFU] Existing peers:', peers.length);
+      for (const peerData of peers) {
+        let peer = this.peers.get(peerData.userId);
+        if (!peer) {
+          peer = {
+            userId: peerData.userId,
+            username: peerData.username,
+            producers: new Map(),
+          };
+          this.peers.set(peerData.userId, peer);
+        } else {
+          // Update username if provided
+          if (peerData.username) {
+            peer.username = peerData.username;
+          }
+        }
         this.peerJoinedCallbacks.forEach((callback) => {
           callback(peer);
         });
-      } else if (payload.username && existingPeer.username !== payload.username) {
-        existingPeer.username = payload.username;
-        this.peerJoinedCallbacks.forEach((callback) => {
-          callback(existingPeer);
-        });
       }
+    });
 
-      await this.consumeProducer(payload);
+    // Handle new producer from remote peer
+    this.socket.on('sfu:new-producer', (payload: SfuNewProducerPayload) => {
+      console.log('[SFU] New producer:', payload.userId, payload.kind);
+      void this.consumeProducer(payload);
     });
 
     // Handle consumer created
@@ -441,10 +469,12 @@ export class SfuManager {
     if (!peer) {
       peer = {
         userId: payload.userId,
-        username: '',
+        username: payload.username || '',
         producers: new Map(),
       };
       this.peers.set(payload.userId, peer);
+      // Fallback: notify peer joined for cases where sfu:peer-joined wasn't received
+      this.peerJoinedCallbacks.forEach((callback) => callback(peer!));
     }
     peer.producers.set(payload.producerId, { kind: payload.kind });
 

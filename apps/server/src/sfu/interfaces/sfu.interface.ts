@@ -97,3 +97,15 @@ export interface SfuResumeProducerPayload {
 export interface SfuKickPeerPayload {
   userId: string;
 }
+
+// Peer joined payload - sent when a peer joins the room (independent of media)
+export interface SfuPeerJoinedPayload {
+  userId: string;
+  username: string;
+}
+
+// Existing peer info - sent to new peer about existing room members
+export interface SfuExistingPeerPayload {
+  userId: string;
+  username: string;
+}

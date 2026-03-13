@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 
 export interface LocalVideoProps {
   stream: MediaStream | null;
+  username?: string;
   isVideoEnabled?: boolean;
   isAudioEnabled?: boolean;
   className?: string;
@@ -11,6 +12,7 @@ export interface LocalVideoProps {
 
 export function LocalVideo({
   stream,
+  username,
   isVideoEnabled = true,
   isAudioEnabled = true,
   className,
@@ -61,7 +63,9 @@ export function LocalVideo({
 
       {!isVideoEnabled && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-          <span className="text-sm text-white">Camera Off</span>
+          <div className="flex size-16 items-center justify-center rounded-full bg-gray-700 text-xl text-white">
+            {username?.charAt(0).toUpperCase() ?? '?'}
+          </div>
         </div>
       )}
     </div>

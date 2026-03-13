@@ -379,13 +379,14 @@ export const RoomPage = () => {
           <div className="min-w-0">
             {/* Video grid */}
             <VideoGrid className="mb-4">
-              {/* Local video */}
-              {localStream && (
+              {/* Local video — always shown once media init is done */}
+              {isMediaInitialized && (
                 <VideoTile isActiveSpeaker={activeSpeakerId === localUserId}>
                   <LocalVideo
                     stream={localStream}
-                    isVideoEnabled={mediaControls.isVideoEnabled}
-                    isAudioEnabled={mediaControls.isAudioEnabled}
+                    username={user?.username}
+                    isVideoEnabled={!mediaError && mediaControls.isVideoEnabled && !isAudioOnly}
+                    isAudioEnabled={!mediaError && mediaControls.isAudioEnabled}
                     className="h-full w-full"
                     showControls={false}
                   />

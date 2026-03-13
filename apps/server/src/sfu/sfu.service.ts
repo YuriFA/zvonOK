@@ -9,6 +9,7 @@ import type {
   SfuTransportConnectPayload,
   SfuProducePayload,
   SfuConsumePayload,
+  SfuExistingPeerPayload,
 } from './interfaces/sfu.interface';
 import type { Consumer, Producer, WebRtcTransport } from 'mediasoup/types';
 import { config } from './config/mediasoup.config';
@@ -167,6 +168,25 @@ export class SfuService implements OnModuleDestroy {
       this.roomOwners.set(roomId, roomOwnerId);
     }
     this.logger.log(`Peer ${peerId} joined SFU room ${roomId}`);
+
+    // Notify existing peers about the new peer
+    for (const roomPeer of this.getRoomPeers(roomId)) {
+      if (roomPeer.id !== socket.id) {
+        roomPeer.socket.emit('sfu:peer-joined', {
+          userId: peer.userId,
+          username: peer.username,
+        });
+      }
+    }
+
+    // Notify new peer about existing peers (even those without producers)
+    const existingPeers: SfuExistingPeerPayload[] = this.getRoomPeers(roomId)
+      .filter((p) => p.id !== socket.id)
+      .map((p) => ({ userId: p.userId, username: p.username }));
+
+    if (existingPeers.length > 0) {
+      socket.emit('sfu:existing-peers', existingPeers);
+    }
 
     await this.workerManager.createRouter(roomId);
 

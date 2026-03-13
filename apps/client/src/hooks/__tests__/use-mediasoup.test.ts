@@ -202,7 +202,7 @@ describe('useMediasoup', () => {
       sfuMock.emitState({
         ...baseState,
         connectionState: 'connected',
-        sendTransportConnected: true,
+        isSendTransportCreated: true,
       });
     });
 

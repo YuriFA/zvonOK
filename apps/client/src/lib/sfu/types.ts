@@ -107,6 +107,18 @@ export interface SfuPeerInfo {
   producers: Map<string, { kind: 'audio' | 'video' }>;
 }
 
+// Payload for sfu:peer-joined event (peer joins after you)
+export interface SfuPeerJoinedPayload {
+  userId: string;
+  username: string;
+}
+
+// Payload for sfu:existing-peers event (peers already in room when you join)
+export interface SfuExistingPeersPayload {
+  userId: string;
+  username: string;
+}
+
 // SFU connection state
 export type SfuConnectionState =
   | 'disconnected'

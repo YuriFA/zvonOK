@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/features/auth/contexts/auth.context';
 import { sfuManager } from '@/lib/sfu/manager';
-import type { SfuPeerInfo, SfuState } from '@/lib/sfu/types';
+import type { SfuPeerInfo, SfuPeerJoinedPayload, SfuExistingPeersPayload, SfuState } from '@/lib/sfu/types';
 
 export interface UseMediasoupOptions {
   roomId?: string;
@@ -38,8 +38,8 @@ function updateRemotePeer(
     userId,
     username: 'Participant',
     stream: new MediaStream(),
-    isVideoEnabled: true,
-    isAudioEnabled: true,
+    isVideoEnabled: false,
+    isAudioEnabled: false,
   };
 
   next.set(userId, updater(current));

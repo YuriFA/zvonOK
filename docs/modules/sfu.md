@@ -77,8 +77,29 @@ Worker (OS process)
 | `sfu:pause-producer` | Client → Server | `{ producerId }` | Pause producer |
 | `sfu:resume-producer` | Client → Server | `{ producerId }` | Resume producer |
 | `sfu:peer-left` | Server → Client | `{ userId }` | Notify peers that a participant left or was removed |
+| `sfu:peer-joined` | Server → Client | `{ userId, username }` | Notify existing peers that a new participant joined the room (fired regardless of media) |
+| `sfu:existing-peers` | Server → Client | `[{ userId, username }]` | Sent to a newly joined peer listing participants already in the room |
 | `sfu:kick-peer` | Client → Server | `{ userId }` | Room owner removes a participant |
 | `sfu:kicked` | Server → Client | `{ roomId }` | Sent to the removed participant before disconnect |
+
+---
+
+## Peer Presence Contract
+
+Peer visibility is **independent of media track production**. A peer appears for others as soon as it joins the SFU room, even if it has zero producers (camera/mic denied).
+
+### Join sequence
+
+1. Peer A emits `sfu:join` → server adds it to the room and emits `sfu:peer-joined` to all existing peers
+2. Server emits `sfu:existing-peers` to Peer A with all peers already in the room
+3. Both events fire before any `sfu:new-producer` — clients must create a participant model on these events
+
+### When a peer has no media
+
+- `sfu:peer-joined` / `sfu:existing-peers` still fire
+- No `sfu:new-producer` is emitted (nothing to consume)
+- Client renders the peer as a placeholder tile: avatar initial + muted/cam-off indicators
+- `isVideoEnabled` and `isAudioEnabled` default to `false` until actual tracks are received via `sfu:new-producer` → `sfu:consumer-created`
 
 ---
 

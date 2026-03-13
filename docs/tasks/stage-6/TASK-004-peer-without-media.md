@@ -1,7 +1,7 @@
 # TASK-064 — Fix Missing Participant Without Media
 
 ## Status
-planned
+completed
 
 ## Priority
 high
@@ -49,10 +49,10 @@ sfuManager.onPeerJoined((peer: SfuPeerInfo) => {
 Add or reuse an SFU-level peer presence event so joins are visible even when the peer has no producers.
 
 ## Acceptance Criteria
-- [ ] User who denies all media permissions appears in participants list for others
-- [ ] User without video shows a placeholder tile with username/avatar
-- [ ] User without audio shows muted indicator
-- [ ] Existing media functionality unaffected
+- [x] User who denies all media permissions appears in participants list for others
+- [x] User without video shows a placeholder tile with username/avatar
+- [x] User without audio shows muted indicator
+- [x] Existing media functionality unaffected
 
 ## Definition of Done
 - Peer visibility independent of media tracks
