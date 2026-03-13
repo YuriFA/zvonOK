@@ -75,7 +75,7 @@ The WebRTC Chat application provides:
 | REQ-005 | [modules/sfu.md](./modules/sfu.md), SDD 4.2 | stage-5/TASK-001 to TASK-009 |
 | REQ-006 | [modules/client.md](./modules/client.md), SDD 4.3 | stage-0.5/TASK-001 to TASK-009, stage-2/TASK-003, stage-3/TASK-001 to TASK-005 |
 | REQ-007 | SDD 6 | stage-1/TASK-002, TASK-003 |
-| REQ-008 | SDD 7 | stage-9/TASK-003, stage-10/TASK-001 |
+| REQ-008 | SDD 7 | stage-7/TASK-003, stage-10/TASK-001 |
 
 ---
 
@@ -136,7 +136,7 @@ erDiagram
         datetime lastActivityAt
     }
 
-    %% Message model to be added in Stage 6 (Chat)
+    %% Message model to be added in Stage 9 (Chat)
     %% Message {
     %%     string id PK
     %%     string content
@@ -254,7 +254,7 @@ enum RoomStatus {
   ended
 }
 
-// Note: Message model will be added in Stage 6 (Chat feature)
+// Note: Message model will be added in Stage 9 (Chat feature)
 // model Message {
 //   id        String   @id @default(cuid())
 //   content   String
@@ -270,7 +270,7 @@ enum RoomStatus {
 |-------|---------|---------|
 | `User` | id, email, username, passwordHash, refreshTokenHash, failedLoginAttempts, lockedUntil, tokenVersion, createdAt, updatedAt | email (unique), username (unique) |
 | `Room` | id, slug, name, ownerId, isPublic, maxParticipants, status, createdAt, updatedAt, endedAt, lastActivityAt | slug (unique), ownerId (FK to User, indexed), status (indexed), isPublic (indexed) |
-| `Message` | id, content, userId, roomId, createdAt | userId (FK to User), roomId (FK to Room) — *To be added in Stage 6* |
+| `Message` | id, content, userId, roomId, createdAt | userId (FK to User), roomId (FK to Room) — *To be added in Stage 9* |
 
 ---
 

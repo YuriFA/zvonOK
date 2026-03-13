@@ -155,49 +155,49 @@ Tasks:
 
 ---
 
-## Stage 7 — Screen Share
-
-**Status:** Planned
-**Goal:** Desktop/application window sharing
-
-Tasks:
-- [task-1](./tasks/stage-7/TASK-001-screen-share.md) — getDisplayMedia + replaceTrack
-- [task-2](./tasks/stage-7/TASK-002-screen-share-ui.md) — Screen share button, status indicator, error handling
-
-**Result:** Screen sharing capability
-
----
-
-## Stage 8 — Chat
-
-**Status:** Planned
-**Goal:** Real-time text chat with history
-
-Tasks:
-- [task-1](./tasks/stage-8/TASK-001-chat-model.md) — Message data model
-- [task-2](./tasks/stage-8/TASK-002-chat-api.md) — Chat API endpoints
-- [task-3](./tasks/stage-8/TASK-003-chat-websocket.md) — Real-time chat via WebSocket
-- [task-4](./tasks/stage-8/TASK-004-chat-ui.md) — Chat container layout
-- [task-5](./tasks/stage-8/TASK-005-message-list.md) — Message list component
-- [task-6](./tasks/stage-8/TASK-006-message-input.md) — Message input component
-- [task-7](./tasks/stage-8/TASK-007-chat-integration.md) — Chat integration in room page
-
-**Result:** Working chat with history
-
----
-
-## Stage 9 — Deployment
+## Stage 7 — Deployment
 
 **Status:** Planned
 **Goal:** Production-ready deployment with HTTPS and TURN
 
 Tasks:
-- [task-1](./tasks/stage-9/TASK-001-https-caddy.md) — Caddy reverse proxy with auto HTTPS
-- [task-2](./tasks/stage-9/TASK-002-turn-coturn.md) — coturn TURN server setup
-- [task-3](./tasks/stage-9/TASK-003-deploy-process.md) — Production deployment process
-- [task-4](./tasks/stage-9/TASK-004-client-build.md) — Client build and deployment
+- [task-1](./tasks/stage-7/TASK-001-https-caddy.md) — Caddy reverse proxy with auto HTTPS
+- [task-2](./tasks/stage-7/TASK-002-turn-coturn.md) — coturn TURN server setup
+- [task-3](./tasks/stage-7/TASK-003-deploy-process.md) — Production deployment process
+- [task-4](./tasks/stage-7/TASK-004-client-build.md) — Client build and deployment
 
 **Result:** Application available via HTTPS, works through NAT
+
+---
+
+## Stage 8 — Screen Share
+
+**Status:** Planned
+**Goal:** Desktop/application window sharing
+
+Tasks:
+- [task-1](./tasks/stage-8/TASK-001-screen-share.md) — getDisplayMedia + replaceTrack
+- [task-2](./tasks/stage-8/TASK-002-screen-share-ui.md) — Screen share button, status indicator, error handling
+
+**Result:** Screen sharing capability
+
+---
+
+## Stage 9 — Chat
+
+**Status:** Planned
+**Goal:** Real-time text chat with history
+
+Tasks:
+- [task-1](./tasks/stage-9/TASK-001-chat-model.md) — Message data model
+- [task-2](./tasks/stage-9/TASK-002-chat-api.md) — Chat API endpoints
+- [task-3](./tasks/stage-9/TASK-003-chat-websocket.md) — Real-time chat via WebSocket
+- [task-4](./tasks/stage-9/TASK-004-chat-ui.md) — Chat container layout
+- [task-5](./tasks/stage-9/TASK-005-message-list.md) — Message list component
+- [task-6](./tasks/stage-9/TASK-006-message-input.md) — Message input component
+- [task-7](./tasks/stage-9/TASK-007-chat-integration.md) — Chat integration in room page
+
+**Result:** Working chat with history
 
 ---
 
@@ -248,8 +248,8 @@ Tasks:
 | Stage 4 | Completed | 1-2 days |
 | Stage 5 | In Progress | 5-7 days |
 | Stage 6 | Planned | 2-3 days |
-| Stage 7 | Planned | 1-2 days |
-| Stage 8 | Planned | 2-3 days |
+| Stage 7 | Planned | 2-3 days |
+| Stage 8 | Planned | 1-2 days |
 | Stage 9 | Planned | 2-3 days |
 | Stage 10 | Planned | 2-3 days |
 | Stage 11 | Planned | TBD |
