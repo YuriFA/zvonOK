@@ -141,17 +141,21 @@ Tasks:
 
 ---
 
-## Stage 6 — Video Grid
+## Stage 6 — Call UX
 
-**Status:** Planned
-**Goal:** Adaptive video layout with speaker detection
+**Status:** In Progress
+**Goal:** Canonical room entry flow and adaptive in-call experience
 
 Tasks:
 - [task-1](./tasks/stage-6/TASK-001-video-grid-layout.md) — CSS Grid adaptive layout
-- [task-2](./tasks/stage-6/TASK-002-speaker-detection.md) — Active speaker detection
-- [task-3](./tasks/stage-6/TASK-003-pre-join-lobby.md) — Pre-join lobby before call connection
+- [task-2](./tasks/stage-6/TASK-003-pre-join-lobby.md) — Canonical pre-join state on room link
+- [task-3](./tasks/stage-6/TASK-004-peer-without-media.md) — Presence for participants without media
+- [task-4](./tasks/stage-6/TASK-005-camera-toggle.md) — Physical camera release on toggle
+- [task-5](./tasks/stage-6/TASK-006-media-error-indicators.md) — Media error states in call controls
+- [task-6](./tasks/stage-6/TASK-002-speaker-detection.md) — Active speaker detection
+- [task-7](./tasks/stage-6/TASK-007-call-ended-state.md) — Ended call state on room link
 
-**Result:** Video tiles auto-arrange based on participant count
+**Result:** Room link supports pre-join, active call, and ended states; participant and media UX work predictably in group calls
 
 ---
 
@@ -247,7 +251,7 @@ Tasks:
 | Stage 3 | Completed | 3-4 days |
 | Stage 4 | Completed | 1-2 days |
 | Stage 5 | Completed | 5-7 days |
-| Stage 6 | Planned | 2-3 days |
+| Stage 6 | In Progress | 3-5 days |
 | Stage 7 | Planned | 2-3 days |
 | Stage 8 | Planned | 1-2 days |
 | Stage 9 | Planned | 2-3 days |
@@ -262,7 +266,7 @@ Tasks:
 
 ## Next Steps
 
-1. **Stage 6** (Video Grid) — Adaptive video layout with speaker detection
-2. Follow task files in numerical order
+1. **Stage 6** (Call UX) — Canonical room entry flow and adaptive in-call experience
+2. Follow task dependencies, not raw filename order
 3. Update task status as work progresses
 4. Refer to [SDD](./SDD.md) for architecture and design decisions

@@ -394,14 +394,15 @@ Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800
 | `/` | Lobby | No |
 | `/login` | Login Page | No (redirect if authenticated) |
 | `/register` | Register Page | No (redirect if authenticated) |
-| `/room/:slug/lobby` | Room Lobby (device setup, share link) | Optional |
-| `/room/:slug` | Video Room | Optional |
+| `/room/:slug` | Room Page with pre-join, active call, and ended states | Optional |
+| `/room/:slug/lobby` | Legacy compatibility alias redirecting to `/room/:slug` pre-join state | Optional |
 
 **Room Creation Flow:**
 1. User creates room via dialog on lobby page
-2. Redirect to `/room/:slug/lobby` (not directly to room)
-3. Lobby shows: device setup, video preview, shareable link
-4. User clicks "Join Room" → navigate to `/room/:slug`
+2. Redirect to `/room/:slug`
+3. Room page opens in pre-join state with device setup, video preview, and shareable link
+4. User clicks "Join Room" → room page switches to active call state
+5. When the room is ended, the same route shows the ended state instead of reconnecting
 
 ---
 
@@ -475,8 +476,8 @@ Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800
 - `LobbyPage` (`/`) — Room join/create, auth-aware navigation
 - `LoginPage` (`/login`) — Email/password login form
 - `RegisterPage` (`/register`) — Registration with password confirmation
-- `RoomLobbyPage` (`/room/:slug/lobby`) — Device setup, video preview, share link (for room creator)
-- `RoomPage` (`/room/:slug`) — Video call interface
+- `RoomPage` (`/room/:slug`) — Canonical room experience with three states: pre-join, active call, ended
+- `RoomLobbyPage` (`/room/:slug/lobby`) — Legacy compatibility entry that redirects to the canonical pre-join state
 
 **Features:**
 - `AuthContext` — Global auth state with `useAuth()` hook
