@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/features/auth/contexts/auth.context';
 import { sfuManager } from '@/lib/sfu/manager';
-import type { SfuPeerInfo, SfuPeerJoinedPayload, SfuExistingPeersPayload, SfuState } from '@/lib/sfu/types';
+import { mediaManager } from '@/lib/media/manager';
+import type { SfuPeerInfo, SfuState } from '@/lib/sfu/types';
 
 export interface UseMediasoupOptions {
   roomId?: string;
@@ -21,7 +22,8 @@ export interface RemotePeerMedia {
 export interface UseMediasoupResult {
   state: SfuState;
   remotePeers: RemotePeerMedia[];
-  syncProducerState: (kind: 'audio' | 'video', enabled: boolean) => void;
+  toggleVideoWithHardware: (enabled: boolean) => Promise<boolean>;
+  toggleAudioWithHardware: (enabled: boolean) => Promise<boolean>;
   kickPeer: (userId: string) => void;
   wasKicked: boolean;
 }
@@ -218,18 +220,106 @@ export function useMediasoup({ roomId, roomOwnerId, localStream, enabled = true 
     }
   }, [localStream, state.isSendTransportCreated]);
 
-  const syncProducerState = useCallback((kind: 'audio' | 'video', enabled: boolean) => {
-    const producer = sfuManager.getProducerByKind(kind);
-    if (!producer) {
-      return;
-    }
-
+  /**
+   * Toggle video with proper hardware control.
+   * When disabled: stops the camera track (releases hardware, indicator light turns off).
+   * When enabled: re-acquires the camera track and replaces it in the SFU producer.
+   * Returns true on success, false on failure.
+   */
+  const toggleVideoWithHardware = useCallback(async (enabled: boolean): Promise<boolean> => {
     if (enabled) {
-      sfuManager.resumeProducer(producer.id);
-      return;
-    }
+      const newTrack = await mediaManager.startVideoTrack();
+      if (!newTrack) {
+        return false;
+      }
 
-    sfuManager.pauseProducer(producer.id);
+      const producer = sfuManager.getProducerByKind('video');
+      if (!producer) {
+        const nextProducer = await sfuManager.produce(newTrack);
+        if (!nextProducer) {
+          mediaManager.stopVideoTrack('Failed to publish camera');
+          return false;
+        }
+
+        return true;
+      }
+
+      const replaced = await sfuManager.replaceTrack('video', newTrack);
+      if (!replaced) {
+        console.error('[useMediasoup] Failed to replace video track in SFU');
+        mediaManager.stopVideoTrack('Failed to publish camera');
+        return false;
+      }
+
+      sfuManager.resumeProducer(producer.id);
+
+      return true;
+    } else {
+      const producer = sfuManager.getProducerByKind('video');
+      if (producer) {
+        sfuManager.pauseProducer(producer.id);
+      }
+
+      const replaced = await sfuManager.replaceTrack('video', null);
+      if (!replaced) {
+        console.warn('[useMediasoup] Failed to detach video track from SFU producer; producer remains paused');
+      }
+
+      mediaManager.stopVideoTrack();
+
+      return true;
+    }
+  }, []);
+
+  /**
+   * Toggle audio with proper hardware control.
+   * When disabled: stops the microphone track (releases hardware, system indicator turns off).
+   * When enabled: re-acquires the microphone track and replaces it in the SFU producer.
+   * Returns true on success, false on failure.
+   */
+  const toggleAudioWithHardware = useCallback(async (enabled: boolean): Promise<boolean> => {
+    if (enabled) {
+      const newTrack = await mediaManager.startAudioTrack();
+      if (!newTrack) {
+        return false;
+      }
+
+      const producer = sfuManager.getProducerByKind('audio');
+      if (!producer) {
+        const nextProducer = await sfuManager.produce(newTrack);
+        if (!nextProducer) {
+          mediaManager.stopAudioTrack('Failed to publish microphone');
+          return false;
+        }
+
+        return true;
+      }
+
+      const replaced = await sfuManager.replaceTrack('audio', newTrack);
+      if (!replaced) {
+        console.error('[useMediasoup] Failed to replace audio track in SFU');
+        mediaManager.stopAudioTrack('Failed to publish microphone');
+        return false;
+      }
+
+      sfuManager.resumeProducer(producer.id);
+
+      return true;
+    } else {
+      const producer = sfuManager.getProducerByKind('audio');
+      if (producer) {
+        sfuManager.pauseProducer(producer.id);
+      }
+
+      const replaced = await sfuManager.replaceTrack('audio', null);
+      if (!replaced) {
+        console.warn('[useMediasoup] Failed to detach audio track from SFU producer; producer remains paused');
+      }
+
+      mediaManager.stopAudioTrack();
+
+      return true;
+    }
   }, []);
 
   const kickPeer = useCallback((userId: string) => {
@@ -239,7 +329,8 @@ export function useMediasoup({ roomId, roomOwnerId, localStream, enabled = true 
   return {
     state,
     remotePeers: useMemo(() => Array.from(remotePeers.values()), [remotePeers]),
-    syncProducerState,
+    toggleVideoWithHardware,
+    toggleAudioWithHardware,
     kickPeer,
     wasKicked,
   };

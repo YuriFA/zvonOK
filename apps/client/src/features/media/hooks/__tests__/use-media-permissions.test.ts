@@ -8,7 +8,7 @@ const mockStopStream = vi.hoisted(() => vi.fn());
 const mockIsAudioOnly = vi.hoisted(() => vi.fn());
 const mockGetVideoUnavailableReason = vi.hoisted(() => vi.fn());
 
-vi.mock('@/lib/media', () => ({
+vi.mock('@/lib/media/manager', () => ({
   mediaManager: {
     checkPermissions: mockCheckPermissions,
     startStreamWithFallback: mockStartStreamWithFallback,

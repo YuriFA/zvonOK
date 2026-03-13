@@ -55,7 +55,7 @@ export function DeviceSelector({ className }: DeviceSelectorProps) {
             type="button"
             variant="secondary"
             size="icon"
-            onClick={mediaControls.toggleVideo}
+            onClick={() => void mediaControls.toggleVideo()}
             disabled={!stream || !!error}
           >
             {mediaControls.isVideoEnabled ? (
@@ -68,7 +68,7 @@ export function DeviceSelector({ className }: DeviceSelectorProps) {
             type="button"
             variant="secondary"
             size="icon"
-            onClick={mediaControls.toggleAudio}
+            onClick={() => void mediaControls.toggleAudio()}
             disabled={!stream || !!error}
           >
             {mediaControls.isAudioEnabled ? (

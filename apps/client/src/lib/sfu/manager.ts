@@ -24,6 +24,8 @@ import type {
   SfuTrackCallback,
   SfuPeerCallback,
   SfuPeerInfo,
+  SfuPeerJoinedPayload,
+  SfuExistingPeersPayload,
   QualityStats,
   QualityScore,
   PeerQualityStats,
@@ -604,7 +606,7 @@ export class SfuManager {
     return undefined;
   }
 
-  async replaceTrack(kind: 'audio' | 'video', newTrack: MediaStreamTrack): Promise<boolean> {
+  async replaceTrack(kind: 'audio' | 'video', newTrack: MediaStreamTrack | null): Promise<boolean> {
     const producer = this.getProducerByKind(kind);
 
     if (!producer) {
@@ -617,6 +619,23 @@ export class SfuManager {
     } catch (error) {
       console.error(`[SFU] Failed to replace ${kind} track:`, error);
       return false;
+    }
+  }
+
+  closeProducer(kind: 'audio' | 'video'): void {
+    const producer = this.getProducerByKind(kind);
+    if (!producer) {
+      return;
+    }
+
+    producer.close();
+    this.producers.delete(producer.id);
+    this.socket?.emit('sfu:close-producer', { producerId: producer.id });
+
+    if (kind === 'audio') {
+      this.updateState({ audioProducerId: null });
+    } else {
+      this.updateState({ videoProducerId: null });
     }
   }
 

@@ -30,6 +30,11 @@ export function useDeviceSwitching(): UseDeviceSwitchingReturn {
     isSwitchingRef.current = true;
 
     try {
+      if (!mediaManager.hasVideoTrack()) {
+        mediaManager.setSelectedVideoDeviceId(deviceId);
+        return true;
+      }
+
       const newTrack = await mediaManager.switchVideoDevice(deviceId);
 
       if (!newTrack) {
@@ -71,6 +76,11 @@ export function useDeviceSwitching(): UseDeviceSwitchingReturn {
     isSwitchingRef.current = true;
 
     try {
+      if (!mediaManager.hasAudioTrack()) {
+        mediaManager.setSelectedAudioDeviceId(deviceId);
+        return true;
+      }
+
       const newTrack = await mediaManager.switchAudioDevice(deviceId);
 
       if (!newTrack) {

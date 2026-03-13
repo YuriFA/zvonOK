@@ -22,6 +22,13 @@ import { useActiveSpeaker } from '@/features/room/hooks/use-active-speaker';
 
 type RoomViewState = 'prejoin' | 'active';
 
+interface SavedMediaSetup {
+  video: string | null;
+  audio: string | null;
+  isVideoEnabled: boolean;
+  isAudioEnabled: boolean;
+}
+
 export const RoomPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -35,12 +42,14 @@ export const RoomPage = () => {
 
   const [viewState, setViewState] = useState<RoomViewState>('prejoin');
   // Preserve device selection from lobby preview when joining
-  const savedDeviceIds = useRef<{ video: string | null; audio: string | null } | null>(null);
+  const savedDeviceIds = useRef<SavedMediaSetup | null>(null);
 
   const handleJoin = useCallback(() => {
     savedDeviceIds.current = {
       video: mediaManager.getVideoDeviceId(),
       audio: mediaManager.getAudioDeviceId(),
+      isVideoEnabled: mediaManager.hasVideoTrack(),
+      isAudioEnabled: mediaManager.hasAudioTrack(),
     };
     setViewState('active');
   }, []);
@@ -68,7 +77,7 @@ export const RoomPage = () => {
 
   const primaryRemoteMediaElement = remoteMediaElements.values().next().value ?? null;
 
-  const { state: sfuState, remotePeers, syncProducerState, kickPeer, wasKicked } = useMediasoup({
+  const { state: sfuState, remotePeers, toggleVideoWithHardware, toggleAudioWithHardware, kickPeer, wasKicked } = useMediasoup({
     roomId: room?.id,
     roomOwnerId: room?.ownerId,
     localStream,
@@ -93,16 +102,40 @@ export const RoomPage = () => {
   };
 
   // Toggle handlers with media state sync
-  const handleToggleVideo = () => {
+  const handleToggleVideo = async () => {
     const nextVideoEnabled = !mediaControls.isVideoEnabled;
-    mediaControls.toggleVideo();
-    syncProducerState('video', nextVideoEnabled);
+
+    // Update UI state immediately for responsiveness
+    mediaControls.setVideoEnabled(nextVideoEnabled);
+
+    // Use hardware-aware toggle that properly stops/restarts camera
+    const success = await toggleVideoWithHardware(nextVideoEnabled);
+
+    if (!success && nextVideoEnabled) {
+      // Failed to re-acquire camera - revert UI state
+      mediaControls.setVideoEnabled(false);
+      setVideoUnavailableReason('Failed to access camera');
+      setIsAudioOnly(true);
+    } else if (success) {
+      // Update audio-only state based on video availability
+      setIsAudioOnly(!nextVideoEnabled);
+      setVideoUnavailableReason(nextVideoEnabled ? null : 'Camera turned off');
+    }
   };
 
-  const handleToggleAudio = () => {
+  const handleToggleAudio = async () => {
     const nextAudioEnabled = !mediaControls.isAudioEnabled;
-    mediaControls.toggleAudio();
-    syncProducerState('audio', nextAudioEnabled);
+
+    // Update UI state immediately for responsiveness
+    mediaControls.setAudioEnabled(nextAudioEnabled);
+
+    // Use hardware-aware toggle that properly stops/restarts microphone
+    const success = await toggleAudioWithHardware(nextAudioEnabled);
+
+    if (!success && nextAudioEnabled) {
+      // Failed to re-acquire microphone - revert UI state
+      mediaControls.setAudioEnabled(false);
+    }
   };
 
   // Build participants list from local user + remote peers
@@ -158,16 +191,28 @@ export const RoomPage = () => {
       setIsMediaInitialized(false);
       setMediaError(null);
 
-      // Build constraints using device IDs saved from the lobby preview
+      // Preserve device IDs from lobby preview for video re-acquisition
       const ids = savedDeviceIds.current;
+      if (ids?.video) {
+        mediaManager.setSelectedVideoDeviceId(ids.video);
+      }
+      if (ids?.audio) {
+        mediaManager.setSelectedAudioDeviceId(ids.audio);
+      }
+
+      // Build constraints using device IDs saved from the lobby preview
       const constraints = ids
         ? {
-            video: ids.video
+            video: ids.isVideoEnabled
+              ? ids.video
               ? { deviceId: { exact: ids.video }, width: { ideal: 1280 }, height: { ideal: 720 } }
-              : { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' as const },
-            audio: ids.audio
+              : { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' as const }
+              : false,
+            audio: ids.isAudioEnabled
+              ? ids.audio
               ? { deviceId: { exact: ids.audio }, echoCancellation: true, noiseSuppression: true, autoGainControl: true }
-              : { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+              : { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+              : false,
           }
         : undefined;
 
