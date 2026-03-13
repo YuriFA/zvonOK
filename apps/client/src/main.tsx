@@ -1,13 +1,12 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, Navigate } from "react-router";
 import { RouterProvider } from "react-router/dom";
 import { QueryClientProvider } from '@tanstack/react-query';
 
 import { Lobby } from "./routes/lobby.tsx";
 import { LoginPage } from "./routes/login.tsx";
 import { RegisterPage } from "./routes/register.tsx";
-import { RoomLobbyPage } from "./routes/room-lobby.tsx";
 import { RoomPage } from "./routes/room.tsx";
 import { AuthProvider } from "./features/auth/contexts/auth.context.tsx";
 import { queryClient } from "./lib/react-query/query-client";
@@ -30,7 +29,7 @@ const router = createBrowserRouter([
   },
   {
     path: "/room/:slug/lobby",
-    Component: RoomLobbyPage,
+    element: <Navigate to=".." relative="path" replace />,
   },
   {
     path: "/room/:slug",

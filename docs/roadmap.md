@@ -149,11 +149,12 @@ Tasks:
 Tasks:
 - [task-1](./tasks/stage-6/TASK-001-video-grid-layout.md) — CSS Grid adaptive layout
 - [task-2](./tasks/stage-6/TASK-003-pre-join-lobby.md) — Canonical pre-join state on room link
-- [task-3](./tasks/stage-6/TASK-004-peer-without-media.md) — Presence for participants without media
-- [task-4](./tasks/stage-6/TASK-005-camera-toggle.md) — Physical camera release on toggle
-- [task-5](./tasks/stage-6/TASK-006-media-error-indicators.md) — Media error states in call controls
-- [task-6](./tasks/stage-6/TASK-002-speaker-detection.md) — Active speaker detection
-- [task-7](./tasks/stage-6/TASK-007-call-ended-state.md) — Ended call state on room link
+- [task-3](./tasks/stage-6/TASK-008-device-state-persistence.md) — Persist lobby device state into call join
+- [task-4](./tasks/stage-6/TASK-004-peer-without-media.md) — Presence for participants without media
+- [task-5](./tasks/stage-6/TASK-005-camera-toggle.md) — Physical camera release on toggle
+- [task-6](./tasks/stage-6/TASK-006-media-error-indicators.md) — Media error states in call controls
+- [task-7](./tasks/stage-6/TASK-002-speaker-detection.md) — Active speaker detection
+- [task-8](./tasks/stage-6/TASK-007-call-ended-state.md) — Ended call state on room link
 
 **Result:** Room link supports pre-join, active call, and ended states; participant and media UX work predictably in group calls
 
