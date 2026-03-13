@@ -123,7 +123,7 @@ Tasks:
 
 ## Stage 5 — SFU (Group Calls)
 
-**Status:** In Progress
+**Status:** Completed
 **Goal:** Scalable group calls (3-10+ participants) via mediasoup
 
 Tasks:
@@ -246,7 +246,7 @@ Tasks:
 | Stage 2.5 | Completed | 1 day |
 | Stage 3 | Completed | 3-4 days |
 | Stage 4 | Completed | 1-2 days |
-| Stage 5 | In Progress | 5-7 days |
+| Stage 5 | Completed | 5-7 days |
 | Stage 6 | Planned | 2-3 days |
 | Stage 7 | Planned | 2-3 days |
 | Stage 8 | Planned | 1-2 days |
@@ -262,7 +262,7 @@ Tasks:
 
 ## Next Steps
 
-1. **Stage 5** (SFU Group Calls) — mediasoup integration for scalable group calls
+1. **Stage 6** (Video Grid) — Adaptive video layout with speaker detection
 2. Follow task files in numerical order
 3. Update task status as work progresses
 4. Refer to [SDD](./SDD.md) for architecture and design decisions
