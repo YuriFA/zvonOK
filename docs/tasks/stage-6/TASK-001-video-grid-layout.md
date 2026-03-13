@@ -1,7 +1,7 @@
 # TASK-042 — Adaptive Video Grid Layout
 
 ## Status
-planned
+completed
 
 ## Priority
 medium

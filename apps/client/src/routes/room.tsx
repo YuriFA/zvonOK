@@ -9,6 +9,7 @@ import { Link } from 'react-router';
 import { mediaManager } from '@/lib/media/manager';
 import { LocalVideo } from '@/components/local-video';
 import { RemoteVideo } from '@/components/remote-video';
+import { VideoGrid, VideoTile } from '@/components/video-grid';
 import { ParticipantsList, type Participant } from '@/components/room/ParticipantsList';
 import { useMediaControls } from '@/features/media/hooks/use-media-controls';
 import { MediaControls } from '@/features/media/components/media-controls';
@@ -272,15 +273,15 @@ export const RoomPage = () => {
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
           <div className="min-w-0">
         {/* Video grid */}
-        <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+        <VideoGrid className="mb-4">
           {/* Local video */}
           {localStream && (
-            <div className="relative">
+            <VideoTile>
               <LocalVideo
                 stream={localStream}
                 isVideoEnabled={mediaControls.isVideoEnabled}
                 isAudioEnabled={mediaControls.isAudioEnabled}
-                className="w-full aspect-video"
+                className="h-full w-full"
                 showControls={false}
               />
               {/* Media controls overlay */}
@@ -292,30 +293,30 @@ export const RoomPage = () => {
                   onToggleAudio={handleToggleAudio}
                 />
               </div>
-            </div>
+            </VideoTile>
           )}
 
           {/* Remote videos */}
           {remotePeers.map((peer) => {
             return (
-              <div key={peer.userId} className="relative">
+              <VideoTile key={peer.userId}>
                 <RemoteVideo
                   stream={peer.stream}
                   username={peer.username}
                   isVideoEnabled={peer.isVideoEnabled}
                   isAudioEnabled={peer.isAudioEnabled}
                   onMediaElement={(element) => handleRemoteMediaElement(peer.userId, element)}
-                  className="w-full aspect-video"
+                    className="h-full w-full"
                 />
                 {sfuState.connectionState !== 'connected' && (
                   <div className="absolute top-2 right-2 rounded bg-black/50 px-1.5 py-0.5 text-xs text-white">
                     {sfuState.connectionState === 'connecting' ? 'Connecting...' : sfuState.connectionState}
                   </div>
                 )}
-              </div>
+              </VideoTile>
             );
           })}
-        </div>
+        </VideoGrid>
 
         {/* Room info */}
         <div className="mb-4 flex gap-4 text-sm text-muted-foreground">
