@@ -60,11 +60,19 @@ export function VideoGrid({ children, className }: VideoGridProps) {
 export interface VideoTileProps {
   children: ReactNode;
   className?: string;
+  /** Whether this tile represents the active speaker */
+  isActiveSpeaker?: boolean;
 }
 
-export function VideoTile({ children, className }: VideoTileProps) {
+export function VideoTile({ children, className, isActiveSpeaker = false }: VideoTileProps) {
   return (
-    <div className={cn('relative aspect-video overflow-hidden', className)}>
+    <div
+      className={cn(
+        'relative aspect-video overflow-hidden rounded-lg transition-all duration-300',
+        isActiveSpeaker && 'ring-4 ring-green-500 ring-offset-2 ring-offset-background',
+        className
+      )}
+    >
       {children}
     </div>
   );

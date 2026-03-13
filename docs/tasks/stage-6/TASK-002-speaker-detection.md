@@ -1,7 +1,7 @@
 # TASK-043 — Active Speaker Detection
 
 ## Status
-planned
+completed
 
 ## Priority
 medium

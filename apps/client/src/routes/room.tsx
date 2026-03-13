@@ -16,6 +16,7 @@ import { MediaControls } from '@/features/media/components/media-controls';
 import { DeviceSettingsPanel } from '@/features/media/components/device-settings-panel';
 import { useMediasoup, type RemotePeerMedia } from '@/hooks/use-mediasoup';
 import { useQualityStats } from '@/hooks/use-quality-stats';
+import { useActiveSpeaker } from '@/features/room/hooks/use-active-speaker';
 
 export const RoomPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -59,6 +60,16 @@ export const RoomPage = () => {
   });
 
   const { peerStats } = useQualityStats({ enabled: sfuState.connectionState === 'connected' });
+
+  const localUserId = user?.id ?? 'local';
+
+  // Active speaker detection
+  const activeSpeakerId = useActiveSpeaker({
+    remotePeers,
+    localUserId,
+    localStream,
+    enabled: sfuState.connectionState === 'connected',
+  });
 
   const handleEndRoom = () => {
     if (!room || !user || room.ownerId !== user.id) return;
@@ -272,83 +283,83 @@ export const RoomPage = () => {
       <main className="flex flex-1 flex-col p-4">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
           <div className="min-w-0">
-        {/* Video grid */}
-        <VideoGrid className="mb-4">
-          {/* Local video */}
-          {localStream && (
-            <VideoTile>
-              <LocalVideo
-                stream={localStream}
-                isVideoEnabled={mediaControls.isVideoEnabled}
-                isAudioEnabled={mediaControls.isAudioEnabled}
-                className="h-full w-full"
-                showControls={false}
-              />
-              {/* Media controls overlay */}
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2">
-                <MediaControls
-                  isVideoEnabled={mediaControls.isVideoEnabled}
-                  isAudioEnabled={mediaControls.isAudioEnabled}
-                  onToggleVideo={handleToggleVideo}
-                  onToggleAudio={handleToggleAudio}
-                />
-              </div>
-            </VideoTile>
-          )}
-
-          {/* Remote videos */}
-          {remotePeers.map((peer) => {
-            return (
-              <VideoTile key={peer.userId}>
-                <RemoteVideo
-                  stream={peer.stream}
-                  username={peer.username}
-                  isVideoEnabled={peer.isVideoEnabled}
-                  isAudioEnabled={peer.isAudioEnabled}
-                  onMediaElement={(element) => handleRemoteMediaElement(peer.userId, element)}
+            {/* Video grid */}
+            <VideoGrid className="mb-4">
+              {/* Local video */}
+              {localStream && (
+                <VideoTile isActiveSpeaker={activeSpeakerId === localUserId}>
+                  <LocalVideo
+                    stream={localStream}
+                    isVideoEnabled={mediaControls.isVideoEnabled}
+                    isAudioEnabled={mediaControls.isAudioEnabled}
                     className="h-full w-full"
-                />
-                {sfuState.connectionState !== 'connected' && (
-                  <div className="absolute top-2 right-2 rounded bg-black/50 px-1.5 py-0.5 text-xs text-white">
-                    {sfuState.connectionState === 'connecting' ? 'Connecting...' : sfuState.connectionState}
+                    showControls={false}
+                  />
+                  {/* Media controls overlay */}
+                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2">
+                    <MediaControls
+                      isVideoEnabled={mediaControls.isVideoEnabled}
+                      isAudioEnabled={mediaControls.isAudioEnabled}
+                      onToggleVideo={handleToggleVideo}
+                      onToggleAudio={handleToggleAudio}
+                    />
                   </div>
-                )}
-              </VideoTile>
-            );
-          })}
-        </VideoGrid>
+                </VideoTile>
+              )}
 
-        {/* Room info */}
-        <div className="mb-4 flex gap-4 text-sm text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <Users className="size-4" />
-            <span>Up to {room.maxParticipants} participants</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Calendar className="size-4" />
-            <span>Created {new Date(room.createdAt).toLocaleDateString()}</span>
-          </div>
-        </div>
+              {/* Remote videos */}
+              {remotePeers.map((peer) => {
+                return (
+                  <VideoTile key={peer.userId} isActiveSpeaker={activeSpeakerId === peer.userId}>
+                    <RemoteVideo
+                      stream={peer.stream}
+                      username={peer.username}
+                      isVideoEnabled={peer.isVideoEnabled}
+                      isAudioEnabled={peer.isAudioEnabled}
+                      onMediaElement={(element) => handleRemoteMediaElement(peer.userId, element)}
+                      className="h-full w-full"
+                    />
+                    {sfuState.connectionState !== 'connected' && (
+                      <div className="absolute top-2 right-2 rounded bg-black/50 px-1.5 py-0.5 text-xs text-white">
+                        {sfuState.connectionState === 'connecting' ? 'Connecting...' : sfuState.connectionState}
+                      </div>
+                    )}
+                  </VideoTile>
+                );
+              })}
+            </VideoGrid>
 
-        {/* Connection status */}
-        <div className="flex items-center gap-1">
-          {sfuState.connectionState === 'connected' ? (
-            <Wifi className="size-4 text-green-500" />
-          ) : sfuState.connectionState === 'connecting' ? (
-            <Wifi className="size-4 animate-pulse text-yellow-500" />
-          ) : (
-            <WifiOff className="size-4 text-red-500" />
-          )}
-          <span className="capitalize">
-            {sfuState.connectionState === 'connecting'
-              ? 'Connecting...'
-              : sfuState.connectionState === 'connected'
-                ? 'Connected'
-                : sfuState.connectionState === 'failed'
-                  ? 'Connection failed'
-                  : 'Disconnected'}
-          </span>
-        </div>
+            {/* Room info */}
+            <div className="mb-4 flex gap-4 text-sm text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <Users className="size-4" />
+                <span>Up to {room.maxParticipants} participants</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Calendar className="size-4" />
+                <span>Created {new Date(room.createdAt).toLocaleDateString()}</span>
+              </div>
+            </div>
+
+            {/* Connection status */}
+            <div className="flex items-center gap-1">
+              {sfuState.connectionState === 'connected' ? (
+                <Wifi className="size-4 text-green-500" />
+              ) : sfuState.connectionState === 'connecting' ? (
+                <Wifi className="size-4 animate-pulse text-yellow-500" />
+              ) : (
+                <WifiOff className="size-4 text-red-500" />
+              )}
+              <span className="capitalize">
+                {sfuState.connectionState === 'connecting'
+                  ? 'Connecting...'
+                  : sfuState.connectionState === 'connected'
+                    ? 'Connected'
+                    : sfuState.connectionState === 'failed'
+                      ? 'Connection failed'
+                      : 'Disconnected'}
+              </span>
+            </div>
 
           </div>
 
