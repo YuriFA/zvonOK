@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { useRoom } from '@/features/room/hooks/use-room';
@@ -14,9 +14,13 @@ import { ParticipantsList, type Participant } from '@/components/room/Participan
 import { useMediaControls } from '@/features/media/hooks/use-media-controls';
 import { MediaControls } from '@/features/media/components/media-controls';
 import { DeviceSettingsPanel } from '@/features/media/components/device-settings-panel';
+import { DeviceSelector } from '@/features/media/components/device-selector';
+import { CopyLink } from '@/components/ui/copy-link';
 import { useMediasoup, type RemotePeerMedia } from '@/hooks/use-mediasoup';
 import { useQualityStats } from '@/hooks/use-quality-stats';
 import { useActiveSpeaker } from '@/features/room/hooks/use-active-speaker';
+
+type RoomViewState = 'prejoin' | 'active';
 
 export const RoomPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -28,6 +32,18 @@ export const RoomPage = () => {
   const endRoom = useEndRoom({
     onSuccess: () => navigate('/'),
   });
+
+  const [viewState, setViewState] = useState<RoomViewState>('prejoin');
+  // Preserve device selection from lobby preview when joining
+  const savedDeviceIds = useRef<{ video: string | null; audio: string | null } | null>(null);
+
+  const handleJoin = useCallback(() => {
+    savedDeviceIds.current = {
+      video: mediaManager.getVideoDeviceId(),
+      audio: mediaManager.getAudioDeviceId(),
+    };
+    setViewState('active');
+  }, []);
 
   // Media state
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
@@ -56,7 +72,7 @@ export const RoomPage = () => {
     roomId: room?.id,
     roomOwnerId: room?.ownerId,
     localStream,
-    enabled: !!room && isMediaInitialized,
+    enabled: !!room && isMediaInitialized && viewState === 'active',
   });
 
   const { peerStats } = useQualityStats({ enabled: sfuState.connectionState === 'connected' });
@@ -132,16 +148,31 @@ export const RoomPage = () => {
     setVideoUnavailableReason(null);
   }, [wasKicked]);
 
-  // Media stream - start on mount, stop on unmount
+  // Media stream - start after join, stop on unmount or leaving active state
   useEffect(() => {
+    if (viewState !== 'active') return;
+
     let isCancelled = false;
 
     const startMedia = async () => {
       setIsMediaInitialized(false);
       setMediaError(null);
 
+      // Build constraints using device IDs saved from the lobby preview
+      const ids = savedDeviceIds.current;
+      const constraints = ids
+        ? {
+            video: ids.video
+              ? { deviceId: { exact: ids.video }, width: { ideal: 1280 }, height: { ideal: 720 } }
+              : { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' as const },
+            audio: ids.audio
+              ? { deviceId: { exact: ids.audio }, echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+              : { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+          }
+        : undefined;
+
       try {
-        const result = await mediaManager.startStreamWithFallback();
+        const result = await mediaManager.startStreamWithFallback(constraints);
 
         if (isCancelled) {
           mediaManager.stopStream();
@@ -182,7 +213,7 @@ export const RoomPage = () => {
       setIsAudioOnly(false);
       setVideoUnavailableReason(null);
     };
-  }, []);
+  }, [viewState]);
 
   if (isLoading) {
     return (
@@ -204,6 +235,69 @@ export const RoomPage = () => {
   }
 
   const isOwner = user?.id === room.ownerId;
+  const roomUrl = `${window.location.origin}/room/${room.slug}`;
+
+  if (viewState === 'prejoin') {
+    return (
+      <div className="flex min-h-screen flex-col">
+        {/* Header */}
+        <header className="border-b">
+          <div className="container flex h-16 items-center justify-between px-4">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon" asChild>
+                <Link to="/">
+                  <ArrowLeft className="size-4" />
+                </Link>
+              </Button>
+              <div>
+                <h1 className="text-lg font-semibold">{room.name || 'Unnamed Room'}</h1>
+                <p className="text-sm text-muted-foreground">Code: {room.slug}</p>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Main content */}
+        <main className="flex flex-1 flex-col p-4">
+          {/* Room info */}
+          <div className="mb-6 flex gap-4 text-sm text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <Users className="size-4" />
+              <span>Up to {room.maxParticipants} participants</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Calendar className="size-4" />
+              <span>Created {new Date(room.createdAt).toLocaleDateString()}</span>
+            </div>
+          </div>
+
+          <div className="mx-auto grid w-full max-w-2xl gap-6">
+            {/* Device selector */}
+            <div>
+              <h2 className="mb-4 text-xl font-semibold">Setup Your Devices</h2>
+              <DeviceSelector />
+            </div>
+
+            {/* Share link */}
+            <div>
+              <h2 className="mb-2 text-xl font-semibold">Share Room Link</h2>
+              <p className="mb-4 text-sm text-muted-foreground">
+                Copy this link and share it with others to invite them to the room.
+              </p>
+              <CopyLink url={roomUrl} />
+            </div>
+
+            {/* Join button */}
+            <div className="flex justify-end">
+              <Button size="lg" onClick={handleJoin}>
+                Join Room
+              </Button>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col">
