@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { useRoom } from '@/features/room/hooks/use-room';
@@ -12,84 +12,141 @@ import { RemoteVideo } from '@/components/remote-video';
 import { VideoGrid, VideoTile } from '@/components/video-grid';
 import { ParticipantsList, type Participant } from '@/components/room/ParticipantsList';
 import { useMediaControls } from '@/features/media/hooks/use-media-controls';
+import { useMediaDevices } from '@/features/media/hooks/use-media-devices';
 import { MediaControls } from '@/features/media/components/media-controls';
+import { DeviceSelector } from '@/features/media/components/device-selector';
 import { DeviceSettingsPanel } from '@/features/media/components/device-settings-panel';
 import { useMediasoup, type RemotePeerMedia } from '@/hooks/use-mediasoup';
 import { useQualityStats } from '@/hooks/use-quality-stats';
 import { useActiveSpeaker } from '@/features/room/hooks/use-active-speaker';
+import { CopyLink } from '@/components/ui/copy-link';
+import type { PeerQualityStats } from '@/lib/sfu/types';
 
-export const RoomPage = () => {
-  const { slug } = useParams<{ slug: string }>();
-  const navigate = useNavigate();
+type RoomViewState = 'prejoin' | 'active' | 'ended';
+
+function getManagedStartResult() {
+  const stream = mediaManager.getStream();
+  if (!stream) {
+    return null;
+  }
+
+  return {
+    stream,
+    isAudioOnly: mediaManager.isAudioOnly(),
+    videoError: mediaManager.getVideoUnavailableReason() ?? undefined,
+  };
+}
+
+function stopManagedOrStaleStream(stream: MediaStream | null): void {
+  if (!stream) {
+    return;
+  }
+
+  if (mediaManager.getStream() === stream) {
+    mediaManager.stopStream();
+    return;
+  }
+
+  stream.getTracks().forEach((track) => {
+    track.stop();
+  });
+}
+
+// Pre-join lobby view component
+function PreJoinView({
+  room,
+  onJoin,
+  preserveStreamOnUnmountRef,
+}: {
+  room: NonNullable<ReturnType<typeof useRoom>['data']>;
+  onJoin: () => void;
+  preserveStreamOnUnmountRef: React.MutableRefObject<boolean>;
+}) {
+  const roomUrl = `${window.location.origin}/room/${room.slug}`;
+
+  return (
+    <main className="flex flex-1 flex-col p-4">
+      {/* Room info */}
+      <div className="mb-6 flex gap-4 text-sm text-muted-foreground">
+        <div className="flex items-center gap-1">
+          <Users className="size-4" />
+          <span>Up to {room.maxParticipants} participants</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Calendar className="size-4" />
+          <span>
+            Created {new Date(room.createdAt).toLocaleDateString()}
+          </span>
+        </div>
+      </div>
+
+      <div className="mx-auto grid w-full max-w-2xl gap-6">
+        {/* Device selector */}
+        <div>
+          <h2 className="mb-4 text-xl font-semibold">Setup Your Devices</h2>
+          <DeviceSelector preserveStreamOnUnmountRef={preserveStreamOnUnmountRef} />
+        </div>
+
+        {/* Share link */}
+        <div>
+          <h2 className="mb-2 text-xl font-semibold">Share Room Link</h2>
+          <p className="mb-4 text-sm text-muted-foreground">
+            Copy this link and share it with others to invite them to the
+            room.
+          </p>
+          <CopyLink url={roomUrl} />
+        </div>
+
+        {/* Join button */}
+        <div className="flex justify-end">
+          <Button size="lg" onClick={onJoin}>
+            Join Room
+          </Button>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+// Active call view component
+function ActiveCallView({
+  room,
+  localStream,
+  isAudioOnly,
+  videoUnavailableReason,
+  mediaError,
+  mediaControls,
+  sfuState,
+  remotePeers,
+  peerStats,
+  localUserId,
+  activeSpeakerId,
+  onToggleVideo,
+  onToggleAudio,
+  onKickParticipant,
+  endRoom,
+  wasKicked,
+}: {
+  room: NonNullable<ReturnType<typeof useRoom>['data']>;
+  localStream: MediaStream | null;
+  isAudioOnly: boolean;
+  videoUnavailableReason: string | null;
+  mediaError: string | null;
+  mediaControls: ReturnType<typeof useMediaControls>;
+  sfuState: ReturnType<typeof useMediasoup>['state'];
+  remotePeers: RemotePeerMedia[];
+  peerStats: Map<string, PeerQualityStats>;
+  localUserId: string;
+  activeSpeakerId: string | null;
+  onToggleVideo: () => void;
+  onToggleAudio: () => void;
+  onKickParticipant: (participantId: string) => void;
+  endRoom: ReturnType<typeof useEndRoom>;
+  wasKicked: boolean;
+}) {
   const { user } = useAuth();
 
-  const { data: room, isLoading, error } = useRoom(slug || '');
-
-  const endRoom = useEndRoom({
-    onSuccess: () => navigate('/'),
-  });
-
-  // Media state
-  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
-  const [mediaError, setMediaError] = useState<string | null>(null);
-  const [isMediaInitialized, setIsMediaInitialized] = useState(false);
-  const [isAudioOnly, setIsAudioOnly] = useState(false);
-  const [videoUnavailableReason, setVideoUnavailableReason] = useState<string | null>(null);
-  const mediaControls = useMediaControls();
-  const [remoteMediaElements, setRemoteMediaElements] = useState<Map<string, HTMLVideoElement>>(new Map());
-
-  const handleRemoteMediaElement = useCallback((peerId: string, element: HTMLVideoElement | null) => {
-    setRemoteMediaElements((prev) => {
-      const next = new Map(prev);
-      if (element) {
-        next.set(peerId, element);
-      } else {
-        next.delete(peerId);
-      }
-      return next;
-    });
-  }, []);
-
-  const primaryRemoteMediaElement = remoteMediaElements.values().next().value ?? null;
-
-  const { state: sfuState, remotePeers, syncProducerState, kickPeer, wasKicked } = useMediasoup({
-    roomId: room?.id,
-    roomOwnerId: room?.ownerId,
-    localStream,
-    enabled: !!room && isMediaInitialized,
-  });
-
-  const { peerStats } = useQualityStats({ enabled: sfuState.connectionState === 'connected' });
-
-  const localUserId = user?.id ?? 'local';
-
-  // Active speaker detection
-  const activeSpeakerId = useActiveSpeaker({
-    remotePeers,
-    localUserId,
-    localStream,
-    enabled: sfuState.connectionState === 'connected',
-  });
-
-  const handleEndRoom = () => {
-    if (!room || !user || room.ownerId !== user.id) return;
-    endRoom.mutate(room.id);
-  };
-
-  // Toggle handlers with media state sync
-  const handleToggleVideo = () => {
-    const nextVideoEnabled = !mediaControls.isVideoEnabled;
-    mediaControls.toggleVideo();
-    syncProducerState('video', nextVideoEnabled);
-  };
-
-  const handleToggleAudio = () => {
-    const nextAudioEnabled = !mediaControls.isAudioEnabled;
-    mediaControls.toggleAudio();
-    syncProducerState('audio', nextAudioEnabled);
-  };
-
-  // Build participants list from local user + remote peers
+  // Build participants list
   const participants: Participant[] = useMemo(() => {
     const localParticipant: Participant = {
       id: user?.id ?? 'local',
@@ -117,130 +174,8 @@ export const RoomPage = () => {
     return [localParticipant, ...remoteParticipants];
   }, [user?.id, user?.username, mediaControls.isAudioEnabled, mediaControls.isVideoEnabled, sfuState.connectionState, remotePeers, peerStats]);
 
-  const handleKickParticipant = (participantId: string) => {
-    kickPeer(participantId);
-  };
-
-  useEffect(() => {
-    if (!wasKicked) {
-      return;
-    }
-
-    mediaManager.stopStream();
-    setLocalStream(null);
-    setIsAudioOnly(false);
-    setVideoUnavailableReason(null);
-  }, [wasKicked]);
-
-  // Media stream - start on mount, stop on unmount
-  useEffect(() => {
-    let isCancelled = false;
-
-    const startMedia = async () => {
-      setIsMediaInitialized(false);
-      setMediaError(null);
-
-      try {
-        const result = await mediaManager.startStreamWithFallback();
-
-        if (isCancelled) {
-          mediaManager.stopStream();
-          return;
-        }
-
-        setLocalStream(result.stream);
-        setIsAudioOnly(result.isAudioOnly);
-        setVideoUnavailableReason(result.videoError ?? null);
-
-        if (result.isAudioOnly) {
-          console.log('[Room] Running in audio-only mode:', result.videoError);
-        }
-      } catch (err) {
-        if (isCancelled) {
-          return;
-        }
-
-        const message =
-          err instanceof Error ? err.message : 'Failed to access camera/microphone';
-        setMediaError(message);
-        console.error('Failed to start media stream:', err);
-      } finally {
-        if (!isCancelled) {
-          setIsMediaInitialized(true);
-        }
-      }
-    };
-
-    void startMedia();
-
-    return () => {
-      isCancelled = true;
-      mediaManager.stopStream();
-      setLocalStream(null);
-      setMediaError(null);
-      setIsMediaInitialized(false);
-      setIsAudioOnly(false);
-      setVideoUnavailableReason(null);
-    };
-  }, []);
-
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground">Loading room...</p>
-      </div>
-    );
-  }
-
-  if (error || !room) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4">
-        <p className="text-destructive">{error?.message || 'Room not found'}</p>
-        <Button asChild>
-          <Link to="/">Back to Lobby</Link>
-        </Button>
-      </div>
-    );
-  }
-
-  const isOwner = user?.id === room.ownerId;
-
   return (
-    <div className="flex min-h-screen flex-col">
-      {/* Header */}
-      <header className="border-b">
-        <div className="container flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" asChild>
-              <Link to="/">
-                <ArrowLeft className="size-4" />
-              </Link>
-            </Button>
-            <div>
-              <h1 className="text-lg font-semibold">{room.name || 'Unnamed Room'}</h1>
-              <p className="text-sm text-muted-foreground">Code: {room.slug}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <DeviceSettingsPanel
-              variant="popover"
-              remoteVideoElement={primaryRemoteMediaElement}
-              isVideoEnabled={mediaControls.isVideoEnabled}
-              isAudioEnabled={mediaControls.isAudioEnabled}
-            />
-            {isOwner && (
-              <Button
-                variant="destructive"
-                onClick={handleEndRoom}
-                disabled={endRoom.isPending}
-              >
-                {endRoom.isPending ? 'Ending...' : 'End Room'}
-              </Button>
-            )}
-          </div>
-        </div>
-      </header>
-
+    <>
       {/* Error message from mutation */}
       {endRoom.error && (
         <div className="container mx-auto px-4 py-4">
@@ -300,8 +235,8 @@ export const RoomPage = () => {
                     <MediaControls
                       isVideoEnabled={mediaControls.isVideoEnabled}
                       isAudioEnabled={mediaControls.isAudioEnabled}
-                      onToggleVideo={handleToggleVideo}
-                      onToggleAudio={handleToggleAudio}
+                      onToggleVideo={onToggleVideo}
+                      onToggleAudio={onToggleAudio}
                     />
                   </div>
                 </VideoTile>
@@ -316,7 +251,6 @@ export const RoomPage = () => {
                       username={peer.username}
                       isVideoEnabled={peer.isVideoEnabled}
                       isAudioEnabled={peer.isAudioEnabled}
-                      onMediaElement={(element) => handleRemoteMediaElement(peer.userId, element)}
                       className="h-full w-full"
                     />
                     {sfuState.connectionState !== 'connected' && (
@@ -368,12 +302,297 @@ export const RoomPage = () => {
               participants={participants}
               currentUserId={user?.id}
               roomOwnerId={room.ownerId}
-              onKickParticipant={handleKickParticipant}
+              onKickParticipant={onKickParticipant}
               className="lg:sticky lg:top-4"
             />
           </aside>
         </div>
       </main>
-    </div>
+    </>
   );
 }
+
+export const RoomPage = () => {
+  const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const { data: room, isLoading, error } = useRoom(slug || '');
+
+  const endRoom = useEndRoom({
+    onSuccess: () => navigate('/'),
+  });
+
+  // Room view state
+  const [viewState, setViewState] = useState<RoomViewState>('prejoin');
+
+  // Media state
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [mediaError, setMediaError] = useState<string | null>(null);
+  const [isMediaInitialized, setIsMediaInitialized] = useState(false);
+  const [isAudioOnly, setIsAudioOnly] = useState(false);
+  const [videoUnavailableReason, setVideoUnavailableReason] = useState<string | null>(null);
+  const mediaControls = useMediaControls();
+  const preservePreJoinStreamRef = useRef(false);
+
+  // Get persisted device selections to use when starting stream
+  const { selectedDevices } = useMediaDevices();
+
+  const { state: sfuState, remotePeers, syncProducerState, kickPeer, wasKicked } = useMediasoup({
+    roomId: room?.id,
+    roomOwnerId: room?.ownerId,
+    localStream,
+    enabled: viewState === 'active' && !!room && isMediaInitialized,
+  });
+
+  const { peerStats } = useQualityStats({ enabled: sfuState.connectionState === 'connected' });
+
+  const localUserId = user?.id ?? 'local';
+
+  // Active speaker detection
+  const activeSpeakerId = useActiveSpeaker({
+    remotePeers,
+    localUserId,
+    localStream,
+    enabled: sfuState.connectionState === 'connected',
+  });
+
+  const handleEndRoom = () => {
+    if (!room || !user || room.ownerId !== user.id) return;
+    endRoom.mutate(room.id);
+  };
+
+  // Toggle handlers with media state sync
+  const handleToggleVideo = () => {
+    const nextVideoEnabled = !mediaControls.isVideoEnabled;
+    mediaControls.toggleVideo();
+    syncProducerState('video', nextVideoEnabled);
+  };
+
+  const handleToggleAudio = () => {
+    const nextAudioEnabled = !mediaControls.isAudioEnabled;
+    mediaControls.toggleAudio();
+    syncProducerState('audio', nextAudioEnabled);
+  };
+
+  const handleKickParticipant = (participantId: string) => {
+    kickPeer(participantId);
+  };
+
+  const handleJoinRoom = () => {
+    preservePreJoinStreamRef.current = true;
+    setViewState('active');
+  };
+
+  // Reset state when kicked
+  useEffect(() => {
+    if (!wasKicked) {
+      return;
+    }
+
+    mediaManager.stopStream();
+    setLocalStream(null);
+    setIsAudioOnly(false);
+    setVideoUnavailableReason(null);
+  }, [wasKicked]);
+
+  // Media stream - start only when in active state
+  // Uses persisted device selections from pre-join
+  useEffect(() => {
+    if (viewState !== 'active') {
+      return;
+    }
+
+    let isCancelled = false;
+    let streamToCleanup: MediaStream | null = null;
+
+    const startMedia = async () => {
+      setIsMediaInitialized(false);
+      setMediaError(null);
+
+      try {
+        // Build constraints with selected device IDs from pre-join
+        const constraints: MediaStreamConstraints = {
+          video: selectedDevices.videoDeviceId
+            ? {
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+                facingMode: 'user',
+                deviceId: { exact: selectedDevices.videoDeviceId },
+              }
+            : {
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+                facingMode: 'user',
+              },
+          audio: selectedDevices.audioDeviceId
+            ? {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+                deviceId: { exact: selectedDevices.audioDeviceId },
+              }
+            : {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+              },
+        };
+
+          const currentVideoDeviceId = mediaManager.getVideoDeviceId();
+          const currentAudioDeviceId = mediaManager.getAudioDeviceId();
+          const hasSelectedVideoMismatch =
+            !!selectedDevices.videoDeviceId && currentVideoDeviceId !== selectedDevices.videoDeviceId;
+          const hasSelectedAudioMismatch =
+            !!selectedDevices.audioDeviceId && currentAudioDeviceId !== selectedDevices.audioDeviceId;
+
+          if (hasSelectedVideoMismatch || hasSelectedAudioMismatch) {
+            mediaManager.stopStream();
+          }
+
+          const result =
+            getManagedStartResult() ??
+            (await mediaManager.startStreamWithFallback(constraints));
+          streamToCleanup = result.stream;
+
+        if (isCancelled) {
+            stopManagedOrStaleStream(result.stream);
+          return;
+        }
+
+          mediaManager.toggleVideo(mediaControls.isVideoEnabled);
+          mediaManager.toggleAudio(mediaControls.isAudioEnabled);
+        setLocalStream(result.stream);
+        setIsAudioOnly(result.isAudioOnly);
+        setVideoUnavailableReason(result.videoError ?? null);
+          preservePreJoinStreamRef.current = false;
+
+        if (result.isAudioOnly) {
+          console.log('[Room] Running in audio-only mode:', result.videoError);
+        }
+      } catch (err) {
+        if (isCancelled) {
+          return;
+        }
+
+        const message =
+          err instanceof Error ? err.message : 'Failed to access camera/microphone';
+        setMediaError(message);
+        console.error('Failed to start media stream:', err);
+      } finally {
+        if (!isCancelled) {
+          setIsMediaInitialized(true);
+        }
+      }
+    };
+
+    void startMedia();
+
+    return () => {
+      isCancelled = true;
+      preservePreJoinStreamRef.current = false;
+      stopManagedOrStaleStream(streamToCleanup ?? mediaManager.getStream());
+      setLocalStream(null);
+      setMediaError(null);
+      setIsMediaInitialized(false);
+      setIsAudioOnly(false);
+      setVideoUnavailableReason(null);
+    };
+  }, [
+    viewState,
+    selectedDevices.videoDeviceId,
+    selectedDevices.audioDeviceId,
+    mediaControls.isVideoEnabled,
+    mediaControls.isAudioEnabled,
+  ]);
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-muted-foreground">Loading room...</p>
+      </div>
+    );
+  }
+
+  if (error || !room) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4">
+        <p className="text-destructive">{error?.message || 'Room not found'}</p>
+        <Button asChild>
+          <Link to="/">Back to Lobby</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  const isOwner = user?.id === room.ownerId;
+
+  return (
+    <div className="flex min-h-screen flex-col">
+      {/* Header */}
+      <header className="border-b">
+        <div className="container flex h-16 items-center justify-between px-4">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" asChild>
+              <Link to="/">
+                <ArrowLeft className="size-4" />
+              </Link>
+            </Button>
+            <div>
+              <h1 className="text-lg font-semibold">{room.name || 'Unnamed Room'}</h1>
+              <p className="text-sm text-muted-foreground">Code: {room.slug}</p>
+            </div>
+          </div>
+          {viewState === 'active' && (
+            <div className="flex items-center gap-2">
+              <DeviceSettingsPanel
+                variant="popover"
+                remoteVideoElement={null}
+                isVideoEnabled={mediaControls.isVideoEnabled}
+                isAudioEnabled={mediaControls.isAudioEnabled}
+              />
+              {isOwner && (
+                <Button
+                  variant="destructive"
+                  onClick={handleEndRoom}
+                  disabled={endRoom.isPending}
+                >
+                  {endRoom.isPending ? 'Ending...' : 'End Room'}
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      </header>
+
+      {viewState === 'prejoin' && (
+        <PreJoinView
+          room={room}
+          onJoin={handleJoinRoom}
+          preserveStreamOnUnmountRef={preservePreJoinStreamRef}
+        />
+      )}
+
+      {viewState === 'active' && (
+        <ActiveCallView
+          room={room}
+          localStream={localStream}
+          isAudioOnly={isAudioOnly}
+          videoUnavailableReason={videoUnavailableReason}
+          mediaError={mediaError}
+          mediaControls={mediaControls}
+          sfuState={sfuState}
+          remotePeers={remotePeers}
+          peerStats={peerStats}
+          localUserId={localUserId}
+          activeSpeakerId={activeSpeakerId}
+          onToggleVideo={handleToggleVideo}
+          onToggleAudio={handleToggleAudio}
+          onKickParticipant={handleKickParticipant}
+          endRoom={endRoom}
+          wasKicked={wasKicked}
+        />
+      )}
+    </div>
+  );
+};

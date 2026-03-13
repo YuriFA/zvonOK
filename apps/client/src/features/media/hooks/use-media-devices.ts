@@ -81,7 +81,9 @@ export function useMediaDevices(): UseMediaDevicesReturn {
       if (!isPermissionGranted) {
         // Stop all tracks immediately — we only need the permission prompt
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        stream.getTracks().forEach((t) => t.stop());
+        stream.getTracks().forEach((track) => {
+          track.stop();
+        });
         setIsPermissionGranted(true);
       }
 
@@ -98,17 +100,22 @@ export function useMediaDevices(): UseMediaDevicesReturn {
   // Initial enumeration
   useEffect(() => {
     refreshDevices();
-  }, []);
+  }, [refreshDevices]);
 
   // Listen for device changes
   useEffect(() => {
+    const mediaDevices = navigator.mediaDevices;
+    if (!mediaDevices || typeof mediaDevices.addEventListener !== 'function') {
+      return;
+    }
+
     const handleDeviceChange = () => {
       refreshDevices();
     };
 
-    navigator.mediaDevices.addEventListener('devicechange', handleDeviceChange);
+    mediaDevices.addEventListener('devicechange', handleDeviceChange);
     return () => {
-      navigator.mediaDevices.removeEventListener('devicechange', handleDeviceChange);
+      mediaDevices.removeEventListener('devicechange', handleDeviceChange);
     };
   }, [refreshDevices]);
 

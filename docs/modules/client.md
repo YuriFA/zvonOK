@@ -48,8 +48,8 @@ React 19 + Vite frontend for the WebRTC chat application. Handles user authentic
 | `/` | `LobbyPage` | No | Main lobby, create/join rooms |
 | `/login` | `LoginPage` | No (redirect if auth) | Email/password login |
 | `/register` | `RegisterPage` | No (redirect if auth) | User registration |
-| `/room/:slug/lobby` | `RoomLobbyPage` | Optional | Device setup, video preview, share link |
-| `/room/:slug` | `RoomPage` | Optional | Video call interface |
+| `/room/:slug/lobby` | `RoomLobbyPage` | Optional | Legacy compatibility alias redirecting to `/room/:slug` pre-join |
+| `/room/:slug` | `RoomPage` | Optional | Canonical room flow with pre-join setup and active call states |
 
 ---
 
@@ -120,10 +120,14 @@ Located in `apps/client/src/components/ui/`:
 - Shareable room link display
 
 **RoomLobbyPage** (`src/routes/room-lobby.tsx`)
-- Pre-room lobby with device setup
-- Video preview and device configuration
-- Shareable room link (using slug)
-- "Join Room" button to enter call
+- Legacy compatibility route
+- Redirects `/room/:slug/lobby` to the canonical `/room/:slug` pre-join flow
+
+**RoomPage** (`src/routes/room.tsx`)
+- Canonical room entry route
+- Starts in pre-join with local preview, device selection, and share link
+- Delays Socket.io/SFU join until the user confirms entry
+- Reuses selected camera and microphone settings when transitioning into the active call
 
 ---
 

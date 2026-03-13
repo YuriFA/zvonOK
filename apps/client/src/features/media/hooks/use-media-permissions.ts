@@ -1,6 +1,15 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { mediaManager } from '@/lib/media/manager';
 import type { MediaPermissionStatus, StartStreamResult } from '@/lib/media/manager';
+import type { MutableRefObject } from 'react';
+
+export interface UseMediaPermissionsOptions {
+  /**
+   * Preserve an active managed stream across component unmount.
+   * Used by the room pre-join flow when transitioning into the active call.
+   */
+  preserveStreamOnUnmountRef?: MutableRefObject<boolean>;
+}
 
 export interface UseMediaPermissionsReturn {
   /** Permission status for camera and microphone */
@@ -30,6 +39,21 @@ export interface UseMediaPermissionsReturn {
 const DEFAULT_RETRY_DELAY = 1000;
 const DEFAULT_MAX_RETRIES = 3;
 
+function stopManagedOrStaleStream(stream: MediaStream | null): void {
+  if (!stream) {
+    return;
+  }
+
+  if (mediaManager.getStream() === stream) {
+    mediaManager.stopStream();
+    return;
+  }
+
+  stream.getTracks().forEach((track) => {
+    track.stop();
+  });
+}
+
 /**
  * Hook for handling media device permissions with graceful degradation.
  *
@@ -39,7 +63,8 @@ const DEFAULT_MAX_RETRIES = 3;
  * - Retry logic for temporary failures
  * - Loading and error states
  */
-export function useMediaPermissions(): UseMediaPermissionsReturn {
+export function useMediaPermissions(options: UseMediaPermissionsOptions = {}): UseMediaPermissionsReturn {
+  const { preserveStreamOnUnmountRef } = options;
   const [permissionStatus, setPermissionStatus] = useState<MediaPermissionStatus | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -47,44 +72,74 @@ export function useMediaPermissions(): UseMediaPermissionsReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [isAudioOnly, setIsAudioOnly] = useState(false);
   const [videoUnavailableReason, setVideoUnavailableReason] = useState<string | null>(null);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const checkPermissions = useCallback(async (): Promise<MediaPermissionStatus> => {
-    setIsChecking(true);
+    if (isMountedRef.current) {
+      setIsChecking(true);
+    }
+
     try {
       const status = await mediaManager.checkPermissions();
-      setPermissionStatus(status);
+      if (isMountedRef.current) {
+        setPermissionStatus(status);
+      }
       return status;
     } finally {
-      setIsChecking(false);
+      if (isMountedRef.current) {
+        setIsChecking(false);
+      }
     }
   }, []);
 
   const startMedia = useCallback(async (): Promise<StartStreamResult> => {
-    setIsLoading(true);
-    setError(null);
+    if (isMountedRef.current) {
+      setIsLoading(true);
+      setError(null);
+    }
 
     try {
       const result = await mediaManager.startStreamWithFallback();
-      setStream(result.stream);
-      setIsAudioOnly(result.isAudioOnly);
-      setVideoUnavailableReason(result.videoError ?? null);
+      if (isMountedRef.current) {
+        setStream(result.stream);
+        setIsAudioOnly(result.isAudioOnly);
+        setVideoUnavailableReason(result.videoError ?? null);
+      }
       return result;
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to start media');
-      setError(error);
+      if (isMountedRef.current) {
+        setError(error);
+      }
       throw error;
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
   const stopMedia = useCallback(() => {
-    mediaManager.stopStream();
-    setStream(null);
-    setIsAudioOnly(false);
-    setVideoUnavailableReason(null);
-    setError(null);
-  }, []);
+    if (preserveStreamOnUnmountRef?.current) {
+      return;
+    }
+
+    stopManagedOrStaleStream(stream ?? mediaManager.getStream());
+
+    if (isMountedRef.current) {
+      setStream(null);
+      setIsAudioOnly(false);
+      setVideoUnavailableReason(null);
+      setError(null);
+    }
+  }, [preserveStreamOnUnmountRef, stream]);
 
   const retry = useCallback(
     async (maxRetries: number = DEFAULT_MAX_RETRIES): Promise<StartStreamResult | null> => {
@@ -125,12 +180,6 @@ export function useMediaPermissions(): UseMediaPermissionsReturn {
   useEffect(() => {
     checkPermissions();
   }, [checkPermissions]);
-
-  // Update audio-only state when stream changes
-  useEffect(() => {
-    setIsAudioOnly(mediaManager.isAudioOnly());
-    setVideoUnavailableReason(mediaManager.getVideoUnavailableReason());
-  }, [stream]);
 
   return {
     permissionStatus,

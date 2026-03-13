@@ -1,7 +1,7 @@
 # TASK-063 — Pre-Join Lobby Before Call Connection
 
 ## Status
-planned
+completed
 
 ## Priority
 high
@@ -49,16 +49,16 @@ type RoomViewState = 'prejoin' | 'active' | 'ended';
 - Leaving the call and re-entering should also pass through the lobby
 
 ## Acceptance Criteria
-- [ ] Opening `/room/:slug` shows the pre-join state instead of connecting immediately
-- [ ] Creating a room from the app lands on the same pre-join flow as a shared link
-- [ ] `/room/:slug/lobby` does not create a second independent flow; it redirects to or reuses the canonical pre-join state
-- [ ] No signalling room join happens before the user confirms entry
-- [ ] No SFU transport or consumer setup starts before confirmation
-- [ ] Lobby shows local media preview and device controls before join
-- [ ] Selected camera and microphone are applied after joining the call
-- [ ] Clicking "Join" switches the room page into active call state and starts connection setup
-- [ ] Refreshing the page before joining keeps the user in the lobby flow
-- [ ] Direct navigation from app UI and shared links both use the same pre-join behavior
+- [x] Opening `/room/:slug` shows the pre-join state instead of connecting immediately
+- [x] Creating a room from the app lands on the same pre-join flow as a shared link
+- [x] `/room/:slug/lobby` does not create a second independent flow; it redirects to or reuses the canonical pre-join state
+- [x] No signalling room join happens before the user confirms entry
+- [x] No SFU transport or consumer setup starts before confirmation
+- [x] Lobby shows local media preview and device controls before join
+- [x] Selected camera and microphone are applied after joining the call
+- [x] Clicking "Join" switches the room page into active call state and starts connection setup
+- [x] Refreshing the page before joining keeps the user in the lobby flow
+- [x] Direct navigation from app UI and shared links both use the same pre-join behavior
 
 ## Definition of Done
 - `/room/:slug` is the default entry point to calls
