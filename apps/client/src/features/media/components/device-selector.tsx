@@ -6,13 +6,18 @@ import { LocalVideo } from '@/components/local-video';
 import { useMediaControls } from '../hooks/use-media-controls';
 import { useMediaPermissions } from '../hooks/use-media-permissions';
 import { DeviceSettingsPanel } from './device-settings-panel';
+import type { MutableRefObject } from 'react';
+import { mediaManager } from '@/lib/media/manager';
 
 interface DeviceSelectorProps {
   className?: string;
+  preserveStreamOnUnmountRef?: MutableRefObject<boolean>;
 }
 
-export function DeviceSelector({ className }: DeviceSelectorProps) {
-  const { stream, startMedia, stopMedia, isLoading, error } = useMediaPermissions();
+export function DeviceSelector({ className, preserveStreamOnUnmountRef }: DeviceSelectorProps) {
+  const { stream, startMedia, stopMedia, isLoading, error } = useMediaPermissions({
+    preserveStreamOnUnmountRef,
+  });
   const mediaControls = useMediaControls();
 
   useEffect(() => {
@@ -24,6 +29,15 @@ export function DeviceSelector({ className }: DeviceSelectorProps) {
       stopMedia();
     };
   }, [startMedia, stopMedia]);
+
+  useEffect(() => {
+    if (!stream) {
+      return;
+    }
+
+    mediaManager.toggleVideo(mediaControls.isVideoEnabled);
+    mediaManager.toggleAudio(mediaControls.isAudioEnabled);
+  }, [stream, mediaControls.isVideoEnabled, mediaControls.isAudioEnabled]);
 
   return (
     <div className={cn('space-y-4', className)}>

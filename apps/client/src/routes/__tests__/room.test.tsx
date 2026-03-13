@@ -7,9 +7,20 @@ const mockUseEndRoom = vi.hoisted(() => vi.fn());
 const mockUseAuth = vi.hoisted(() => vi.fn());
 const mockStartStreamWithFallback = vi.hoisted(() => vi.fn());
 const mockStopStream = vi.hoisted(() => vi.fn());
+const mockGetStream = vi.hoisted(() => vi.fn());
+const mockGetVideoDeviceId = vi.hoisted(() => vi.fn());
+const mockGetAudioDeviceId = vi.hoisted(() => vi.fn());
+const mockIsAudioOnly = vi.hoisted(() => vi.fn());
+const mockGetVideoUnavailableReason = vi.hoisted(() => vi.fn());
+const mockManagerToggleVideo = vi.hoisted(() => vi.fn());
+const mockManagerToggleAudio = vi.hoisted(() => vi.fn());
 const mockUseMediaControls = vi.hoisted(() => vi.fn());
+const mockUseMediaPermissions = vi.hoisted(() => vi.fn());
+const mockUseMediaDevices = vi.hoisted(() => vi.fn());
 const mockUseMediasoup = vi.hoisted(() => vi.fn());
 const mockKickPeer = vi.hoisted(() => vi.fn());
+const mockUseQualityStats = vi.hoisted(() => vi.fn());
+const mockUseActiveSpeaker = vi.hoisted(() => vi.fn());
 
 vi.mock('@/features/room/hooks/use-room', () => ({
   useRoom: mockUseRoom,
@@ -27,6 +38,13 @@ vi.mock('@/lib/media/manager', () => ({
   mediaManager: {
     startStreamWithFallback: mockStartStreamWithFallback,
     stopStream: mockStopStream,
+    getStream: mockGetStream,
+    getVideoDeviceId: mockGetVideoDeviceId,
+    getAudioDeviceId: mockGetAudioDeviceId,
+    isAudioOnly: mockIsAudioOnly,
+    getVideoUnavailableReason: mockGetVideoUnavailableReason,
+    toggleVideo: mockManagerToggleVideo,
+    toggleAudio: mockManagerToggleAudio,
   },
 }));
 
@@ -34,8 +52,24 @@ vi.mock('@/features/media/hooks/use-media-controls', () => ({
   useMediaControls: mockUseMediaControls,
 }));
 
+vi.mock('@/features/media/hooks/use-media-permissions', () => ({
+  useMediaPermissions: mockUseMediaPermissions,
+}));
+
+vi.mock('@/features/media/hooks/use-media-devices', () => ({
+  useMediaDevices: mockUseMediaDevices,
+}));
+
 vi.mock('@/hooks/use-mediasoup', () => ({
   useMediasoup: mockUseMediasoup,
+}));
+
+vi.mock('@/hooks/use-quality-stats', () => ({
+  useQualityStats: mockUseQualityStats,
+}));
+
+vi.mock('@/features/room/hooks/use-active-speaker', () => ({
+  useActiveSpeaker: mockUseActiveSpeaker,
 }));
 
 vi.mock('@/components/local-video', () => ({
@@ -54,6 +88,15 @@ vi.mock('@/features/media/components/device-settings-panel', () => ({
 
 import { RoomPage } from '../room';
 
+function createMockStream(id: string): MediaStream {
+  return {
+    id,
+    getTracks: () => [],
+    getVideoTracks: () => [],
+    getAudioTracks: () => [],
+  } as unknown as MediaStream;
+}
+
 const room = {
   id: 'room-1',
   slug: 'alpha',
@@ -68,9 +111,11 @@ describe('RoomPage', () => {
   const toggleVideo = vi.fn();
   const toggleAudio = vi.fn();
   const syncProducerState = vi.fn();
+  let currentStream: MediaStream | null = null;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    currentStream = null;
 
     mockUseRoom.mockReturnValue({
       data: room,
@@ -87,16 +132,52 @@ describe('RoomPage', () => {
         id: 'user-1',
       },
     });
-    mockStartStreamWithFallback.mockResolvedValue({
-      stream: { id: 'local-stream' },
-      isAudioOnly: false,
-      videoError: null,
+    mockStartStreamWithFallback.mockImplementation(async () => {
+      currentStream = createMockStream('local-stream');
+      return {
+        stream: currentStream,
+        isAudioOnly: false,
+        videoError: null,
+      };
     });
+    mockStopStream.mockImplementation(() => {
+      currentStream = null;
+    });
+    mockGetStream.mockImplementation(() => currentStream);
+    mockGetVideoDeviceId.mockReturnValue(null);
+    mockGetAudioDeviceId.mockReturnValue(null);
+    mockIsAudioOnly.mockReturnValue(false);
+    mockGetVideoUnavailableReason.mockReturnValue(null);
     mockUseMediaControls.mockReturnValue({
       isVideoEnabled: true,
       isAudioEnabled: true,
       toggleVideo,
       toggleAudio,
+    });
+    mockUseMediaPermissions.mockImplementation((options?: { preserveStreamOnUnmountRef?: { current: boolean } }) => ({
+      permissionStatus: null,
+      isChecking: false,
+      checkPermissions: vi.fn(),
+      startMedia: mockStartStreamWithFallback,
+      stopMedia: () => {
+        if (options?.preserveStreamOnUnmountRef?.current) {
+          return;
+        }
+        mockStopStream();
+      },
+      isAudioOnly: false,
+      videoUnavailableReason: null,
+      stream: currentStream,
+      error: null,
+      isLoading: false,
+      retry: vi.fn(),
+    }));
+    mockUseMediaDevices.mockReturnValue({
+      selectedDevices: {
+        videoDeviceId: null,
+        audioDeviceId: null,
+        speakerDeviceId: null,
+      },
     });
     mockUseMediasoup.mockReturnValue({
       state: {
@@ -120,6 +201,10 @@ describe('RoomPage', () => {
       kickPeer: mockKickPeer,
       wasKicked: false,
     });
+    mockUseQualityStats.mockReturnValue({
+      peerStats: new Map(),
+    });
+    mockUseActiveSpeaker.mockReturnValue(null);
   });
 
   const renderRoomPage = () =>
@@ -133,7 +218,7 @@ describe('RoomPage', () => {
 
   it('waits for media initialization before enabling the SFU connection', async () => {
     let resolveStartStream: ((value: {
-      stream: { id: string };
+      stream: MediaStream;
       isAudioOnly: boolean;
       videoError: null;
     }) => void) | null = null;
@@ -153,8 +238,12 @@ describe('RoomPage', () => {
     );
 
     await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Join Room' }));
+    });
+
+    await act(async () => {
       resolveStartStream?.({
-        stream: { id: 'local-stream' },
+        stream: createMockStream('local-stream'),
         isAudioOnly: false,
         videoError: null,
       });
@@ -176,13 +265,18 @@ describe('RoomPage', () => {
 
     expect(screen.getByText('Alpha Room')).toBeInTheDocument();
     expect(screen.getByText('Code: alpha')).toBeInTheDocument();
-    expect(screen.getByText('Connected')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /participants/i })).toHaveTextContent('2');
+    expect(screen.getByRole('button', { name: 'Join Room' })).toBeInTheDocument();
 
     await waitFor(() => {
       expect(mockStartStreamWithFallback).toHaveBeenCalled();
     });
 
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Join Room' }));
+    });
+
+    expect(screen.getByText('Connected')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /participants/i })).toHaveTextContent('2');
     expect(screen.getAllByText('bob')).toHaveLength(2);
     expect(await screen.findByTestId('local-video')).toHaveTextContent('local-stream-ready');
   });
@@ -192,6 +286,10 @@ describe('RoomPage', () => {
 
     await waitFor(() => {
       expect(mockStartStreamWithFallback).toHaveBeenCalled();
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Join Room' }));
     });
 
     await act(async () => {
@@ -215,9 +313,40 @@ describe('RoomPage', () => {
     });
 
     await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Join Room' }));
+    });
+
+    await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Kick bob' }));
     });
 
     expect(mockKickPeer).toHaveBeenCalledWith('user-2');
+  });
+
+  it('reuses the preview stream on join and reapplies persisted mute state', async () => {
+    mockUseMediaControls.mockReturnValue({
+      isVideoEnabled: false,
+      isAudioEnabled: false,
+      toggleVideo,
+      toggleAudio,
+    });
+
+    renderRoomPage();
+
+    await waitFor(() => {
+      expect(mockStartStreamWithFallback).toHaveBeenCalled();
+    });
+
+    const preJoinCallCount = mockStartStreamWithFallback.mock.calls.length;
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Join Room' }));
+    });
+
+    await waitFor(() => {
+      expect(mockStartStreamWithFallback).toHaveBeenCalledTimes(preJoinCallCount);
+      expect(mockManagerToggleVideo).toHaveBeenCalledWith(false);
+      expect(mockManagerToggleAudio).toHaveBeenCalledWith(false);
+    });
   });
 });

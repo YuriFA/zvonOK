@@ -21,7 +21,7 @@ export function CreateRoomForm({ onSuccess, onCancel }: CreateRoomFormProps) {
         onSuccess(room);
       }
 
-      navigate(`/room/${room.slug}/lobby`);
+      navigate(`/room/${room.slug}`);
     },
   });
 
