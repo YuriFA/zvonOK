@@ -1,4 +1,5 @@
-import { test as base, type APIRequestContext, type Page } from '@playwright/test';
+/* eslint-disable react-hooks/rules-of-hooks */
+import { test as base, type Page } from '@playwright/test';
 import { API_BASE_URL, generateTestUser } from '../utils/test-data';
 
 type TestUser = ReturnType<typeof generateTestUser>;
@@ -53,7 +54,7 @@ export const test = base.extend<AuthFixtures>({
     await use(registerFn);
   },
 
-  authenticatedPage: async ({ browser, registerViaApi, loginViaApi }, use) => {
+  authenticatedPage: async ({ browser, registerViaApi }, use) => {
     const user = await registerViaApi();
     const context = await browser.newContext();
     const page = await context.newPage();
