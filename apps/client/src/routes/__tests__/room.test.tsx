@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mockUseRoom = vi.hoisted(() => vi.fn());
 const mockUseEndRoom = vi.hoisted(() => vi.fn());
 const mockUseAuth = vi.hoisted(() => vi.fn());
-const mockStartStreamWithFallback = vi.hoisted(() => vi.fn());
+const mockStartStream = vi.hoisted(() => vi.fn());
 const mockStopStream = vi.hoisted(() => vi.fn());
 const mockGetVideoDeviceId = vi.hoisted(() => vi.fn());
 const mockGetAudioDeviceId = vi.hoisted(() => vi.fn());
@@ -13,6 +13,8 @@ const mockSetSelectedVideoDeviceId = vi.hoisted(() => vi.fn());
 const mockSetSelectedAudioDeviceId = vi.hoisted(() => vi.fn());
 const mockHasVideoTrack = vi.hoisted(() => vi.fn());
 const mockHasAudioTrack = vi.hoisted(() => vi.fn());
+const mockIsPreferredVideoEnabled = vi.hoisted(() => vi.fn());
+const mockIsPreferredAudioEnabled = vi.hoisted(() => vi.fn());
 const mockUseMediaControls = vi.hoisted(() => vi.fn());
 const mockUseMediasoup = vi.hoisted(() => vi.fn());
 const mockKickPeer = vi.hoisted(() => vi.fn());
@@ -37,7 +39,7 @@ vi.mock('@/features/auth/contexts/auth.context', () => ({
 
 vi.mock('@/lib/media/manager', () => ({
   mediaManager: {
-    startStreamWithFallback: mockStartStreamWithFallback,
+    startStream: mockStartStream,
     stopStream: mockStopStream,
     getVideoDeviceId: mockGetVideoDeviceId,
     getAudioDeviceId: mockGetAudioDeviceId,
@@ -45,6 +47,8 @@ vi.mock('@/lib/media/manager', () => ({
     setSelectedAudioDeviceId: mockSetSelectedAudioDeviceId,
     hasVideoTrack: mockHasVideoTrack,
     hasAudioTrack: mockHasAudioTrack,
+    isPreferredVideoEnabled: mockIsPreferredVideoEnabled,
+    isPreferredAudioEnabled: mockIsPreferredAudioEnabled,
   },
 }));
 
@@ -120,11 +124,9 @@ describe('RoomPage', () => {
     mockGetAudioDeviceId.mockReturnValue('microphone-1');
     mockHasVideoTrack.mockReturnValue(true);
     mockHasAudioTrack.mockReturnValue(true);
-    mockStartStreamWithFallback.mockResolvedValue({
-      stream: { id: 'local-stream' } as MediaStream,
-      isAudioOnly: false,
-      videoError: null,
-    });
+    mockIsPreferredVideoEnabled.mockReturnValue(true);
+    mockIsPreferredAudioEnabled.mockReturnValue(true);
+    mockStartStream.mockResolvedValue({ id: 'local-stream' } as MediaStream);
     mockUseMediaControls.mockReturnValue({
       isVideoEnabled: true,
       isAudioEnabled: true,
@@ -175,13 +177,9 @@ describe('RoomPage', () => {
     );
 
   it('waits for media initialization before enabling the SFU connection', async () => {
-    let resolveStartStream: ((value: {
-      stream: MediaStream;
-      isAudioOnly: boolean;
-      videoError: null;
-    }) => void) | null = null;
+    let resolveStartStream: ((value: MediaStream) => void) | null = null;
 
-    mockStartStreamWithFallback.mockImplementation(
+    mockStartStream.mockImplementation(
       () => new Promise((resolve) => {
         resolveStartStream = resolve;
       })
@@ -200,11 +198,7 @@ describe('RoomPage', () => {
     });
 
     await act(async () => {
-      resolveStartStream?.({
-        stream: { id: 'local-stream' } as MediaStream,
-        isAudioOnly: false,
-        videoError: null,
-      });
+      resolveStartStream?.({ id: 'local-stream' } as MediaStream);
     });
 
     await waitFor(() => {
@@ -230,7 +224,7 @@ describe('RoomPage', () => {
     expect(screen.getByRole('button', { name: /participants/i })).toHaveTextContent('2');
 
     await waitFor(() => {
-      expect(mockStartStreamWithFallback).toHaveBeenCalled();
+      expect(mockStartStream).toHaveBeenCalled();
     });
 
     expect(mockSetSelectedVideoDeviceId).toHaveBeenCalledWith('camera-1');
@@ -248,7 +242,7 @@ describe('RoomPage', () => {
     });
 
     await waitFor(() => {
-      expect(mockStartStreamWithFallback).toHaveBeenCalled();
+      expect(mockStartStream).toHaveBeenCalled();
     });
 
     await act(async () => {
@@ -272,7 +266,7 @@ describe('RoomPage', () => {
     });
 
     await waitFor(() => {
-      expect(mockStartStreamWithFallback).toHaveBeenCalled();
+      expect(mockStartStream).toHaveBeenCalled();
     });
 
     await act(async () => {
@@ -280,5 +274,23 @@ describe('RoomPage', () => {
     });
 
     expect(mockKickPeer).toHaveBeenCalledWith('user-2');
+  });
+
+  it('joins without requesting camera when prejoin video preference is off', async () => {
+    mockIsPreferredVideoEnabled.mockReturnValue(false);
+
+    renderRoomPage();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Join Room' }));
+    });
+
+    await waitFor(() => {
+      expect(mockStartStream).toHaveBeenCalledWith(
+        expect.objectContaining({
+          video: false,
+        })
+      );
+    });
   });
 });

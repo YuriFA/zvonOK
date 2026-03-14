@@ -19,9 +19,9 @@ describe('ActiveDeviceDisplay', () => {
       />
     );
 
-    expect(screen.getByText('Camera: FaceTime HD Camera')).toBeInTheDocument();
-    expect(screen.getByText('Microphone: Built-in Mic')).toBeInTheDocument();
-    expect(screen.getByText('Speaker: Built-in Speakers')).toBeInTheDocument();
+    expect(screen.getAllByText('Camera: FaceTime HD Camera').length).toBe(2);
+    expect(screen.getAllByText('Microphone: Built-in Mic').length).toBe(2);
+    expect(screen.getAllByText('Speaker: Built-in Speakers').length).toBe(2);
   });
 
   it('shows icons (and sr-only labels) in compact mode', () => {

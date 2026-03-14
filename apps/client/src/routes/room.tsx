@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useRoom } from '@/features/room/hooks/use-room';
 import { useEndRoom } from '@/features/room/hooks/use-end-room';
 import { useAuth } from '@/features/auth/contexts/auth.context';
-import { ArrowLeft, Users, Calendar, Wifi, WifiOff, VideoOff } from 'lucide-react';
+import { ArrowLeft, Users, Calendar, Wifi, WifiOff } from 'lucide-react';
 import { Link } from 'react-router';
 import { mediaManager } from '@/lib/media/manager';
 import { LocalVideo } from '@/components/local-video';
@@ -48,8 +48,8 @@ export const RoomPage = () => {
     savedDeviceIds.current = {
       video: mediaManager.getVideoDeviceId(),
       audio: mediaManager.getAudioDeviceId(),
-      isVideoEnabled: mediaManager.hasVideoTrack(),
-      isAudioEnabled: mediaManager.hasAudioTrack(),
+      isVideoEnabled: mediaManager.isPreferredVideoEnabled(),
+      isAudioEnabled: mediaManager.isPreferredAudioEnabled(),
     };
     setViewState('active');
   }, []);
@@ -58,8 +58,6 @@ export const RoomPage = () => {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [mediaError, setMediaError] = useState<string | null>(null);
   const [isMediaInitialized, setIsMediaInitialized] = useState(false);
-  const [isAudioOnly, setIsAudioOnly] = useState(false);
-  const [videoUnavailableReason, setVideoUnavailableReason] = useState<string | null>(null);
   const mediaControls = useMediaControls();
   const [remoteMediaElements, setRemoteMediaElements] = useState<Map<string, HTMLVideoElement>>(new Map());
 
@@ -114,12 +112,8 @@ export const RoomPage = () => {
     if (!success && nextVideoEnabled) {
       // Failed to re-acquire camera - revert UI state
       mediaControls.setVideoEnabled(false);
-      setVideoUnavailableReason('Failed to access camera');
-      setIsAudioOnly(true);
     } else if (success) {
       // Update audio-only state based on video availability
-      setIsAudioOnly(!nextVideoEnabled);
-      setVideoUnavailableReason(nextVideoEnabled ? null : 'Camera turned off');
     }
   };
 
@@ -177,8 +171,6 @@ export const RoomPage = () => {
 
     mediaManager.stopStream();
     setLocalStream(null);
-    setIsAudioOnly(false);
-    setVideoUnavailableReason(null);
   }, [wasKicked]);
 
   // Media stream - start after join, stop on unmount or leaving active state
@@ -203,34 +195,28 @@ export const RoomPage = () => {
       // Build constraints using device IDs saved from the lobby preview
       const constraints = ids
         ? {
-            video: ids.isVideoEnabled
-              ? ids.video
+          video: ids.isVideoEnabled
+            ? ids.video
               ? { deviceId: { exact: ids.video }, width: { ideal: 1280 }, height: { ideal: 720 } }
               : { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' as const }
-              : false,
-            audio: ids.isAudioEnabled
-              ? ids.audio
+            : false,
+          audio: ids.isAudioEnabled
+            ? ids.audio
               ? { deviceId: { exact: ids.audio }, echoCancellation: true, noiseSuppression: true, autoGainControl: true }
               : { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
-              : false,
-          }
+            : false,
+        }
         : undefined;
 
       try {
-        const result = await mediaManager.startStreamWithFallback(constraints);
+        const stream = await mediaManager.startStream(constraints);
 
         if (isCancelled) {
           mediaManager.stopStream();
           return;
         }
 
-        setLocalStream(result.stream);
-        setIsAudioOnly(result.isAudioOnly);
-        setVideoUnavailableReason(result.videoError ?? null);
-
-        if (result.isAudioOnly) {
-          console.log('[Room] Running in audio-only mode:', result.videoError);
-        }
+        setLocalStream(stream);
       } catch (err) {
         if (isCancelled) {
           return;
@@ -255,8 +241,6 @@ export const RoomPage = () => {
       setLocalStream(null);
       setMediaError(null);
       setIsMediaInitialized(false);
-      setIsAudioOnly(false);
-      setVideoUnavailableReason(null);
     };
   }, [viewState]);
 
@@ -398,18 +382,6 @@ export const RoomPage = () => {
         </div>
       )}
 
-      {/* Audio-only mode warning */}
-      {isAudioOnly && !mediaError && (
-        <div className="container mx-auto px-4 py-4">
-          <div className="rounded-md bg-yellow-500/15 p-3 text-sm text-yellow-600 dark:text-yellow-400 flex items-center gap-2">
-            <VideoOff className="size-4" />
-            <span>
-              {videoUnavailableReason || 'Camera unavailable'}. Running in audio-only mode.
-            </span>
-          </div>
-        </div>
-      )}
-
       {wasKicked && (
         <div className="container mx-auto px-4 py-4">
           <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
@@ -430,7 +402,7 @@ export const RoomPage = () => {
                   <LocalVideo
                     stream={localStream}
                     username={user?.username}
-                    isVideoEnabled={!mediaError && mediaControls.isVideoEnabled && !isAudioOnly}
+                    isVideoEnabled={!mediaError && mediaControls.isVideoEnabled}
                     isAudioEnabled={!mediaError && mediaControls.isAudioEnabled}
                     className="h-full w-full"
                     showControls={false}

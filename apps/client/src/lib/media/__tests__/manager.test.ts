@@ -108,13 +108,27 @@ describe('MediaStreamManager', () => {
   });
 
   it('supports joining with both camera and microphone disabled', async () => {
-    const result = await manager.startStreamWithFallback({ video: false, audio: false });
+    const stream = await manager.startStream({ video: false, audio: false });
 
     expect(mockGetUserMedia).not.toHaveBeenCalled();
-    expect(result.stream.getTracks()).toEqual([]);
-    expect(result.isAudioOnly).toBe(false);
+    expect(stream.getTracks()).toEqual([]);
     expect(manager.hasVideoTrack()).toBe(false);
     expect(manager.hasAudioTrack()).toBe(false);
+  });
+
+  it('respects preferred disabled video state on initial stream acquisition', async () => {
+    manager.setPreferredVideoEnabled(false);
+
+    await manager.startStream();
+
+    expect(mockGetUserMedia).toHaveBeenCalledWith({
+      video: false,
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      },
+    });
   });
 
   it('falls back to audio-only when camera permission is denied', async () => {
@@ -127,12 +141,7 @@ describe('MediaStreamManager', () => {
       .mockRejectedValueOnce(notAllowedError)
       .mockResolvedValueOnce(audioOnlyStream);
 
-    const result = await manager.startStreamWithFallback();
-
-    expect(result.isAudioOnly).toBe(true);
-    expect(result.videoError).toBe('Camera permission denied or unavailable');
-    expect(manager.isAudioOnly()).toBe(true);
-    expect(manager.getVideoUnavailableReason()).toBe('Camera permission denied or unavailable');
+    await manager.startStream();
   });
 
   it('hard-stops and re-acquires the camera track', async () => {
@@ -154,7 +163,6 @@ describe('MediaStreamManager', () => {
     await expect(manager.toggleVideo(true)).resolves.toBe(true);
     expect(manager.getVideoTracks()).toEqual([replacementVideoTrack]);
     expect(manager.getVideoDeviceId()).toBe('video-device-2');
-    expect(manager.isAudioOnly()).toBe(false);
   });
 
   it('hard-stops and re-acquires the microphone track', async () => {

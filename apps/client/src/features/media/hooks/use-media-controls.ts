@@ -16,15 +16,16 @@ export interface UseMediaControlsReturn extends MediaControlsState {
 }
 
 export function useMediaControls(initialState?: Partial<MediaControlsState>): UseMediaControlsReturn {
-  const [isVideoEnabled, setIsVideoEnabled] = useState(initialState?.isVideoEnabled ?? mediaManager.isVideoEnabled());
-  const [isAudioEnabled, setIsAudioEnabled] = useState(initialState?.isAudioEnabled ?? mediaManager.isAudioEnabled());
+  const [isVideoEnabled, setIsVideoEnabled] = useState(initialState?.isVideoEnabled ?? mediaManager.isPreferredVideoEnabled());
+  const [isAudioEnabled, setIsAudioEnabled] = useState(initialState?.isAudioEnabled ?? mediaManager.isPreferredAudioEnabled());
   const [isVideoAvailable, setIsVideoAvailable] = useState(initialState?.isVideoAvailable ?? mediaManager.hasVideoTrack());
   const [isAudioAvailable, setIsAudioAvailable] = useState(initialState?.isAudioAvailable ?? mediaManager.hasAudioTrack());
 
   useEffect(() => {
     const syncState = () => {
-      setIsVideoEnabled(mediaManager.isVideoEnabled());
-      setIsAudioEnabled(mediaManager.isAudioEnabled());
+      const hasStream = mediaManager.getStream() !== null;
+      setIsVideoEnabled(hasStream ? mediaManager.isVideoEnabled() : mediaManager.isPreferredVideoEnabled());
+      setIsAudioEnabled(hasStream ? mediaManager.isAudioEnabled() : mediaManager.isPreferredAudioEnabled());
       setIsVideoAvailable(mediaManager.hasVideoTrack());
       setIsAudioAvailable(mediaManager.hasAudioTrack());
     };
@@ -73,11 +74,13 @@ export function useMediaControls(initialState?: Partial<MediaControlsState>): Us
   }, [isAudioEnabled]);
 
   const setVideoEnabled = useCallback((enabled: boolean) => {
+    mediaManager.setPreferredVideoEnabled(enabled);
     setIsVideoEnabled(enabled);
     setIsVideoAvailable(mediaManager.hasVideoTrack());
   }, []);
 
   const setAudioEnabled = useCallback((enabled: boolean) => {
+    mediaManager.setPreferredAudioEnabled(enabled);
     setIsAudioEnabled(enabled);
     setIsAudioAvailable(mediaManager.hasAudioTrack());
   }, []);

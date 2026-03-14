@@ -16,9 +16,7 @@ export function DeviceSelector({ className }: DeviceSelectorProps) {
   const mediaControls = useMediaControls();
 
   useEffect(() => {
-    startMedia().catch(() => {
-      // error state is exposed by the hook
-    });
+    startMedia()
 
     return () => {
       stopMedia();

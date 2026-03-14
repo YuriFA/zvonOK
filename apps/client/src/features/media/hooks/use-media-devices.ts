@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 export type DeviceType = 'videoinput' | 'audioinput' | 'audiooutput';
 
@@ -16,7 +16,6 @@ export interface SelectedDevices {
 }
 
 export interface UseMediaDevicesReturn {
-  devices: MediaDevice[];
   videoDevices: MediaDevice[];
   audioDevices: MediaDevice[];
   speakerDevices: MediaDevice[];
@@ -24,10 +23,7 @@ export interface UseMediaDevicesReturn {
   setSelectedVideoDevice: (deviceId: string | null) => void;
   setSelectedAudioDevice: (deviceId: string | null) => void;
   setSelectedSpeakerDevice: (deviceId: string | null) => void;
-  refreshDevices: () => Promise<void>;
-  isPermissionGranted: boolean;
   isLoading: boolean;
-  error: Error | null;
 }
 
 const STORAGE_KEY = 'webrtc-selected-devices';
@@ -68,49 +64,40 @@ function mapMediaDeviceInfo(device: MediaDeviceInfo): MediaDevice {
 export function useMediaDevices(): UseMediaDevicesReturn {
   const [devices, setDevices] = useState<MediaDevice[]>([]);
   const [selectedDevices, setSelectedDevices] = useState<SelectedDevices>(loadSelectedDevices);
-  const [isPermissionGranted, setIsPermissionGranted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-
-  const refreshDevices = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // Request permissions if not already granted
-      if (!isPermissionGranted) {
-        // Stop all tracks immediately — we only need the permission prompt
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        stream.getTracks().forEach((t) => t.stop());
-        setIsPermissionGranted(true);
-      }
-
-      const rawDevices = await navigator.mediaDevices.enumerateDevices();
-      const mappedDevices = rawDevices.map(mapMediaDeviceInfo);
-      setDevices(mappedDevices);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to enumerate devices'));
-    } finally {
-      setIsLoading(false);
-    }
-  }, [isPermissionGranted]);
-
-  // Initial enumeration
-  useEffect(() => {
-    refreshDevices();
-  }, []);
+  const isPermissionGranted = useRef(false);
 
   // Listen for device changes
   useEffect(() => {
-    const handleDeviceChange = () => {
-      refreshDevices();
+    const handleDeviceChange = async () => {
+      setIsLoading(true);
+
+      try {
+        // Request permissions if not already granted
+        if (!isPermissionGranted.current) {
+          // Stop all tracks immediately — we only need the permission prompt
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          stream.getTracks().forEach((t) => t.stop());
+          isPermissionGranted.current = true;
+        }
+
+        const rawDevices = await navigator.mediaDevices.enumerateDevices();
+        const mappedDevices = rawDevices.map(mapMediaDeviceInfo);
+        setDevices(mappedDevices);
+      } catch (err) {
+        console.warn('Failed to enumerate devices');
+      } finally {
+        setIsLoading(false);
+      }
+
     };
 
+    handleDeviceChange();
     navigator.mediaDevices.addEventListener('devicechange', handleDeviceChange);
     return () => {
       navigator.mediaDevices.removeEventListener('devicechange', handleDeviceChange);
     };
-  }, [refreshDevices]);
+  }, [isPermissionGranted]);
 
   // Persist selected devices
   useEffect(() => {
@@ -135,7 +122,6 @@ export function useMediaDevices(): UseMediaDevicesReturn {
   const speakerDevices = devices.filter((d) => d.kind === 'audiooutput');
 
   return {
-    devices,
     videoDevices,
     audioDevices,
     speakerDevices,
@@ -143,9 +129,6 @@ export function useMediaDevices(): UseMediaDevicesReturn {
     setSelectedVideoDevice,
     setSelectedAudioDevice,
     setSelectedSpeakerDevice,
-    refreshDevices,
-    isPermissionGranted,
     isLoading,
-    error,
   };
 }

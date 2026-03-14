@@ -70,6 +70,8 @@ export function useMediasoup({ roomId, roomOwnerId, localStream, enabled = true 
       return;
     }
 
+    const producedKinds = producedKindsRef.current;
+
     const unsubscribeState = sfuManager.onStateChange((nextState) => {
       setState(nextState);
 
@@ -170,7 +172,7 @@ export function useMediasoup({ roomId, roomOwnerId, localStream, enabled = true 
       unsubscribeTrack();
       unsubscribePeerLeft();
       unsubscribeKicked();
-      producedKindsRef.current.clear();
+      producedKinds.clear();
       joinedRef.current = false;
       setWasKicked(false);
       setRemotePeers(new Map());
