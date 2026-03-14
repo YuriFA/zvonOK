@@ -4,7 +4,6 @@ import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RoomModule } from './room/room.module';
-import { WebrtcModule } from './gateway/webrtc.module';
 import { SfuModule } from './sfu/sfu.module';
 
 @Module({
@@ -46,7 +45,6 @@ import { SfuModule } from './sfu/sfu.module';
     AuthModule,
     UserModule,
     RoomModule,
-    WebrtcModule,
     SfuModule,
   ],
   controllers: [],
