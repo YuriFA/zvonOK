@@ -19,15 +19,8 @@ React 19 + Vite frontend for the WebRTC chat application. Handles user authentic
 - User joins room by code
 - Display active rooms (user's rooms list)
 
-### 3. WebRTC P2P Connection
+### 3. SFU Connection (Group Calls)
 - Connect to signalling server via Socket.io
-- Join room
-- Create RTCPeerConnection for each peer
-- Exchange offer/answer/ICE candidates
-- Display remote video streams
-
-### 4. SFU Connection (Group Calls)
-- Connect to signalling server
 - Join SFU room
 - Create send/receive Transports
 - Produce local audio/video
@@ -228,7 +221,13 @@ const roomKeys = {
 
 ## WebSocket Events
 
-### Emitted (Client → Server)
+### SFU Events (mediasoup)
+
+See [SFU Module](./sfu.md) for the complete SFU event list.
+
+### Legacy P2P Events (Not Implemented)
+
+> **Note:** The following P2P events were planned but never implemented. The project uses SFU-only architecture.
 
 | Event | Payload | Description |
 |-------|---------|-------------|
@@ -237,19 +236,6 @@ const roomKeys = {
 | `webrtc:offer` | `{ targetPeerId, offer }` | WebRTC offer |
 | `webrtc:answer` | `{ targetPeerId, answer }` | WebRTC answer |
 | `webrtc:ice` | `{ targetPeerId, candidate }` | ICE candidate |
-
-### Received (Server → Client)
-
-| Event | Payload | Handler |
-|-------|---------|---------|
-| `room:joined` | `{ roomId, peerId, peers[] }` | Room join success |
-| `peer:joined` | `{ peerId, userInfo }` | New peer arrived |
-| `peer:left` | `{ peerId }` | Peer departed |
-| `webrtc:offer` | `{ fromPeerId, offer }` | Incoming offer |
-| `webrtc:answer` | `{ fromPeerId, answer }` | Incoming answer |
-| `webrtc:ice` | `{ fromPeerId, candidate }` | ICE candidate |
-| `media:state_changed` | `{ peerId, isVideoEnabled, isAudioEnabled }` | Peer media state |
-| `error` | `{ code, message }` | Error notification |
 
 ---
 
@@ -321,9 +307,11 @@ apps/client/src/
 ├── lib/
 │   ├── api/
 │   │   └── auth.ts      # Auth API client
-│   ├── webrtc/
-│   │   ├── manager.ts   # WebRTCManager
-│   │   └── devices.ts   # DeviceManager
+│   ├── media/
+│   │   └── manager.ts   # MediaStreamManager
+│   ├── sfu/
+│   │   ├── manager.ts   # SFU manager (mediasoup-client)
+│   │   └── types.ts     # SFU types
 │   └── config.ts        # App config
 └── main.tsx             # Entry point with Router
 ```

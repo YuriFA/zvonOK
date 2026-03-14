@@ -47,9 +47,9 @@ export class SfuGateway
     this.logger.log(`SFU client connected: ${client.id}`);
   }
 
-  handleDisconnect(client: Socket): void {
+  async handleDisconnect(client: Socket): Promise<void> {
     this.logger.log(`SFU client disconnected: ${client.id}`);
-    this.sfuService.closePeer(client);
+    await this.sfuService.closePeer(client);
   }
 
   @SubscribeMessage('sfu:join')
@@ -62,9 +62,7 @@ export class SfuGateway
   }
 
   @SubscribeMessage('sfu:leave')
-  async handleLeave(
-    @ConnectedSocket() client: Socket,
-  ): Promise<void> {
+  async handleLeave(@ConnectedSocket() client: Socket): Promise<void> {
     this.logger.log(`SFU leave request from ${client.id}`);
     await this.sfuService.leaveRoom(client);
   }
@@ -90,7 +88,9 @@ export class SfuGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: SfuTransportConnectPayload,
   ): Promise<void> {
-    this.logger.log(`Connecting transport ${payload.transportId} for ${client.id}`);
+    this.logger.log(
+      `Connecting transport ${payload.transportId} for ${client.id}`,
+    );
     await this.sfuService.connectTransport(client, payload);
   }
 

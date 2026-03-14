@@ -65,14 +65,14 @@ Tasks:
 ## Stage 2 — Signalling Server
 
 **Status:** Completed
-**Goal:** WebSocket server for WebRTC signalling
+**Goal:** WebSocket server for SFU signalling
 
 Tasks:
 - [task-1](./tasks/stage-2/TASK-001-socketio-server.md) — Socket.io server setup in NestJS
 - [task-2](./tasks/stage-2/TASK-002-join-leave.md) — Room join/leave functionality
-- [task-3](./tasks/stage-2/TASK-003-webrtc-signalling.md) — Offer/Answer/ICE exchange
+- [task-3](./tasks/stage-2/TASK-003-webrtc-signalling.md) — Signalling events (planned for P2P, superseded by SFU)
 
-**Result:** Signalling server ready for P2P
+**Result:** Signalling server ready (SFU uses `/sfu` namespace)
 
 ---
 
@@ -88,19 +88,19 @@ Tasks:
 
 ---
 
-## Stage 3 — WebRTC P2P
+## Stage 3 — Media Stream Access
 
 **Status:** Completed
-**Goal:** 1-on-1 video calls via direct peer connection
+**Goal:** Camera/microphone access and local media management
 
 Tasks:
 - [task-1](./tasks/stage-3/TASK-001-media-stream.md) — Camera/microphone access
-- [task-2](./tasks/stage-3/TASK-002-rtc-peer-connection.md) — RTCPeerConnection setup
-- [task-3](./tasks/stage-3/TASK-003-offer-answer.md) — Offer/Answer exchange implementation
+- [task-2](./tasks/stage-3/TASK-002-rtc-peer-connection.md) — RTCPeerConnection setup (planned for P2P, superseded by SFU)
+- [task-3](./tasks/stage-3/TASK-003-offer-answer.md) — Offer/Answer exchange (planned for P2P, superseded by SFU)
 - [task-4](./tasks/stage-3/TASK-004-mute-unmute.md) — Media controls (mute/unmute)
 - [task-5](./tasks/stage-3/TASK-005-local-video-integration.md) — LocalVideo component integration
 
-**Result:** Working 1-on-1 video call
+**Result:** Local media stream management working
 
 ---
 
@@ -249,7 +249,7 @@ Tasks:
 | Stage 1.5 | Completed | 1-2 days |
 | Stage 2 | Completed | 2-3 days |
 | Stage 2.5 | Completed | 1 day |
-| Stage 3 | Completed | 3-4 days |
+| Stage 3 | Completed | 3-4 days (media only) |
 | Stage 4 | Completed | 1-2 days |
 | Stage 5 | Completed | 5-7 days |
 | Stage 6 | In Progress | 3-5 days |
@@ -262,6 +262,12 @@ Tasks:
 **Total:** 3-6 weeks for full implementation
 
 **MVP Path:** Stages 0-6 + basic deploy = 2-3 weeks
+
+---
+
+## Architecture Note
+
+> The project uses an **SFU-only architecture** (mediasoup) for all video calls. P2P signalling was planned but superseded by SFU implementation. The Gateway module for P2P signalling is documented but not implemented.
 
 ---
 

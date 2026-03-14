@@ -1,7 +1,9 @@
 # TASK-025 — RTCPeerConnection Setup
 
+> **Note:** This task was planned for P2P architecture but The project uses SFU-only (mediasoup) for all video calls. See Stage 5 for SFU implementation.
+
 ## Status
-completed
+superseded
 
 ## Priority
 high

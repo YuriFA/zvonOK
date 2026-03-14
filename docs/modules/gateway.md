@@ -1,12 +1,28 @@
 # Gateway Module (WebRTC Signalling)
 
-## Purpose
+> **Status:** Not Implemented
+>
+> The project uses an SFU-only architecture via the [SFU Module](./sfu.md). P2P signalling described below was planned but never implemented.
 
-WebSocket server for real-time WebRTC signalling. Manages room membership and exchanges offers, answers, and ICE candidates between peers.
+## Original Purpose
+
+WebSocket server for real-time WebRTC signalling. Would have managed room membership and exchanged offers, answers, and ICE candidates between peers for P2P connections.
 
 ---
 
-## Use Cases
+## Why Not Implemented
+
+The project moved directly to an SFU (mediasoup) architecture for all video calls:
+
+- **SFU scales better** for group calls (3+ participants)
+- **Simpler architecture** - no need for full mesh P2P connections
+- **All signalling** is handled by the SFU gateway at `/sfu` namespace
+
+See [sfu.md](./sfu.md) for the current implementation.
+
+---
+
+## Planned Use Cases (Reference Only)
 
 ### 1. Join Room
 - Client sends `join:room` with room code
@@ -35,7 +51,7 @@ WebSocket server for real-time WebRTC signalling. Manages room membership and ex
 
 ---
 
-## WebSocket Events
+## Planned WebSocket Events (Reference Only)
 
 | Event | Direction | Payload | Description |
 |-------|-----------|---------|-------------|
@@ -53,184 +69,17 @@ WebSocket server for real-time WebRTC signalling. Manages room membership and ex
 | `media:state` | Client → Server | `{ isVideoEnabled, isAudioEnabled }` | Broadcast media state |
 | `media:state_changed` | Server → Client | `{ peerId, isVideoEnabled, isAudioEnabled }` | Peer media state changed |
 
-### Payload Examples
-
-**join:room**
-```json
-{
-  "roomCode": "ABC123"
-}
-```
-
-**room:joined**
-```json
-{
-  "roomId": "room_abc123",
-  "peerId": "socket_xyz789",
-  "peers": [
-    {
-      "id": "socket_def456",
-      "userInfo": {
-        "username": "alice"
-      }
-    }
-  ]
-}
-```
-
-**webrtc:offer**
-```json
-{
-  "targetPeerId": "socket_def456",
-  "offer": {
-    "type": "offer",
-    "sdp": "v=0\r\n..."
-  }
-}
-```
-
-**webrtc:ice**
-```json
-{
-  "targetPeerId": "socket_def456",
-  "candidate": "candidate:1 1 UDP 2130706431 192.168.1.1 54321 typ host"
-}
-```
-
 ---
 
-## Configuration
-
-```typescript
-@WebSocketGateway({
-  cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
-    credentials: true,
-  },
-  namespace: '/',
-})
-```
-
----
-
-## Edge Cases
-
-### Room Not Found
-- Send error response to client
-- Client should create room or check code
-
-### Target Peer Not Found
-- Send error response to client
-- Target peer may have disconnected
-
-### Authentication Required
-
-**Implementation Pattern for NestJS Socket.io Authentication:**
-
-NestJS uses a middleware-based approach for Socket.io authentication. The JWT is extracted from HTTP-only cookies during the WebSocket handshake.
-
-```typescript
-// Gateway configuration with authentication
-@WebSocketGateway({
-  cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
-    credentials: true, // Required for HTTP-only cookies
-  },
-  namespace: '/',
-})
-export class WebrtcGateway implements OnGatewayInit {
-  constructor(private jwtService: JwtService) {}
-
-  // Authentication middleware
-  async handleConnection(client: Socket) {
-    try {
-      // Extract JWT from cookies in handshake
-      const cookies = client.handshake.headers.cookie;
-      const token = this.extractTokenFromCookies(cookies, 'access_token');
-
-      if (!token) {
-        client.disconnect();
-        return;
-      }
-
-      // Verify token using JwtService
-      const payload = this.jwtService.verify(token);
-
-      // Attach user info to socket for use in event handlers
-      client.data.user = payload;
-      client.data.userId = payload.sub;
-
-      // Optionally join user-specific room
-      await client.join(`user:${payload.sub}`);
-    } catch (error) {
-      // Invalid token - disconnect
-      client.disconnect();
-    }
-  }
-
-  private extractTokenFromCookies(cookieHeader: string, cookieName: string): string | null {
-    if (!cookieHeader) return null;
-    const cookies = cookieHeader.split(';').map(c => c.trim());
-    const targetCookie = cookies.find(c => c.startsWith(`${cookieName}=`));
-    return targetCookie ? targetCookie.split('=')[1] : null;
-  }
-
-  @SubscribeMessage('join:room')
-  async handleJoinRoom(@ConnectedSocket() client: Socket, payload: JoinRoomDto) {
-    // User is authenticated (otherwise they'd be disconnected)
-    const userId = client.data.userId;
-    // ... rest of join logic
-  }
-}
-```
-
-**Alternative: Using Socket.io Middleware (Cleaner Approach):**
-
-```typescript
-@WebSocketGateway({
-  cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
-    credentials: true,
-  },
-})
-export class WebrtcGateway {
-  @WebSocketMiddleware()
-  async authenticate(socket: Socket, next: (err?: Error) => void) {
-    try {
-      const cookies = socket.handshake.headers.cookie;
-      const token = this.extractTokenFromCookies(cookies, 'access_token');
-
-      if (!token) {
-        return next(new Error('Authentication error: No token'));
-      }
-
-      const payload = this.jwtService.verify(token);
-      socket.data.user = payload;
-      socket.data.userId = payload.sub;
-      next();
-    } catch (error) {
-      next(new Error('Authentication error: Invalid token'));
-    }
-  }
-}
-```
-
-**Key Points:**
-- JWT is stored in HTTP-only cookies (same as REST API)
-- Extract cookie from `socket.handshake.headers.cookie`
-- Use `JwtService` from `@nestjs/jwt` to verify token
-- Attach user info to `socket.data` for later use
-- Disconnect immediately on authentication failure
-- CORS `credentials: true` is required for cookie transmission
-
-### Max Room Size
-- Limit rooms to 10 participants for P2P
-- Route to SFU for larger groups
-
----
-
-## Files
+## Files (Planned Location)
 
 - `apps/server/src/gateway/webrtc.gateway.ts` — Gateway class
 - `apps/server/src/gateway/webrtc.module.ts` — Module definition
 - `apps/server/src/gateway/interfaces/` — Type definitions
+
+---
+
+## Related
+
+- [SFU Module](./sfu.md) — Current implementation
+- [Roadmap Stage 2](../roadmap.md) — Signalling server tasks

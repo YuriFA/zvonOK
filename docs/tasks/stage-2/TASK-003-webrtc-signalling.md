@@ -1,13 +1,15 @@
 # TASK-022 — WebRTC Signalling
 
 ## Status
-completed
+superseded
 
 ## Priority
 high
 
 ## Description
-Implement WebRTC signalling events to exchange offers, answers, and ICE candidates between peers for establishing P2P connections.
+~~Implement WebRTC signalling events to exchange offers, answers, and ICE candidates between peers for establishing P2P connections.~~
+
+> **Note:** This task was planned for P2P signalling but was superseded by the SFU implementation (Stage 5). The project now uses mediasoup for all video calls. See [sfu.md](../../modules/sfu.md) for the current signalling implementation.
 
 ## Scope
 - Offer forwarding (webrtc:offer)

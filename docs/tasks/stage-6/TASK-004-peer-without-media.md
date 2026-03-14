@@ -24,7 +24,7 @@ When a second user joins a call and denies media permissions (camera or micropho
 ## Technical Design
 
 ### Current Behavior
-When a user denies media permissions, the `MediaStreamManager.startStreamWithFallback()` throws an error if both audio and video are denied. The SFU connection may still happen, but no tracks are produced.
+When a user denies media permissions, the `MediaStreamManager.startStream()` throws an error if both audio and video are denied. The SFU connection may still happen, but no tracks are produced.
 
 ### Expected Behavior
 1. Peer should join the SFU room regardless of media availability

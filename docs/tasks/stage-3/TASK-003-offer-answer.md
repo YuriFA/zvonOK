@@ -1,7 +1,9 @@
 # TASK-026 — Offer/Answer Exchange Implementation
 
+> **Note:** This task was planned for P2P but Superseded by SFU implementation in Stage 5.
+
 ## Status
-completed
+superseded
 
 ## Priority
 high

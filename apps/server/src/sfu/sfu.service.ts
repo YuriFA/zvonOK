@@ -78,7 +78,11 @@ export class SfuService implements OnModuleDestroy {
     });
   }
 
-  private emitNewProducer(target: Socket, producer: Producer, peer: Peer): void {
+  private emitNewProducer(
+    target: Socket,
+    producer: Producer,
+    peer: Peer,
+  ): void {
     target.emit('sfu:new-producer', {
       producerId: producer.id,
       userId: peer.userId,
@@ -87,7 +91,11 @@ export class SfuService implements OnModuleDestroy {
     });
   }
 
-  private notifyPeerLeft(roomId: string, userId: string, excludedSocketId: string): void {
+  private notifyPeerLeft(
+    roomId: string,
+    userId: string,
+    excludedSocketId: string,
+  ): void {
     for (const roomPeer of this.getRoomPeers(roomId)) {
       if (roomPeer.id !== excludedSocketId) {
         roomPeer.socket.emit('sfu:peer-left', { userId });
@@ -114,7 +122,9 @@ export class SfuService implements OnModuleDestroy {
     return peer.consumers.get(consumerId);
   }
 
-  private async removePeer(socketId: string): Promise<{ roomId: string; userId: string } | null> {
+  private async removePeer(
+    socketId: string,
+  ): Promise<{ roomId: string; userId: string } | null> {
     const peer = this.getPeer(socketId);
     const roomId = this.getRoomIdBySocketId(socketId);
 
@@ -207,7 +217,9 @@ export class SfuService implements OnModuleDestroy {
     const router = roomId ? this.workerManager.getRouter(roomId) : undefined;
 
     if (!peer || !router) {
-      this.logger.error(!peer ? `Peer ${socket.id} not found` : 'No router found');
+      this.logger.error(
+        !peer ? `Peer ${socket.id} not found` : 'No router found',
+      );
       return;
     }
 
@@ -228,7 +240,9 @@ export class SfuService implements OnModuleDestroy {
     const router = roomId ? this.workerManager.getRouter(roomId) : undefined;
 
     if (!peer || !router) {
-      this.logger.error(!peer ? `Peer ${socket.id} not found` : 'No router found');
+      this.logger.error(
+        !peer ? `Peer ${socket.id} not found` : 'No router found',
+      );
       return;
     }
 
@@ -252,7 +266,7 @@ export class SfuService implements OnModuleDestroy {
       }
 
       for (const producer of roomPeer.producers.values()) {
-        this.emitNewProducer(socket, producer as Producer, roomPeer);
+        this.emitNewProducer(socket, producer, roomPeer);
       }
     }
   }
@@ -279,7 +293,10 @@ export class SfuService implements OnModuleDestroy {
     });
   }
 
-  async createProducer(socket: Socket, payload: SfuProducePayload): Promise<void> {
+  async createProducer(
+    socket: Socket,
+    payload: SfuProducePayload,
+  ): Promise<void> {
     const peer = this.getPeer(socket.id);
     if (!peer?.sendTransport) {
       this.logger.error(`No send transport for peer ${socket.id}`);
@@ -293,7 +310,7 @@ export class SfuService implements OnModuleDestroy {
     }
 
     const producer = await peer.sendTransport.produce({ kind, rtpParameters });
-    peer.producers.set(producer.id, producer as Producer);
+    peer.producers.set(producer.id, producer);
 
     socket.emit('sfu:producer-created', {
       producerId: producer.id,
@@ -301,10 +318,13 @@ export class SfuService implements OnModuleDestroy {
       kind,
     });
 
-    this.notifyPeersToConsume(socket, producer as Producer);
+    this.notifyPeersToConsume(socket, producer);
   }
 
-  async createConsumer(socket: Socket, payload: SfuConsumePayload): Promise<void> {
+  async createConsumer(
+    socket: Socket,
+    payload: SfuConsumePayload,
+  ): Promise<void> {
     const peer = this.getPeer(socket.id);
     const roomId = this.getRoomId(socket);
     const router = roomId ? this.workerManager.getRouter(roomId) : undefined;
@@ -320,7 +340,7 @@ export class SfuService implements OnModuleDestroy {
     for (const [, p] of this.peers) {
       const prod = p.producers.get(producerId);
       if (prod) {
-        targetProducer = prod as Producer;
+        targetProducer = prod;
         break;
       }
     }
@@ -398,11 +418,15 @@ export class SfuService implements OnModuleDestroy {
 
     const roomOwnerId = this.roomOwners.get(roomId);
     if (!roomOwnerId || roomOwnerId !== requester.userId) {
-      this.logger.warn(`Unauthorized kick request from ${requester.userId} in room ${roomId}`);
+      this.logger.warn(
+        `Unauthorized kick request from ${requester.userId} in room ${roomId}`,
+      );
       return;
     }
 
-    const targetPeer = this.getRoomPeers(roomId).find((peer) => peer.userId === targetUserId);
+    const targetPeer = this.getRoomPeers(roomId).find(
+      (peer) => peer.userId === targetUserId,
+    );
     if (!targetPeer || targetPeer.id === socket.id) {
       return;
     }

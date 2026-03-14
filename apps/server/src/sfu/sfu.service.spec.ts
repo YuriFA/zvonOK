@@ -18,10 +18,11 @@ describe('SfuService', () => {
     emit: jest.fn(),
   } as unknown as Socket;
 
-  const createSocket = (id: string) => ({
-    id,
-    emit: jest.fn(),
-  }) as unknown as Socket;
+  const createSocket = (id: string) =>
+    ({
+      id,
+      emit: jest.fn(),
+    }) as unknown as Socket;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -41,7 +42,7 @@ describe('SfuService', () => {
 
     service = module.get<SfuService>(SfuService);
     workerManager = module.get(WorkerManager);
-    socket.emit.mockReset();
+    (socket.emit as jest.Mock).mockReset();
   });
 
   it('joins a room and emits RTP capabilities', async () => {
@@ -65,7 +66,11 @@ describe('SfuService', () => {
   it('creates a send transport and exposes its direction in the payload', async () => {
     const transport = {
       id: 'send-1',
-      iceParameters: { usernameFragment: 'user', password: 'pass', iceLite: true },
+      iceParameters: {
+        usernameFragment: 'user',
+        password: 'pass',
+        iceLite: true,
+      },
       iceCandidates: [],
       dtlsParameters: { fingerprints: [], role: 'auto' },
     } as unknown as WebRtcTransport;
@@ -74,7 +79,9 @@ describe('SfuService', () => {
     } as { createWebRtcTransport: jest.Mock };
 
     workerManager.createRouter.mockResolvedValue({} as never);
-    workerManager.getRtpCapabilities.mockReturnValue({} as unknown as RtpCapabilities);
+    workerManager.getRtpCapabilities.mockReturnValue(
+      {} as unknown as RtpCapabilities,
+    );
     workerManager.getRouter.mockReturnValue(router as never);
 
     await service.joinRoom(socket, {
@@ -83,7 +90,7 @@ describe('SfuService', () => {
       username: 'alice',
       roomOwnerId: 'user-1',
     });
-    socket.emit.mockReset();
+    (socket.emit as jest.Mock).mockReset();
 
     await service.createSendTransport(socket);
 
@@ -151,7 +158,11 @@ describe('SfuService', () => {
     const producer = { id: 'producer-1', kind: 'video' } as never;
     const recvTransport = {
       id: 'recv-1',
-      iceParameters: { usernameFragment: 'user', password: 'pass', iceLite: true },
+      iceParameters: {
+        usernameFragment: 'user',
+        password: 'pass',
+        iceLite: true,
+      },
       iceCandidates: [],
       dtlsParameters: { fingerprints: [], role: 'auto' },
     } as unknown as WebRtcTransport;
@@ -161,15 +172,18 @@ describe('SfuService', () => {
 
     const existingSocket = createSocket('socket-2');
     const serviceState = service as unknown as {
-      peers: Map<string, {
-        id: string;
-        userId: string;
-        username: string;
-        socket: Socket;
-        recvTransport?: WebRtcTransport;
-        producers: Map<string, typeof producer>;
-        consumers: Map<string, unknown>;
-      }>;
+      peers: Map<
+        string,
+        {
+          id: string;
+          userId: string;
+          username: string;
+          socket: Socket;
+          recvTransport?: WebRtcTransport;
+          producers: Map<string, typeof producer>;
+          consumers: Map<string, unknown>;
+        }
+      >;
       rooms: Map<string, Set<string>>;
     };
 
@@ -184,7 +198,9 @@ describe('SfuService', () => {
     });
 
     workerManager.createRouter.mockResolvedValue({} as never);
-    workerManager.getRtpCapabilities.mockReturnValue({} as unknown as RtpCapabilities);
+    workerManager.getRtpCapabilities.mockReturnValue(
+      {} as unknown as RtpCapabilities,
+    );
     workerManager.getRouter.mockReturnValue(router as never);
 
     await service.joinRoom(socket, {
@@ -194,7 +210,7 @@ describe('SfuService', () => {
     });
 
     serviceState.rooms.set('room-1', new Set([socket.id, existingSocket.id]));
-    socket.emit.mockReset();
+    (socket.emit as jest.Mock).mockReset();
 
     await service.createRecvTransport(socket);
 
@@ -209,14 +225,17 @@ describe('SfuService', () => {
   it('notifies other peers when a peer leaves the room', async () => {
     const otherSocket = createSocket('socket-2');
     const serviceState = service as unknown as {
-      peers: Map<string, {
-        id: string;
-        userId: string;
-        username: string;
-        socket: Socket;
-        producers: Map<string, unknown>;
-        consumers: Map<string, unknown>;
-      }>;
+      peers: Map<
+        string,
+        {
+          id: string;
+          userId: string;
+          username: string;
+          socket: Socket;
+          producers: Map<string, unknown>;
+          consumers: Map<string, unknown>;
+        }
+      >;
       rooms: Map<string, Set<string>>;
       roomOwners: Map<string, string>;
     };
@@ -253,15 +272,19 @@ describe('SfuService', () => {
       disconnect: jest.fn(),
     } as unknown as Socket & { disconnect: jest.Mock };
     const serviceState = service as unknown as {
-      peers: Map<string, {
-        id: string;
-        userId: string;
-        username: string;
-        socket: Socket;
-        producers: Map<string, unknown>;
-        consumers: Map<string, unknown>;
-      }>;
+      peers: Map<
+        string,
+        {
+          id: string;
+          userId: string;
+          username: string;
+          socket: Socket;
+          producers: Map<string, unknown>;
+          consumers: Map<string, unknown>;
+        }
+      >;
       rooms: Map<string, Set<string>>;
+      roomOwners: Map<string, string>;
     };
 
     serviceState.peers.set(ownerSocket.id, {
@@ -280,12 +303,17 @@ describe('SfuService', () => {
       producers: new Map(),
       consumers: new Map(),
     });
-    serviceState.rooms.set('room-1', new Set([ownerSocket.id, targetSocket.id]));
+    serviceState.rooms.set(
+      'room-1',
+      new Set([ownerSocket.id, targetSocket.id]),
+    );
     serviceState.roomOwners.set('room-1', 'user-1');
 
     await service.kickPeer(ownerSocket, 'user-2');
 
-    expect(targetSocket.emit).toHaveBeenCalledWith('sfu:kicked', { roomId: 'room-1' });
+    expect(targetSocket.emit).toHaveBeenCalledWith('sfu:kicked', {
+      roomId: 'room-1',
+    });
     expect(targetSocket.disconnect).toHaveBeenCalled();
     expect(ownerSocket.emit).toHaveBeenCalledWith('sfu:peer-left', {
       userId: 'user-2',

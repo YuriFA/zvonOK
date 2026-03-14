@@ -7,17 +7,16 @@ completed
 high
 
 ## Description
-Configure Socket.io in NestJS for WebSocket signalling. Create the WebrtcGateway to handle real-time connections between clients.
+Configure Socket.io in NestJS for WebSocket signalling. The SFU module uses Socket.io for mediasoup signalling via the `/sfu` namespace.
 
 ## Scope
 - Install Socket.io dependencies in NestJS
-- Create WebrtcGateway with basic connection handling
+- Create SfuGateway to handle real-time SFU connections
 - Configure CORS for WebSocket connections
 - Test connection with a simple ping/pong handler
 
 ## Out of Scope
 - Room join/leave logic (TASK-002)
-- WebRTC signalling (TASK-003)
 - Authentication integration (future)
 
 ## Technical Design
@@ -30,20 +29,20 @@ pnpm add @nestjs/websockets @nestjs/platform-socket.io
 ### Gateway Configuration
 - CORS: Allow client origin (localhost:5173)
 - Credentials: true (for JWT cookies)
-- Namespace: `/` (default)
+- Namespace: `/sfu` (SFU module)
 
 ### Handler Methods
 - `afterInit()` - Server initialization hook
 - `handleConnection()` - Client connect event
 - `handleDisconnect()` - Client disconnect event
-- `@SubscribeMessage('ping')` - Test event handler
+- SFU signalling events (see TASK-035 to TASK-041)
 
 ## Acceptance Criteria
 - [x] Socket.io packages installed
-- [x] WebrtcGateway created in `apps/server/src/gateway/`
-- [x] WebrtcModule registered in AppModule
+- [x] SfuGateway created in `apps/server/src/sfu/`
+- [x] SfuModule registered in AppModule
 - [x] Client can connect and receive confirmation
-- [x] ping/pong test event works
+- [x] SFU events work correctly
 
 ## Definition of Done
 - Acceptance criteria satisfied
@@ -54,8 +53,8 @@ pnpm add @nestjs/websockets @nestjs/platform-socket.io
 ## Implementation Guide
 
 ## Related Files
-- `apps/server/src/gateway/webrtc.gateway.ts` - Gateway implementation
-- `apps/server/src/gateway/webrtc.module.ts` - Module definition
+- `apps/server/src/sfu/sfu.gateway.ts` - Gateway implementation
+- `apps/server/src/sfu/sfu.module.ts` - Module definition
 - `apps/server/src/app.module.ts` - App module registration
 
 ## Next Task

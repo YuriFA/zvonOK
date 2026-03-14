@@ -40,7 +40,7 @@ That split leaves duplicated stop/start logic, stale availability state, and unu
 ### Proposed Implementation
 ```typescript
 // lib/media/manager.ts
-startStreamWithFallback(constraints?): Promise<StartStreamResult>
+startStream(constraints?): Promise<StartStreamResult>
 stopStream(): void
 startVideoTrack(): Promise<MediaStreamTrack | null>
 stopVideoTrack(reason?): void

@@ -28,7 +28,9 @@ export class WorkerManager implements OnModuleInit {
 
     this.worker.on('died', () => {
       this.logger.error('mediasoup Worker died!');
-      this.handleWorkerDeath();
+      this.handleWorkerDeath().catch((error) => {
+        console.error('Error handling worker death', error);
+      });
     });
 
     this.logger.log(`mediasoup Worker created (pid: ${this.worker.pid})`);
@@ -44,6 +46,7 @@ export class WorkerManager implements OnModuleInit {
     this.routers.clear();
 
     // Attempt to restart worker after a delay
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     setTimeout(async () => {
       try {
         this.logger.log('Attempting to restart mediasoup Worker...');

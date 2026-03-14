@@ -64,7 +64,7 @@ const initializeMedia = async () => {
 ### Files Created/Modified
 
 1. **`apps/client/src/lib/media/manager.ts`**
-   - Added `startStreamWithFallback()` - starts media with graceful degradation
+   - Added `startStream()` - starts media with graceful degradation
    - Added `checkPermissions()` - checks available devices and permission states
    - Added `isAudioOnly()` - checks if running in audio-only mode
    - Added `getVideoUnavailableReason()` - gets reason for video unavailability
@@ -78,7 +78,7 @@ const initializeMedia = async () => {
    - `retry(maxRetries)` - retry with exponential backoff
 
 3. **`apps/client/src/routes/room.tsx`**
-   - Updated to use `startStreamWithFallback()` for graceful degradation
+   - Updated to use `startStream()` for graceful degradation
    - Added audio-only mode warning banner with `VideoOff` icon
    - Shows video unavailable reason when in audio-only mode
 

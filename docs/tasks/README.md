@@ -36,7 +36,7 @@ All tasks are listed in the [Roadmap](../roadmap.md), organized by stage:
 - **Stage 1** — Backend ✅
 - **Stage 2** — Signalling Server ✅
 - **Stage 2.5** — Socket.io Client ✅
-- **Stage 3** — WebRTC P2P ✅
+- **Stage 3** — Media Stream Access ✅ (P2P tasks superseded by SFU)
 - **Stage 4-11** — Planned
 
 ### Task Format

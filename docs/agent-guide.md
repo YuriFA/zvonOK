@@ -32,8 +32,7 @@ Guidelines for AI agents working on the WebRTC Chat codebase.
 apps/server/src/
 ├── auth/          # AuthModule
 ├── user/          # UserModule
-├── gateway/       # WebSocket/Signalling
-├── sfu/           # mediasoup SFU
+├── sfu/           # mediasoup SFU (WebSocket signalling)
 └── prisma/        # Database service
 
 apps/client/src/
@@ -42,11 +41,14 @@ apps/client/src/
 │   └── ui/        # Radix UI primitives
 ├── contexts/      # React Context providers
 └── lib/           # Utilities and config
+    ├── api/       # API client
+    ├── media/     # Media stream manager
+    └── sfu/       # SFU client (mediasoup-client)
 ```
 
 ### 5. API Conventions
 - REST endpoints follow `/api/resource` pattern
-- WebSocket events follow `namespace:action` pattern (e.g., `join:room`, `webrtc:offer`)
+- WebSocket events follow `namespace:action` pattern (e.g., `sfu:join`, `sfu:produce`)
 - Use HTTP-only cookies for JWT tokens
 - Return consistent error responses
 

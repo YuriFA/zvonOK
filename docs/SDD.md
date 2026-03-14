@@ -1,8 +1,8 @@
 # Software Design Document: WebRTC Chat
 
-> **Version:** 1.5
+> **Version:** 1.6
 >
-> **Date:** 2025-02-07 / Updated: 2026-03-13
+> **Date:** 2025-02-07 / Updated: 2026-03-14
 >
 > **Status:** Living Document
 
@@ -87,8 +87,8 @@ The WebRTC Chat application provides:
 
 **MVP Focus:**
 - Group video calls with authentication and room codes
-- Join/leave flow with WebSocket signalling
-- P2P calls for up to ~10 participants (SFU planned for scale)
+- Join/leave flow with SFU (mediasoup) signalling
+- SFU-based calls for 3-10+ participants
 
 **Planned After MVP:**
 - Screen sharing, device management, and chat history
@@ -173,9 +173,9 @@ flowchart TB
     API <-->|Prisma ORM| DB
     WS <-->|Prisma ORM| DB
 
-    C1 <-->|WebRTC P2P| C2
-    C1 -.->|via SFU| C3
-    C2 -.->|via SFU| C3
+    C1 <-->|via SFU| SFU
+    C2 <-->|via SFU| SFU
+    C3 <-->|via SFU| SFU
 ```
 
 ### 2.3 Component Overview
@@ -185,8 +185,7 @@ flowchart TB
 | **AuthModule** | JWT authentication with refresh token rotation | `apps/server/src/auth/` |
 | **UserModule** | User management via Prisma | `apps/server/src/user/` |
 | **PrismaModule** | Global database service | `apps/server/src/prisma/` |
-| **GatewayModule** | WebSocket signalling | `apps/server/src/gateway/` |
-| **SFUModule** | mediasoup for group calls | `apps/server/src/sfu/` |
+| **SFUModule** | mediasoup for group calls (WebSocket signalling) | `apps/server/src/sfu/` |
 | **Client App** | React 19 + Vite frontend | `apps/client/src/` |
 
 ### 2.4 Technology Stack
@@ -334,23 +333,9 @@ Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800
 
 ### 4.2 WebSocket Events
 
-**Note:** `roomCode` corresponds to `Room.slug` (invite code).
+**Note:** The application uses an SFU (mediasoup) architecture for all video calls. P2P signalling events (`webrtc:offer/answer/ice`) are documented for reference but not currently implemented.
 
-| Event | Direction | Payload | Description |
-|-------|-----------|---------|-------------|
-| `join:room` | Client → Server | `{ roomCode: string }` | Join a room |
-| `leave:room` | Client → Server | — | Leave current room |
-| `room:joined` | Server → Client | `{ roomId, peerId, peers[] }` | Room joined confirmation |
-| `peer:joined` | Server → Client | `{ peerId, userInfo }` | New peer joined |
-| `peer:left` | Server → Client | `{ peerId }` | Peer left room |
-| `webrtc:offer` | Client → Server | `{ targetPeerId, offer }` | WebRTC offer (send) |
-| `webrtc:offer` | Server → Client | `{ fromPeerId, offer }` | WebRTC offer (receive) |
-| `webrtc:answer` | Client → Server | `{ targetPeerId, answer }` | WebRTC answer (send) |
-| `webrtc:answer` | Server → Client | `{ fromPeerId, answer }` | WebRTC answer (receive) |
-| `webrtc:ice` | Client → Server | `{ targetPeerId, candidate }` | ICE candidate (send) |
-| `webrtc:ice` | Server → Client | `{ fromPeerId, candidate }` | ICE candidate (receive) |
-| `media:state` | Client → Server | `{ isVideoEnabled, isAudioEnabled }` | Broadcast media state |
-| `media:state_changed` | Server → Client | `{ peerId, isVideoEnabled, isAudioEnabled }` | Peer media state changed |
+#### SFU Events (mediasoup)
 
 **SFU Events**
 
@@ -446,28 +431,16 @@ Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800
 - Database connection management
 - `@Global()` decorator makes service available everywhere
 
-#### GatewayModule
-
-**Responsibilities:**
-- WebSocket server for real-time WebRTC signalling
-- Room membership management (join/leave)
-- Forwarding offer/answer/ICE candidates between peers
-- JWT authentication via HTTP-only cookies on handshake
-
-**Key Classes:**
-- `WebrtcGateway` — Socket.io gateway with event handlers
-
-**See:** [modules/gateway.md](./modules/gateway.md)
-
 #### SFUModule
 
 **Responsibilities:**
 - mediasoup Worker and Router lifecycle management
 - Transport creation (send/receive) per peer
 - Producer/Consumer coordination for group calls
+- WebSocket signalling via `/sfu` namespace
 - Scaling across multiple Workers (one per CPU core)
 
-**Status:** In Progress (Stage 5)
+**Status:** Completed (Stage 5)
 
 **See:** [modules/sfu.md](./modules/sfu.md)
 
@@ -566,8 +539,8 @@ getProfile(@Request() req) {
 
 | Metric | Target |
 |--------|--------|
-| Video latency | < 200ms (P2P) |
-| Audio latency | < 150ms (P2P) |
+| Video latency | < 200ms (SFU) |
+| Audio latency | < 150ms (SFU) |
 | Chat message delivery | < 100ms |
 | UI frame rate | 60fps with 10+ video tiles |
 | API response time | < 200ms (p95) |
@@ -678,7 +651,7 @@ pnpm dev             # Vite dev server on port 5173
 ### 9.4 Risks and Constraints (MVP assumptions)
 
 - WebRTC connectivity may fail behind strict NAT/firewalls; TURN is required for reliability
-- P2P group calls do not scale beyond ~10 participants; SFU needed for larger rooms
+- SFU server resources (CPU/bandwidth) scale with number of participants
 - Device permissions and hardware variability can impact call quality
 - Network conditions vary; quality adaptation is planned in TASK-047 and TASK-048
 - Compliance requirements (education/privacy) must be validated before production rollout
@@ -747,39 +720,36 @@ pnpm dev             # Vite dev server on port 5173
 
 ## Appendix A: Sequence Diagrams
 
-### WebRTC P2P Handshake
+### SFU Media Flow (mediasoup)
 
 ```mermaid
 sequenceDiagram
     participant A as Alice
-    participant S as Signalling Server
+    participant S as SFU Server
     participant B as Bob
 
-    A->>S: join:room "ROOM123"
-    B->>S: join:room "ROOM123"
-    S-->>A: room:joined {peers: [{id: "bob"}]}
-    S-->>B: room:joined {peers: [{id: "alice"}]}
+    A->>S: sfu:join { roomId, userId }
+    B->>S: sfu:join { roomId, userId }
+    S-->>A: sfu:joined { routerRtpCapabilities }
+    S-->>B: sfu:joined { routerRtpCapabilities }
 
-    Note over A: create RTCPeerConnection()
-    A->>A: createOffer()
-    A->>S: webrtc:offer {targetPeerId: "bob", offer}
+    Note over A: Create send/recv transports
+    A->>S: sfu:create-send-transport
+    S-->>A: sfu:transport-created { iceParams, dtlsParams }
+    A->>S: sfu:connect-transport { dtlsParams }
+    S-->>A: sfu:transport-connected
 
-    S->>B: webrtc:offer {fromPeerId: "alice", offer}
-    Note over B: create RTCPeerConnection()
-    B->>B: setRemoteDescription(offer)
-    B->>B: createAnswer()
-    B->>S: webrtc:answer {targetPeerId: "alice", answer}
+    A->>S: sfu:produce { kind: video, rtpParams }
+    S-->>A: sfu:producer-created { producerId }
+    S->>B: sfu:new-producer { producerId, userId, kind }
 
-    S->>A: webrtc:answer {fromPeerId: "bob", answer}
-    A->>A: setRemoteDescription(answer)
+    Note over B: Create consumer for Alice's track
+    B->>S: sfu:consume { producerId, rtpCapabilities }
+    S-->>B: sfu:consumer-created { consumerId, rtpParams }
+    B->>S: sfu:resume-consumer { consumerId }
+    S-->>B: sfu:consumer-resumed
 
-    A->>S: webrtc:ice {targetPeerId: "bob", candidate}
-    S->>B: webrtc:ice {fromPeerId: "alice", candidate}
-
-    B->>S: webrtc:ice {target: "alice", candidate}
-    S->>A: webrtc:ice {from: "bob", candidate}
-
-    Note over A,B: ICE connection completes<br/>P2P media stream established
+    Note over A,B: Media flows through SFU<br/>Alice → SFU → Bob
 ```
 
 ### Authentication Flow
@@ -823,3 +793,4 @@ sequenceDiagram
 | 1.3 | 2026-02-08 | — | Added requirements/traceability and clarified interface specs |
 | 1.4 | 2026-02-08 | — | Added product goals, MVP scope, and operational assumptions |
 | 1.5 | 2026-03-03 | — | Synced REQ statuses, expanded Room API table, added GatewayModule/SFUModule to Sec 5.1, added Testing Strategy (Sec 11) and Environment Variables (Sec 9.5), fixed concurrent sessions doc |
+| 1.6 | 2026-03-14 | — | Removed P2P signalling documentation; project uses SFU-only architecture. Updated diagrams, events, and component overview to reflect mediasoup implementation. |
