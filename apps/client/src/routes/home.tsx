@@ -7,7 +7,7 @@ import { useAuth } from "@/features/auth/contexts/auth.context";
 import { Link } from "react-router";
 import { CreateRoomDialog } from "@/features/room/components/create-room-dialog";
 
-export const Lobby = () => {
+export const Home = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const [roomCode, setRoomCode] = useState("");
@@ -18,7 +18,7 @@ export const Lobby = () => {
   };
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="min-h-screen flex flex-col">
       <AuthHeader />
 
       <main className="flex flex-1 flex-col items-center justify-center p-4 gap-8">

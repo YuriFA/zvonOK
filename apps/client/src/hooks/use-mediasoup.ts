@@ -8,6 +8,7 @@ export interface UseMediasoupOptions {
   roomId?: string;
   roomOwnerId?: string;
   localStream: MediaStream | null;
+  /** When false, the SFU connection will not be established. Defaults to true. */
   enabled?: boolean;
 }
 
@@ -66,7 +67,7 @@ export function useMediasoup({ roomId, roomOwnerId, localStream, enabled = true 
     : guestIdentityRef.current;
 
   useEffect(() => {
-    if (!enabled || !roomId) {
+    if (!roomId || !enabled) {
       return;
     }
 
@@ -179,10 +180,10 @@ export function useMediasoup({ roomId, roomOwnerId, localStream, enabled = true 
       sfuManager.leaveRoom();
       sfuManager.disconnect();
     };
-  }, [enabled, roomId]);
+  }, [roomId, enabled]);
 
   useEffect(() => {
-    if (!enabled || !roomId || state.connectionState !== 'connected' || joinedRef.current) {
+    if (!roomId || !enabled || state.connectionState !== 'connected' || joinedRef.current) {
       return;
     }
 
@@ -207,10 +208,10 @@ export function useMediasoup({ roomId, roomOwnerId, localStream, enabled = true 
       return;
     }
 
-    for (const track of localStream.getTracks()) {
+    localStream.getTracks().forEach((track) => {
       if ((track.kind === 'audio' || track.kind === 'video') && !producedKindsRef.current.has(track.kind)) {
         producedKindsRef.current.add(track.kind);
-        void sfuManager.produce(track).then((producer) => {
+        sfuManager.produce(track).then((producer) => {
           if (!producer) {
             producedKindsRef.current.delete(track.kind as 'audio' | 'video');
           }
@@ -219,15 +220,9 @@ export function useMediasoup({ roomId, roomOwnerId, localStream, enabled = true 
           producedKindsRef.current.delete(track.kind as 'audio' | 'video');
         });
       }
-    }
+    });
   }, [localStream, state.isSendTransportCreated]);
 
-  /**
-   * Toggle video with proper hardware control.
-   * When disabled: stops the camera track (releases hardware, indicator light turns off).
-   * When enabled: re-acquires the camera track and replaces it in the SFU producer.
-   * Returns true on success, false on failure.
-   */
   const toggleVideoWithHardware = useCallback(async (enabled: boolean): Promise<boolean> => {
     if (enabled) {
       const newTrack = await mediaManager.startVideoTrack();
@@ -273,12 +268,6 @@ export function useMediasoup({ roomId, roomOwnerId, localStream, enabled = true 
     }
   }, []);
 
-  /**
-   * Toggle audio with proper hardware control.
-   * When disabled: stops the microphone track (releases hardware, system indicator turns off).
-   * When enabled: re-acquires the microphone track and replaces it in the SFU producer.
-   * Returns true on success, false on failure.
-   */
   const toggleAudioWithHardware = useCallback(async (enabled: boolean): Promise<boolean> => {
     if (enabled) {
       const newTrack = await mediaManager.startAudioTrack();

@@ -238,61 +238,6 @@ export class MediaStreamManager {
     return this.localStream?.getAudioTracks() ?? [];
   }
 
-  async toggleVideo(enabled: boolean): Promise<boolean> {
-    this.preferredVideoEnabled = enabled;
-
-    if (enabled) {
-      if (this.hasVideoTrack()) {
-        this.getVideoTracks().forEach((track) => {
-          track.enabled = true;
-        });
-        this.updateDerivedState();
-        this.notifyVideoAvailability(true);
-        return true;
-      }
-
-      return (await this.startVideoTrack()) !== null;
-    }
-
-    if (!this.hasVideoTrack()) {
-      this.notifyVideoAvailability(false, 'Camera turned off');
-      return true;
-    }
-
-    this.stopVideoTrack();
-    return true;
-  }
-
-  /**
-   * Stop the video track completely (releases camera hardware).
-   */
-  stopVideoTrack(reason: string = 'Camera turned off'): void {
-    const tracks = this.getVideoTracks();
-    console.log('[Media] Stopping video track. Current tracks:', tracks.map((track) => track.id));
-    this.preferredVideoEnabled = false;
-
-    if (tracks.length === 0) {
-      this.updateDerivedState();
-      this.notifyVideoAvailability(false, reason);
-      return;
-    }
-
-    tracks.forEach((track) => {
-      track.stop();
-      console.log('[Media] Stopping video track:', track.id, 'Reason:', reason);
-      this.localStream?.removeTrack(track);
-    });
-
-    this.updateDerivedState();
-    this.notifyVideoAvailability(false, reason);
-    console.log('[Media] Video track stopped. Remaining video tracks:', this.getVideoTracks().length);
-  }
-
-  /**
-   * Start/re-acquire the video track.
-   * Uses the previously selected device ID if available.
-   * Returns the new track, or null on failure.
-   */
   async startVideoTrack(): Promise<MediaStreamTrack | null> {
     if (!this.localStream) {
       console.error('[Media] No active stream to add video track');
@@ -341,6 +286,42 @@ export class MediaStreamManager {
     return newTrack;
   }
 
+  stopVideoTrack(reason: string = 'Camera turned off'): void {
+    const tracks = this.getVideoTracks();
+
+    if (!tracks.length) {
+      this.notifyVideoAvailability(false, 'Camera turned off');
+      return;
+    }
+
+    console.log('[Media] Stopping video track. Current tracks:', tracks.map((track) => track.id));
+    this.preferredVideoEnabled = false;
+
+    if (tracks.length === 0) {
+      this.updateDerivedState();
+      this.notifyVideoAvailability(false, reason);
+      return;
+    }
+
+    tracks.forEach((track) => {
+      track.stop();
+      console.log('[Media] Stopping video track:', track.id, 'Reason:', reason);
+      this.localStream?.removeTrack(track);
+    });
+
+    this.updateDerivedState();
+    this.notifyVideoAvailability(false, reason);
+    console.log('[Media] Video track stopped. Remaining video tracks:', this.getVideoTracks().length);
+  }
+
+  toggleVideo(enabled: boolean): void {
+    if (enabled) {
+      this.startVideoTrack()
+    } else {
+      this.stopVideoTrack();
+    }
+  }
+
   /**
    * Check if video track is currently available (not stopped).
    */
@@ -380,33 +361,43 @@ export class MediaStreamManager {
   }
 
   /**
-   * Stop the audio track completely (releases microphone hardware).
+   * Check if audio track is currently available (not stopped).
    */
-  stopAudioTrack(reason: string = 'Microphone turned off'): void {
-    const tracks = this.getAudioTracks();
-    this.preferredAudioEnabled = false;
-
-    if (tracks.length === 0) {
-      this.updateDerivedState();
-      this.notifyAudioAvailability(false, reason);
-      return;
-    }
-
-    tracks.forEach((track) => {
-      console.log('[Media] Stopping audio track:', track.id, 'Reason:', reason);
-      track.stop();
-      this.localStream?.removeTrack(track);
-    });
-
-    this.updateDerivedState();
-    this.notifyAudioAvailability(false, reason);
+  hasAudioTrack(): boolean {
+    return this.getAudioTracks().length > 0;
   }
 
   /**
-   * Start/re-acquire the audio track.
-   * Uses the previously selected device ID if available.
-   * Returns the new track, or null on failure.
+   * Set the preferred audio device ID for re-acquisition.
    */
+  setSelectedAudioDeviceId(deviceId: string | null): void {
+    this.selectedAudioDeviceId = deviceId;
+  }
+
+  setPreferredAudioEnabled(enabled: boolean): void {
+    this.preferredAudioEnabled = enabled;
+  }
+
+  isPreferredAudioEnabled(): boolean {
+    return this.preferredAudioEnabled;
+  }
+
+  /**
+   * Subscribe to audio availability changes.
+   */
+  onAudioAvailabilityChange(callback: AudioAvailabilityCallback): () => void {
+    this.audioAvailabilityCallbacks.add(callback);
+    return () => {
+      this.audioAvailabilityCallbacks.delete(callback);
+    };
+  }
+
+  private notifyAudioAvailability(available: boolean, reason?: string): void {
+    this.audioAvailabilityCallbacks.forEach((callback) => {
+      callback(available, reason);
+    });
+  }
+
   async startAudioTrack(): Promise<MediaStreamTrack | null> {
     if (!this.localStream) {
       console.error('[Media] No active stream to add audio track');
@@ -455,73 +446,32 @@ export class MediaStreamManager {
     return newTrack;
   }
 
-  /**
-   * Check if audio track is currently available (not stopped).
-   */
-  hasAudioTrack(): boolean {
-    return this.getAudioTracks().length > 0;
-  }
+  stopAudioTrack(reason: string = 'Microphone turned off'): void {
+    const tracks = this.getAudioTracks();
+    this.preferredAudioEnabled = false;
 
-  /**
-   * Set the preferred audio device ID for re-acquisition.
-   */
-  setSelectedAudioDeviceId(deviceId: string | null): void {
-    this.selectedAudioDeviceId = deviceId;
-  }
+    if (tracks.length === 0) {
+      this.updateDerivedState();
+      this.notifyAudioAvailability(false, reason);
+      return;
+    }
 
-  setPreferredAudioEnabled(enabled: boolean): void {
-    this.preferredAudioEnabled = enabled;
-  }
-
-  isPreferredAudioEnabled(): boolean {
-    return this.preferredAudioEnabled;
-  }
-
-  /**
-   * Subscribe to audio availability changes.
-   */
-  onAudioAvailabilityChange(callback: AudioAvailabilityCallback): () => void {
-    this.audioAvailabilityCallbacks.add(callback);
-    return () => {
-      this.audioAvailabilityCallbacks.delete(callback);
-    };
-  }
-
-  private notifyAudioAvailability(available: boolean, reason?: string): void {
-    this.audioAvailabilityCallbacks.forEach((callback) => {
-      callback(available, reason);
+    tracks.forEach((track) => {
+      console.log('[Media] Stopping audio track:', track.id, 'Reason:', reason);
+      track.stop();
+      this.localStream?.removeTrack(track);
     });
+
+    this.updateDerivedState();
+    this.notifyAudioAvailability(false, reason);
   }
 
-  /**
-   * Toggle audio with hardware control.
-   * When disabled: stops the microphone track (releases hardware, indicator turns off).
-   * When enabled: re-acquires the microphone track.
-   * Returns true on success, false on failure.
-   */
-  async toggleAudio(enabled: boolean): Promise<boolean> {
-    this.preferredAudioEnabled = enabled;
-
+  toggleAudio(enabled: boolean): void {
     if (enabled) {
-      if (this.hasAudioTrack()) {
-        this.getAudioTracks().forEach((track) => {
-          track.enabled = true;
-        });
-        this.updateDerivedState();
-        this.notifyAudioAvailability(true);
-        return true;
-      }
-
-      return (await this.startAudioTrack()) !== null;
+      this.startAudioTrack()
+    } else {
+      this.stopAudioTrack();
     }
-
-    if (!this.hasAudioTrack()) {
-      this.notifyAudioAvailability(false, 'Microphone turned off');
-      return true;
-    }
-
-    this.stopAudioTrack();
-    return true;
   }
 
   isVideoEnabled(): boolean {

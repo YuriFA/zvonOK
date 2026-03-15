@@ -9,8 +9,8 @@ export interface MediaControlsState {
 }
 
 export interface UseMediaControlsReturn extends MediaControlsState {
-  toggleVideo: () => Promise<boolean>;
-  toggleAudio: () => Promise<boolean>;
+  toggleVideo: () => void;
+  toggleAudio: () => void;
   setVideoEnabled: (enabled: boolean) => void;
   setAudioEnabled: (enabled: boolean) => void;
 }
@@ -51,26 +51,13 @@ export function useMediaControls(initialState?: Partial<MediaControlsState>): Us
     };
   }, []);
 
-  const toggleVideo = useCallback(async () => {
-    const newState = !isVideoEnabled;
-    const success = await mediaManager.toggleVideo(newState);
-    const hasVideoTrack = mediaManager.hasVideoTrack();
 
-    setIsVideoEnabled(success ? newState && hasVideoTrack : false);
-    setIsVideoAvailable(hasVideoTrack);
-
-    return success;
+  const toggleVideo = useCallback(() => {
+    mediaManager.toggleVideo(!isVideoEnabled);
   }, [isVideoEnabled]);
 
-  const toggleAudio = useCallback(async () => {
-    const newState = !isAudioEnabled;
-    const success = await mediaManager.toggleAudio(newState);
-    const hasAudioTrack = mediaManager.hasAudioTrack();
-
-    setIsAudioEnabled(success ? newState && hasAudioTrack : false);
-    setIsAudioAvailable(hasAudioTrack);
-
-    return success;
+  const toggleAudio = useCallback(() => {
+    mediaManager.toggleAudio(!isAudioEnabled);
   }, [isAudioEnabled]);
 
   const setVideoEnabled = useCallback((enabled: boolean) => {
@@ -90,8 +77,8 @@ export function useMediaControls(initialState?: Partial<MediaControlsState>): Us
     isAudioEnabled,
     isVideoAvailable,
     isAudioAvailable,
-    toggleVideo,
     toggleAudio,
+    toggleVideo,
     setVideoEnabled,
     setAudioEnabled,
   };

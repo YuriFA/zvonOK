@@ -1,111 +1,60 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { mediaManager } from '@/lib/media/manager';
-import { useMediaControls } from '@/features/media/hooks/use-media-controls';
-import { useMediasoup, type RemotePeerMedia } from '@/hooks/use-mediasoup';
+import { useCallback } from 'react';
 import { useQualityStats } from '@/hooks/use-quality-stats';
 import { useActiveSpeaker } from '@/features/room/hooks/use-active-speaker';
+import { useRemoteMediaElements } from '@/features/room/hooks/use-remote-media-elements';
+import { useRoomParticipants } from '@/features/room/hooks/use-room-participants';
+import { useRoomSfu } from '@/features/room/hooks/use-room-sfu';
+import { useMediaControls, type UseMediaControlsReturn } from '@/features/media/hooks/use-media-controls';
+import type { RemotePeerMedia } from '@/hooks/use-mediasoup';
 import type { Participant } from '@/components/room/ParticipantsList';
 import type { Room } from '@/features/room/types/room.types';
 import type { SfuState } from '@/lib/sfu/types';
-
-export type RoomViewState = 'prejoin' | 'active';
-
-interface SavedMediaSetup {
-  video: string | null;
-  audio: string | null;
-  isVideoEnabled: boolean;
-  isAudioEnabled: boolean;
-}
+import { useMediaStreamContext } from '@/features/media/contexts/media-stream.context';
 
 export interface UseRoomSessionOptions {
-  room: Room | undefined;
+  room: Room;
   userId: string | undefined;
   username: string | undefined;
 }
 
 export interface UseRoomSessionResult {
-  // View state
-  viewState: RoomViewState;
-  handleJoin: () => void;
-
-  // Media
   localStream: MediaStream | null;
   mediaError: string | null;
-  isMediaInitialized: boolean;
-  mediaControls: ReturnType<typeof useMediaControls>;
+  mediaControls: UseMediaControlsReturn;
   handleToggleVideo: () => Promise<void>;
   handleToggleAudio: () => Promise<void>;
-
-  // SFU
   sfuState: SfuState;
   remotePeers: RemotePeerMedia[];
   wasKicked: boolean;
   kickPeer: (userId: string) => void;
-
-  // Remote video elements (for speaker sink)
   handleRemoteMediaElement: (peerId: string, element: HTMLVideoElement | null) => void;
   primaryRemoteMediaElement: HTMLVideoElement | null;
-
-  // Participants
   participants: Participant[];
-
-  // Active speaker
   activeSpeakerId: string | null;
   localUserId: string;
 }
 
 export function useRoomSession({ room, userId, username }: UseRoomSessionOptions): UseRoomSessionResult {
-  const [viewState, setViewState] = useState<RoomViewState>('prejoin');
-  const savedDeviceIds = useRef<SavedMediaSetup | null>(null);
+  const { setElement: handleRemoteMediaElement, primaryElement: primaryRemoteMediaElement } = useRemoteMediaElements();
 
-  const handleJoin = useCallback(() => {
-    savedDeviceIds.current = {
-      video: mediaManager.getVideoDeviceId(),
-      audio: mediaManager.getAudioDeviceId(),
-      isVideoEnabled: mediaManager.isPreferredVideoEnabled(),
-      isAudioEnabled: mediaManager.isPreferredAudioEnabled(),
-    };
-    setViewState('active');
-  }, []);
-
-  // Media state
-  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
-  const [mediaError, setMediaError] = useState<string | null>(null);
-  const [isMediaInitialized, setIsMediaInitialized] = useState(false);
+  const { stream: localStream, error: mediaError, stop: stopMedia } = useMediaStreamContext();
   const mediaControls = useMediaControls();
-  const [remoteMediaElements, setRemoteMediaElements] = useState<Map<string, HTMLVideoElement>>(new Map());
 
-  const handleRemoteMediaElement = useCallback((peerId: string, element: HTMLVideoElement | null) => {
-    setRemoteMediaElements((prev) => {
-      const next = new Map(prev);
-      if (element) {
-        next.set(peerId, element);
-      } else {
-        next.delete(peerId);
-      }
-      return next;
-    });
-  }, []);
+  const localUserId = userId ?? 'local';
 
-  const primaryRemoteMediaElement = remoteMediaElements.values().next().value ?? null;
+  const handleKicked = useCallback(() => {
+    stopMedia();
+  }, [stopMedia]);
 
-  const {
-    state: sfuState,
-    remotePeers,
-    toggleVideoWithHardware,
-    toggleAudioWithHardware,
-    kickPeer,
-    wasKicked,
-  } = useMediasoup({
-    roomId: room?.id,
-    roomOwnerId: room?.ownerId,
+  const { sfuState, remotePeers, wasKicked, kickPeer, handleToggleVideo, handleToggleAudio } = useRoomSfu({
+    roomId: room.id,
+    roomOwnerId: room.ownerId,
     localStream,
-    enabled: !!room && isMediaInitialized && viewState === 'active',
+    mediaControls,
+    onKicked: handleKicked,
   });
 
   const { peerStats } = useQualityStats({ enabled: sfuState.connectionState === 'connected' });
-
-  const localUserId = userId ?? 'local';
 
   const activeSpeakerId = useActiveSpeaker({
     remotePeers,
@@ -114,141 +63,37 @@ export function useRoomSession({ room, userId, username }: UseRoomSessionOptions
     enabled: sfuState.connectionState === 'connected',
   });
 
-  const handleToggleVideo = useCallback(async () => {
-    const nextVideoEnabled = !mediaControls.isVideoEnabled;
-    mediaControls.setVideoEnabled(nextVideoEnabled);
-    const success = await toggleVideoWithHardware(nextVideoEnabled);
-    if (!success && nextVideoEnabled) {
-      mediaControls.setVideoEnabled(false);
-    }
-  }, [mediaControls, toggleVideoWithHardware]);
-
-  const handleToggleAudio = useCallback(async () => {
-    const nextAudioEnabled = !mediaControls.isAudioEnabled;
-    mediaControls.setAudioEnabled(nextAudioEnabled);
-    const success = await toggleAudioWithHardware(nextAudioEnabled);
-    if (!success && nextAudioEnabled) {
-      mediaControls.setAudioEnabled(false);
-    }
-  }, [mediaControls, toggleAudioWithHardware]);
-
-  // Build participants list
-  const participants: Participant[] = useMemo(() => {
-    const localParticipant: Participant = {
-      id: userId ?? 'local',
-      userId: userId,
-      username: username ?? 'You',
-      isMuted: !mediaControls.isAudioEnabled,
-      isVideoOff: !mediaControls.isVideoEnabled,
-      isConnected: sfuState.connectionState === 'connected',
-    };
-
-    const remoteParticipants: Participant[] = remotePeers.map((peer: RemotePeerMedia) => {
-      const qualityData = peerStats.get(peer.userId);
-      return {
-        id: peer.userId,
-        userId: peer.userId,
-        username: peer.username,
-        isMuted: !peer.isAudioEnabled,
-        isVideoOff: !peer.isVideoEnabled,
-        isConnected: true,
-        qualityScore: qualityData?.score,
-        qualityStats: qualityData?.stats,
-      };
-    });
-
-    return [localParticipant, ...remoteParticipants];
-  }, [
+  const { participants } = useRoomParticipants({
     userId,
     username,
-    mediaControls.isAudioEnabled,
-    mediaControls.isVideoEnabled,
-    sfuState.connectionState,
+    isAudioEnabled: mediaControls.isAudioEnabled,
+    isVideoEnabled: mediaControls.isVideoEnabled,
+    connectionState: sfuState.connectionState,
     remotePeers,
     peerStats,
-  ]);
+  });
 
-  // Stop stream when kicked
-  useEffect(() => {
-    if (!wasKicked) return;
-    mediaManager.stopStream();
-    setLocalStream(null);
-  }, [wasKicked]);
-
-  // Media stream — start after join, stop on unmount or leaving active state
-  useEffect(() => {
-    if (viewState !== 'active') return;
-
-    let isCancelled = false;
-
-    const startMedia = async () => {
-      setIsMediaInitialized(false);
-      setMediaError(null);
-
-      const ids = savedDeviceIds.current;
-      if (ids?.video) {
-        mediaManager.setSelectedVideoDeviceId(ids.video);
-      }
-      if (ids?.audio) {
-        mediaManager.setSelectedAudioDeviceId(ids.audio);
-      }
-
-      const constraints = ids
-        ? {
-            video: ids.isVideoEnabled
-              ? ids.video
-                ? { deviceId: { exact: ids.video }, width: { ideal: 1280 }, height: { ideal: 720 } }
-                : { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' as const }
-              : false,
-            audio: ids.isAudioEnabled
-              ? ids.audio
-                ? {
-                    deviceId: { exact: ids.audio },
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl: true,
-                  }
-                : { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
-              : false,
-          }
-        : undefined;
-
-      try {
-        const stream = await mediaManager.startStream(constraints);
-        if (isCancelled) {
-          mediaManager.stopStream();
-          return;
-        }
-        setLocalStream(stream);
-      } catch (err) {
-        if (isCancelled) return;
-        const message = err instanceof Error ? err.message : 'Failed to access camera/microphone';
-        setMediaError(message);
-        console.error('Failed to start media stream:', err);
-      } finally {
-        if (!isCancelled) {
-          setIsMediaInitialized(true);
-        }
-      }
-    };
-
-    void startMedia();
-
-    return () => {
-      isCancelled = true;
-      mediaManager.stopStream();
-      setLocalStream(null);
-      setMediaError(null);
-      setIsMediaInitialized(false);
-    };
-  }, [viewState]);
+  // Start local media when the session mounts. The SFU (useRoomSfu) gates its
+  // connection on isMediaInitialized, so the order is automatically correct.
+  // Device IDs and preferred constraints are read from mediaManager so pre-join
+  // device selection and camera-off preference are honoured.
+  // useEffect(() => {
+  //   const videoDeviceId = mediaManager.getVideoDeviceId() ?? undefined;
+  //   const audioDeviceId = mediaManager.getAudioDeviceId() ?? undefined;
+  //   const constraints: MediaStreamConstraints = {
+  //     video: mediaManager.isPreferredVideoEnabled()
+  //       ? (videoDeviceId ? { deviceId: videoDeviceId } : true)
+  //       : false,
+  //     audio: mediaManager.isPreferredAudioEnabled()
+  //       ? (audioDeviceId ? { deviceId: audioDeviceId } : true)
+  //       : false,
+  //   };
+  //   startMedia({ constraints, deviceId: { video: videoDeviceId, audio: audioDeviceId } });
+  // }, [startMedia]);
 
   return {
-    viewState,
-    handleJoin,
     localStream,
     mediaError,
-    isMediaInitialized,
     mediaControls,
     handleToggleVideo,
     handleToggleAudio,

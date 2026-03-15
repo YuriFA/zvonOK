@@ -187,15 +187,18 @@ describe('RoomPage', () => {
 
     renderRoomPage();
 
+    // useRoomSession (and therefore useMediasoup) is only instantiated after
+    // the user clicks "Join Room" and RoomView mounts.
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Join Room' }));
+    });
+
+    // At this point the stream is still pending, so SFU should be disabled.
     expect(mockUseMediasoup).toHaveBeenCalledWith(
       expect.objectContaining({
         enabled: false,
       })
     );
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Join Room' }));
-    });
 
     await act(async () => {
       resolveStartStream?.({ id: 'local-stream' } as MediaStream);
