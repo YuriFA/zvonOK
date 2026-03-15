@@ -1,9 +1,9 @@
 import { Button } from '@/components/ui/button';
 import { CopyLink } from '@/components/ui/copy-link';
 import { DeviceSelector } from '@/features/media/components/device-selector';
-import { RoomHeader } from '@/features/room/components/RoomHeader';
-import { RoomInfoBar } from '@/features/room/components/RoomInfoBar';
 import type { Room } from '@/features/room/types/room.types';
+import { RoomHeader } from './room-header';
+import { RoomInfoBar } from './room-info-bar';
 
 interface PrejoinViewProps {
   room: Room;
@@ -13,7 +13,7 @@ interface PrejoinViewProps {
 
 export function PrejoinView({ room, roomUrl, onJoin }: PrejoinViewProps) {
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="min-h-screen flex flex-col">
       <RoomHeader variant="prejoin" room={room} />
 
       <main className="flex flex-1 flex-col p-4">

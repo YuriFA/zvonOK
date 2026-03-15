@@ -1,31 +1,21 @@
-import { useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Video, VideoOff, Mic, MicOff } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { LocalVideo } from '@/components/local-video';
+import { useMediaStream } from '../hooks/use-media-stream';
 import { useMediaControls } from '../hooks/use-media-controls';
-import { useMediaPermissions } from '../hooks/use-media-permissions';
 import { DeviceSettingsPanel } from './device-settings-panel';
+import { Button } from '@/components/ui/button';
+import { LocalVideo } from '@/components/local-video';
+import { cn } from '@/lib/utils';
+import { Video, VideoOff, Mic, MicOff } from 'lucide-react';
 
 interface DeviceSelectorProps {
   className?: string;
 }
 
 export function DeviceSelector({ className }: DeviceSelectorProps) {
-  const { stream, startMedia, stopMedia, isLoading, error } = useMediaPermissions();
+  const { stream, error, isLoading } = useMediaStream();
   const mediaControls = useMediaControls();
-
-  useEffect(() => {
-    startMedia()
-
-    return () => {
-      stopMedia();
-    };
-  }, [startMedia, stopMedia]);
 
   return (
     <div className={cn('space-y-4', className)}>
-      {/* Video Preview */}
       <div className="relative aspect-video overflow-hidden rounded-lg bg-muted">
         {isLoading && (
           <div className="flex h-full items-center justify-center">
@@ -34,7 +24,7 @@ export function DeviceSelector({ className }: DeviceSelectorProps) {
         )}
         {error && (
           <div className="flex h-full items-center justify-center">
-            <p className="text-sm text-destructive">{error.message}</p>
+            <p className="text-sm text-destructive">{error}</p>
           </div>
         )}
         {!isLoading && !error && stream && (
@@ -47,7 +37,6 @@ export function DeviceSelector({ className }: DeviceSelectorProps) {
           />
         )}
 
-        {/* Toggle Buttons */}
         <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-2">
           <Button
             type="button"

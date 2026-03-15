@@ -1,31 +1,26 @@
-import { useParams, useNavigate } from 'react-router';
+import { useParams } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { useRoom } from '@/features/room/hooks/use-room';
-import { useEndRoom } from '@/features/room/hooks/use-end-room';
-import { useAuth } from '@/features/auth/contexts/auth.context';
 import { Link } from 'react-router';
-import { useRoomSession } from '@/features/room/hooks/use-room-session';
-import { RoomHeader } from '@/features/room/components/RoomHeader';
-import { RoomAlerts } from '@/features/room/components/RoomAlerts';
-import { PrejoinView } from '@/features/room/components/PrejoinView';
-import { ActiveRoomView } from '@/features/room/components/ActiveRoomView';
+import { PrejoinView } from '@/features/room/components/prejoin-view';
+import { useState } from 'react';
+import { RoomView } from '@/features/room/components/room-view';
 
 export const RoomPage = () => {
   const { slug } = useParams<{ slug: string }>();
-  const navigate = useNavigate();
-  const { user } = useAuth();
+  const [viewState, setViewState] = useState<'prejoin' | 'active'>('prejoin');
 
   const { data: room, isLoading, error } = useRoom(slug || '');
 
-  const endRoom = useEndRoom({
-    onSuccess: () => navigate('/'),
-  });
-
-  const session = useRoomSession({
-    room,
-    userId: user?.id,
-    username: user?.username,
-  });
+  const handleJoin = () => {
+    // savedDeviceIds.current = {
+    //   video: mediaManager.getVideoDeviceId(),
+    //   audio: mediaManager.getAudioDeviceId(),
+    //   isVideoEnabled: mediaManager.isPreferredVideoEnabled(),
+    //   isAudioEnabled: mediaManager.isPreferredAudioEnabled(),
+    // };
+    setViewState('active');
+  }
 
   if (isLoading) {
     return (
@@ -46,38 +41,13 @@ export const RoomPage = () => {
     );
   }
 
-  const isOwner = user?.id === room.ownerId;
   const roomUrl = `${window.location.origin}/room/${room.slug}`;
 
-  if (session.viewState === 'prejoin') {
-    return <PrejoinView room={room} roomUrl={roomUrl} onJoin={session.handleJoin} />;
+  if (viewState === 'prejoin') {
+    return <PrejoinView room={room} roomUrl={roomUrl} onJoin={handleJoin} />;
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <RoomHeader
-        variant="active"
-        room={room}
-        primaryRemoteMediaElement={session.primaryRemoteMediaElement}
-        isVideoEnabled={session.mediaControls.isVideoEnabled}
-        isAudioEnabled={session.mediaControls.isAudioEnabled}
-        isOwner={isOwner}
-        onEndRoom={() => endRoom.mutate(room.id)}
-        isEndingRoom={endRoom.isPending}
-      />
-
-      <RoomAlerts
-        endRoomError={!!endRoom.error}
-        mediaError={session.mediaError}
-        wasKicked={session.wasKicked}
-      />
-
-      <ActiveRoomView
-        session={session}
-        room={room}
-        currentUserId={user?.id}
-        currentUsername={user?.username}
-      />
-    </div>
+    <RoomView room={room} />
   );
 };

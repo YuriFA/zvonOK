@@ -483,7 +483,7 @@ export class SfuManager {
     // Request to consume
     this.socket.emit('sfu:consume', {
       producerId: payload.producerId,
-      rtpCapabilities: this.device.rtpCapabilities,
+      rtpCapabilities: this.device.recvRtpCapabilities,
     });
   }
 
