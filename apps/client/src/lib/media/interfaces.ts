@@ -55,10 +55,6 @@ export interface IMediaTrackController {
   setPreferredVideoEnabled(enabled: boolean): void;
   /** Set preferred audio enabled state */
   setPreferredAudioEnabled(enabled: boolean): void;
-  /** Toggle video on/off, returns true if the operation succeeded */
-  toggleVideo(enabled: boolean): Promise<boolean>;
-  /** Toggle audio on/off, returns true if the operation succeeded */
-  toggleAudio(enabled: boolean): Promise<boolean>;
 }
 
 /**
@@ -107,13 +103,35 @@ export interface IMediaStateNotifier {
 }
 
 /**
+ * Internal state store abstraction.
+ * Used by acquisition and track controller modules to decouple from the
+ * concrete MediaStateStore implementation (DIP).
+ */
+export interface IMediaStateStore extends IMediaStateNotifier {
+  /** Update the current media status and notify subscribers */
+  setStatus(status: MediaStatus): void;
+  /** Notify subscribers about video track availability changes */
+  notifyVideoAvailability(available: boolean, reason?: string): void;
+  /** Notify subscribers about audio track availability changes */
+  notifyAudioAvailability(available: boolean, reason?: string): void;
+}
+
+/**
  * Facade combining all media concerns.
  * Use this as the default injection token for components that need
  * full media management capabilities.
+ *
+ * toggleVideo/toggleAudio live here rather than on IMediaTrackController
+ * because they orchestrate track start/stop — a facade responsibility.
  */
 export interface IMediaManager
   extends IMediaAcquisition,
   IMediaTrackController,
   IMediaDeviceSelector,
   IMediaPermissionChecker,
-  IMediaStateNotifier { }
+  IMediaStateNotifier {
+  /** Toggle video on/off, returns true if the operation succeeded */
+  toggleVideo(enabled: boolean): Promise<boolean>;
+  /** Toggle audio on/off, returns true if the operation succeeded */
+  toggleAudio(enabled: boolean): Promise<boolean>;
+}

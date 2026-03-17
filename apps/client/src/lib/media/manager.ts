@@ -1,7 +1,7 @@
 /**
  * Media manager facade.
- * Composes state store, acquisition, track controller, and permissions
- * into a unified interface implementing IMediaManager.
+ * Composes state store, acquisition, track controller, device switcher,
+ * and permissions into a unified interface implementing IMediaManager.
  */
 
 import { MediaStateStore } from './state-store';
@@ -11,6 +11,8 @@ import {
   DeviceNotFoundStrategy,
 } from './acquisition';
 import { MediaTrackController } from './track-controller';
+import { DeviceGoneFallbackStrategy } from './track-fallback';
+import { DeviceSwitcher } from './device-switcher';
 import { checkPermissions } from './permissions';
 import type { IMediaManager } from './interfaces';
 import type {
@@ -41,11 +43,15 @@ export class MediaStreamManager implements IMediaManager {
   private acquisition: MediaAcquisition;
 
   constructor() {
+    const deviceSwitcher = new DeviceSwitcher(this.stateStore);
+
     // Track controller is the single source of truth for preferences.
     // Create it first so acquisition can reference it via callback.
     this.trackController = new MediaTrackController(
       () => this.acquisition.getStream(),
-      this.stateStore
+      this.stateStore,
+      [new DeviceGoneFallbackStrategy()],
+      deviceSwitcher,
     );
     this.acquisition = new MediaAcquisition(
       this.stateStore,

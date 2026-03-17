@@ -1,9 +1,19 @@
 /**
  * Media track controller.
  * Handles individual track lifecycle: start/stop/replace operations.
+ *
+ * Responsibilities after SRP extraction:
+ * - Track start/stop with fallback via injected strategies (OCP)
+ * - Device selection state (selectedVideoDeviceId / selectedAudioDeviceId)
+ * - Preference state (preferredVideoEnabled / preferredAudioEnabled)
+ * - Hardware disconnect detection (track.onended)
+ *
+ * Device switching is delegated to the injected DeviceSwitcher (SRP).
  */
 
-import { MediaStateStore } from './state-store';
+import type { IMediaStateStore } from './interfaces';
+import type { TrackFallbackStrategy } from './track-fallback';
+import type { DeviceSwitcher } from './device-switcher';
 import {
   DEFAULT_VIDEO_CONSTRAINTS,
   DEFAULT_AUDIO_CONSTRAINTS,
@@ -18,14 +28,20 @@ export class MediaTrackController {
   private selectedVideoDeviceId: string | null = null;
   private selectedAudioDeviceId: string | null = null;
   private getStream: () => MediaStream | null;
-  private stateStore: MediaStateStore;
+  private stateStore: IMediaStateStore;
+  private fallbackStrategies: TrackFallbackStrategy[];
+  private deviceSwitcher: DeviceSwitcher;
 
   constructor(
     getStream: () => MediaStream | null,
-    stateStore: MediaStateStore
+    stateStore: IMediaStateStore,
+    fallbackStrategies: TrackFallbackStrategy[] = [],
+    deviceSwitcher: DeviceSwitcher,
   ) {
     this.getStream = getStream;
     this.stateStore = stateStore;
+    this.fallbackStrategies = fallbackStrategies;
+    this.deviceSwitcher = deviceSwitcher;
   }
 
   // Video track management
@@ -57,10 +73,40 @@ export class MediaTrackController {
       }
       this.selectedVideoDeviceId = track.getSettings().deviceId ?? null;
       stream.addTrack(track);
+      this.attachVideoTrackEndedHandler(track, stream);
       this.stateStore.notifyVideoAvailability(true);
       newStream.getAudioTracks().forEach((t) => t.stop());
       return track;
     } catch (err) {
+      // Try injected fallback strategies (OCP: new strategies can be added
+      // without modifying this class)
+      if (this.selectedVideoDeviceId) {
+        for (const strategy of this.fallbackStrategies) {
+          if (strategy.canHandle(err)) {
+            console.warn('[Media] Selected video device unavailable, trying fallback strategy');
+            this.selectedVideoDeviceId = null;
+            const fallbackTrack = await strategy.execute(async () => {
+              const fallbackStream = await navigator.mediaDevices.getUserMedia({
+                video: this.buildVideoConstraints(null),
+              });
+              const t = fallbackStream.getVideoTracks()[0];
+              if (t) {
+                this.selectedVideoDeviceId = t.getSettings().deviceId ?? null;
+                stream.addTrack(t);
+                this.attachVideoTrackEndedHandler(t, stream);
+                this.stateStore.notifyVideoAvailability(true);
+                fallbackStream.getAudioTracks().forEach((at) => at.stop());
+                return t;
+              }
+              fallbackStream.getTracks().forEach((at) => at.stop());
+              return null;
+            });
+            if (fallbackTrack) return fallbackTrack;
+            break; // Only try one matching strategy
+          }
+        }
+      }
+
       console.error('[Media] Failed to re-acquire video track:', err);
       this.stateStore.notifyVideoAvailability(
         false,
@@ -138,10 +184,39 @@ export class MediaTrackController {
       }
       this.selectedAudioDeviceId = track.getSettings().deviceId ?? null;
       stream.addTrack(track);
+      this.attachAudioTrackEndedHandler(track, stream);
       this.stateStore.notifyAudioAvailability(true);
       newStream.getVideoTracks().forEach((t) => t.stop());
       return track;
     } catch (err) {
+      // Try injected fallback strategies (OCP)
+      if (this.selectedAudioDeviceId) {
+        for (const strategy of this.fallbackStrategies) {
+          if (strategy.canHandle(err)) {
+            console.warn('[Media] Selected audio device unavailable, trying fallback strategy');
+            this.selectedAudioDeviceId = null;
+            const fallbackTrack = await strategy.execute(async () => {
+              const fallbackStream = await navigator.mediaDevices.getUserMedia({
+                audio: this.buildAudioConstraints(null),
+              });
+              const t = fallbackStream.getAudioTracks()[0];
+              if (t) {
+                this.selectedAudioDeviceId = t.getSettings().deviceId ?? null;
+                stream.addTrack(t);
+                this.attachAudioTrackEndedHandler(t, stream);
+                this.stateStore.notifyAudioAvailability(true);
+                fallbackStream.getVideoTracks().forEach((vt) => vt.stop());
+                return t;
+              }
+              fallbackStream.getTracks().forEach((at) => at.stop());
+              return null;
+            });
+            if (fallbackTrack) return fallbackTrack;
+            break;
+          }
+        }
+      }
+
       console.error('[Media] Failed to re-acquire audio track:', err);
       this.stateStore.notifyAudioAvailability(
         false,
@@ -184,21 +259,25 @@ export class MediaTrackController {
 
   // Track queries
   hasVideoTrack(): boolean {
-    return (this.getStream()?.getVideoTracks().length ?? 0) > 0;
+    const tracks = this.getStream()?.getVideoTracks() ?? [];
+    return tracks.some((t) => t.readyState !== 'ended');
   }
 
   hasAudioTrack(): boolean {
-    return (this.getStream()?.getAudioTracks().length ?? 0) > 0;
+    const tracks = this.getStream()?.getAudioTracks() ?? [];
+    return tracks.some((t) => t.readyState !== 'ended');
   }
 
   isVideoEnabled(): boolean {
     const tracks = this.getStream()?.getVideoTracks() ?? [];
-    return tracks.length > 0 && tracks.every((track) => track.enabled);
+    const live = tracks.filter((t) => t.readyState !== 'ended');
+    return live.length > 0 && live.every((track) => track.enabled);
   }
 
   isAudioEnabled(): boolean {
     const tracks = this.getStream()?.getAudioTracks() ?? [];
-    return tracks.length > 0 && tracks.every((track) => track.enabled);
+    const live = tracks.filter((t) => t.readyState !== 'ended');
+    return live.length > 0 && live.every((track) => track.enabled);
   }
 
   // Preference state
@@ -237,47 +316,25 @@ export class MediaTrackController {
     this.selectedAudioDeviceId = deviceId;
   }
 
-  // Device switching
+  // Device switching — delegates to DeviceSwitcher (SRP)
   async switchVideoDevice(deviceId: string): Promise<MediaStreamTrack | null> {
     const stream = this.getStream();
     this.selectedVideoDeviceId = deviceId;
 
-    if (!stream || !this.hasVideoTrack()) {
+    if (!stream) {
       return null;
     }
 
-    let newStream: MediaStream;
-    try {
-      newStream = await navigator.mediaDevices.getUserMedia({
-        video: this.buildVideoConstraints(deviceId),
-      });
-    } catch {
-      console.warn('[Media] Failed to get video device, falling back to default');
-      try {
-        newStream = await navigator.mediaDevices.getUserMedia({ video: true });
-      } catch (err) {
-        console.error('[Media] Failed to get any video device:', err);
-        return null;
-      }
+    const newTrack = await this.deviceSwitcher.switchVideo(
+      stream,
+      deviceId,
+      this.hasVideoTrack(),
+      (track, s) => this.attachVideoTrackEndedHandler(track, s),
+    );
+
+    if (newTrack) {
+      this.selectedVideoDeviceId = newTrack.getSettings().deviceId ?? deviceId;
     }
-
-    const newTrack = newStream.getVideoTracks()[0];
-    if (!newTrack) {
-      console.error('[Media] No video track in new stream');
-      newStream.getTracks().forEach((track) => track.stop());
-      return null;
-    }
-
-    stream.getVideoTracks().forEach((track) => {
-      track.stop();
-      stream.removeTrack(track);
-    });
-
-    stream.addTrack(newTrack);
-    this.selectedVideoDeviceId = newTrack.getSettings().deviceId ?? deviceId;
-    this.stateStore.notifyVideoAvailability(true);
-
-    newStream.getAudioTracks().forEach((track) => track.stop());
 
     return newTrack;
   }
@@ -286,42 +343,20 @@ export class MediaTrackController {
     const stream = this.getStream();
     this.selectedAudioDeviceId = deviceId;
 
-    if (!stream || !this.hasAudioTrack()) {
+    if (!stream) {
       return null;
     }
 
-    let newStream: MediaStream;
-    try {
-      newStream = await navigator.mediaDevices.getUserMedia({
-        audio: this.buildAudioConstraints(deviceId),
-      });
-    } catch {
-      console.warn('[Media] Failed to get audio device, falling back to default');
-      try {
-        newStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      } catch (err) {
-        console.error('[Media] Failed to get any audio device:', err);
-        return null;
-      }
+    const newTrack = await this.deviceSwitcher.switchAudio(
+      stream,
+      deviceId,
+      this.hasAudioTrack(),
+      (track, s) => this.attachAudioTrackEndedHandler(track, s),
+    );
+
+    if (newTrack) {
+      this.selectedAudioDeviceId = newTrack.getSettings().deviceId ?? deviceId;
     }
-
-    const newTrack = newStream.getAudioTracks()[0];
-    if (!newTrack) {
-      console.error('[Media] No audio track in new stream');
-      newStream.getTracks().forEach((track) => track.stop());
-      return null;
-    }
-
-    stream.getAudioTracks().forEach((track) => {
-      track.stop();
-      stream.removeTrack(track);
-    });
-
-    stream.addTrack(newTrack);
-    this.selectedAudioDeviceId = newTrack.getSettings().deviceId ?? deviceId;
-    this.stateStore.notifyAudioAvailability(true);
-
-    newStream.getVideoTracks().forEach((track) => track.stop());
 
     return newTrack;
   }
@@ -341,5 +376,32 @@ export class MediaTrackController {
     return deviceId
       ? { deviceId: { exact: deviceId } }
       : { ...DEFAULT_AUDIO_CONSTRAINTS };
+  }
+
+  // Track ended handlers — detect hardware disconnects while track is live
+  private attachVideoTrackEndedHandler(
+    track: MediaStreamTrack,
+    stream: MediaStream
+  ): void {
+    track.addEventListener('ended', () => {
+      console.warn('[Media] Video track ended unexpectedly (device disconnected?)');
+      stream.removeTrack(track);
+      // Clear the selected device so the next toggle attempt falls back to default
+      this.selectedVideoDeviceId = null;
+      this.stateStore.notifyVideoAvailability(false, 'Camera disconnected');
+    });
+  }
+
+  private attachAudioTrackEndedHandler(
+    track: MediaStreamTrack,
+    stream: MediaStream
+  ): void {
+    track.addEventListener('ended', () => {
+      console.warn('[Media] Audio track ended unexpectedly (device disconnected?)');
+      stream.removeTrack(track);
+      // Clear the selected device so the next toggle attempt falls back to default
+      this.selectedAudioDeviceId = null;
+      this.stateStore.notifyAudioAvailability(false, 'Microphone disconnected');
+    });
   }
 }

@@ -1,8 +1,7 @@
 import { useCallback, useEffect } from 'react';
 import { useMediasoup, type RemotePeerMedia } from '@/hooks/use-mediasoup';
 import { useMediaControls, type UseMediaControlsReturn } from '@/features/media/hooks/use-media-controls';
-import { useMediaManager } from '@/features/media/contexts/media-manager.context';
-import { useSfuManager } from '@/features/sfu/contexts/sfu-manager.context';
+import { useMediaTrackController } from '@/features/media/contexts/media-manager.context';
 import type { SfuState } from '@/lib/sfu/types';
 
 export interface UseRoomSfuOptions {
@@ -28,8 +27,7 @@ export function useRoomSfu({
   localStream,
   onKicked,
 }: UseRoomSfuOptions): UseRoomSfuResult {
-  const mediaManager = useMediaManager();
-  const sfuManager = useSfuManager();
+  const trackController = useMediaTrackController();
   const mediaControls = useMediaControls();
 
   const {
@@ -37,6 +35,7 @@ export function useRoomSfu({
     remotePeers,
     kickPeer,
     wasKicked,
+    produceTrack,
     pauseProducer,
     resumeProducer,
     replaceTrack,
@@ -58,24 +57,26 @@ export function useRoomSfu({
     mediaControls.setVideoEnabled(nextEnabled);
 
     if (nextEnabled) {
-      const newTrack = await mediaManager.startVideoTrack();
+      const newTrack = await trackController.startVideoTrack();
       if (!newTrack) {
         mediaControls.setVideoEnabled(false);
         return;
       }
 
       if (!hasProducer('video')) {
-        const produced = await sfuManager.produce(newTrack);
+        const produced = await produceTrack(newTrack);
         if (!produced) {
-          mediaManager.stopVideoTrack('Failed to publish camera');
+          trackController.stopVideoTrack('Failed to publish camera');
           mediaControls.setVideoEnabled(false);
+          return;
         }
+        resumeProducer('video');
         return;
       }
 
       const replaced = await replaceTrack('video', newTrack);
       if (!replaced) {
-        mediaManager.stopVideoTrack('Failed to publish camera');
+        trackController.stopVideoTrack('Failed to publish camera');
         mediaControls.setVideoEnabled(false);
         return;
       }
@@ -87,33 +88,35 @@ export function useRoomSfu({
       }
 
       await replaceTrack('video', null);
-      mediaManager.stopVideoTrack();
+      trackController.stopVideoTrack();
     }
-  }, [mediaManager, sfuManager, mediaControls, hasProducer, pauseProducer, resumeProducer, replaceTrack]);
+  }, [trackController, produceTrack, mediaControls, hasProducer, pauseProducer, resumeProducer, replaceTrack]);
 
   const toggleAudio = useCallback(async () => {
     const nextEnabled = !mediaControls.isAudioEnabled;
     mediaControls.setAudioEnabled(nextEnabled);
 
     if (nextEnabled) {
-      const newTrack = await mediaManager.startAudioTrack();
+      const newTrack = await trackController.startAudioTrack();
       if (!newTrack) {
         mediaControls.setAudioEnabled(false);
         return;
       }
 
       if (!hasProducer('audio')) {
-        const produced = await sfuManager.produce(newTrack);
+        const produced = await produceTrack(newTrack);
         if (!produced) {
-          mediaManager.stopAudioTrack('Failed to publish microphone');
+          trackController.stopAudioTrack('Failed to publish microphone');
           mediaControls.setAudioEnabled(false);
+          return;
         }
+        resumeProducer('audio');
         return;
       }
 
       const replaced = await replaceTrack('audio', newTrack);
       if (!replaced) {
-        mediaManager.stopAudioTrack('Failed to publish microphone');
+        trackController.stopAudioTrack('Failed to publish microphone');
         mediaControls.setAudioEnabled(false);
         return;
       }
@@ -125,9 +128,9 @@ export function useRoomSfu({
       }
 
       await replaceTrack('audio', null);
-      mediaManager.stopAudioTrack();
+      trackController.stopAudioTrack();
     }
-  }, [mediaManager, sfuManager, mediaControls, hasProducer, pauseProducer, resumeProducer, replaceTrack]);
+  }, [trackController, produceTrack, mediaControls, hasProducer, pauseProducer, resumeProducer, replaceTrack]);
 
   return {
     sfuState,

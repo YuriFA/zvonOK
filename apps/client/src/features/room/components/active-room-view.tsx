@@ -3,6 +3,7 @@ import { ParticipantsList } from '@/components/room/ParticipantsList';
 import { LocalVideoTile } from '@/features/room/components/local-video-tile';
 import { RemoteVideoTile } from '@/features/room/components/remote-video-tile';
 import { ConnectionStatus } from '@/features/room/components/connection-status';
+import { useMediaErrors } from '@/features/media/hooks/use-media-errors';
 import type { UseRoomSessionResult } from '@/features/room/hooks/use-room-session';
 import type { Room } from '@/features/room/types/room.types';
 import { RoomInfoBar } from './room-info-bar';
@@ -30,6 +31,14 @@ export function ActiveRoomView({ session, room, currentUserId, currentUsername }
     kickPeer,
   } = session;
 
+  const { videoError, audioError } = useMediaErrors({
+    streamError: mediaError,
+    isVideoAvailable: mediaControls.isVideoAvailable,
+    isAudioAvailable: mediaControls.isAudioAvailable,
+    isVideoEnabled: mediaControls.isVideoEnabled,
+    isAudioEnabled: mediaControls.isAudioEnabled,
+  });
+
   return (
     <main className="flex flex-1 flex-col p-4">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
@@ -41,7 +50,8 @@ export function ActiveRoomView({ session, room, currentUserId, currentUsername }
               isVideoEnabled={mediaControls.isVideoEnabled}
               isAudioEnabled={mediaControls.isAudioEnabled}
               isActiveSpeaker={activeSpeakerId === localUserId}
-              mediaError={mediaError}
+              videoError={videoError}
+              audioError={audioError}
               onToggleVideo={toggleVideo}
               onToggleAudio={toggleAudio}
             />

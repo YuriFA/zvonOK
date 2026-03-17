@@ -49,8 +49,11 @@ const createMockTrack = (id: string, kind: 'video' | 'audio', deviceId?: string)
   id,
   kind,
   enabled: true,
+  readyState: 'live' as MediaStreamTrackState,
   stop: mockTrackStop,
   getSettings: () => ({ deviceId: deviceId || `${kind}-device-${id}` }),
+  addEventListener: vi.fn(),
+  removeEventListener: vi.fn(),
 }) as unknown as MediaStreamTrack;
 
 describe('MediaStreamManager', () => {

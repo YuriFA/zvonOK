@@ -1,6 +1,7 @@
 import { LocalVideo } from '@/components/local-video';
 import { VideoTile } from '@/components/video-grid';
 import { MediaControls } from '@/features/media/components/media-controls';
+import type { MediaErrorType } from '@/features/media/hooks/use-media-errors';
 
 interface LocalVideoTileProps {
   stream: MediaStream | null;
@@ -8,7 +9,8 @@ interface LocalVideoTileProps {
   isVideoEnabled: boolean;
   isAudioEnabled: boolean;
   isActiveSpeaker: boolean;
-  mediaError: string | null;
+  videoError?: MediaErrorType;
+  audioError?: MediaErrorType;
   onToggleVideo: () => Promise<void>;
   onToggleAudio: () => Promise<void>;
 }
@@ -19,7 +21,8 @@ export function LocalVideoTile({
   isVideoEnabled,
   isAudioEnabled,
   isActiveSpeaker,
-  mediaError,
+  videoError,
+  audioError,
   onToggleVideo,
   onToggleAudio,
 }: LocalVideoTileProps) {
@@ -28,8 +31,8 @@ export function LocalVideoTile({
       <LocalVideo
         stream={stream}
         username={username}
-        isVideoEnabled={!mediaError && isVideoEnabled}
-        isAudioEnabled={!mediaError && isAudioEnabled}
+        isVideoEnabled={!videoError && isVideoEnabled}
+        isAudioEnabled={!audioError && isAudioEnabled}
         className="h-full w-full"
         showControls={false}
       />
@@ -39,6 +42,8 @@ export function LocalVideoTile({
           isAudioEnabled={isAudioEnabled}
           onToggleVideo={onToggleVideo}
           onToggleAudio={onToggleAudio}
+          videoError={videoError}
+          audioError={audioError}
         />
       </div>
     </VideoTile>

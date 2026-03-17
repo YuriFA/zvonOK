@@ -77,7 +77,13 @@ export function useMediaControls(
     (enabled: boolean) => {
       manager.setPreferredVideoEnabled(enabled);
       setIsVideoEnabled(enabled);
-      setIsVideoAvailable(manager.hasVideoTrack());
+      // When enabling, optimistically assume the track will be acquired to
+      // prevent a flash of the "no-device" warning while getUserMedia runs.
+      // If acquisition fails the caller will call setVideoEnabled(false) and
+      // the availability callback from notifyVideoAvailability will correct it.
+      if (enabled) {
+        setIsVideoAvailable(true);
+      }
     },
     [manager]
   );
@@ -86,7 +92,9 @@ export function useMediaControls(
     (enabled: boolean) => {
       manager.setPreferredAudioEnabled(enabled);
       setIsAudioEnabled(enabled);
-      setIsAudioAvailable(manager.hasAudioTrack());
+      if (enabled) {
+        setIsAudioAvailable(true);
+      }
     },
     [manager]
   );

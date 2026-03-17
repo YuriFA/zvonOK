@@ -1,5 +1,5 @@
 import { useCallback, useRef } from 'react';
-import { useMediaManager } from '@/features/media/contexts/media-manager.context';
+import { useMediaDeviceSelector, useMediaTrackController } from '@/features/media/contexts/media-manager.context';
 import { useSfuManager } from '@/features/sfu/contexts/sfu-manager.context';
 
 export interface UseDeviceSwitchingReturn {
@@ -10,7 +10,8 @@ export interface UseDeviceSwitchingReturn {
 }
 
 export function useDeviceSwitching(): UseDeviceSwitchingReturn {
-  const mediaManager = useMediaManager();
+  const deviceSelector = useMediaDeviceSelector();
+  const trackController = useMediaTrackController();
   const sfuManager = useSfuManager();
   const isSwitchingRef = useRef(false);
 
@@ -23,12 +24,12 @@ export function useDeviceSwitching(): UseDeviceSwitchingReturn {
     isSwitchingRef.current = true;
 
     try {
-      if (!mediaManager.hasVideoTrack()) {
-        mediaManager.setSelectedVideoDeviceId(deviceId);
+      if (!trackController.hasVideoTrack()) {
+        deviceSelector.setSelectedVideoDeviceId(deviceId);
         return true;
       }
 
-      const newTrack = await mediaManager.switchVideoDevice(deviceId);
+      const newTrack = await deviceSelector.switchVideoDevice(deviceId);
 
       if (!newTrack) {
         console.error('[DeviceSwitching] Failed to get new video track');
@@ -48,7 +49,7 @@ export function useDeviceSwitching(): UseDeviceSwitchingReturn {
     } finally {
       isSwitchingRef.current = false;
     }
-  }, [mediaManager, sfuManager]);
+  }, [deviceSelector, trackController, sfuManager]);
 
   const switchAudioDevice = useCallback(async (deviceId: string): Promise<boolean> => {
     if (isSwitchingRef.current) {
@@ -59,12 +60,12 @@ export function useDeviceSwitching(): UseDeviceSwitchingReturn {
     isSwitchingRef.current = true;
 
     try {
-      if (!mediaManager.hasAudioTrack()) {
-        mediaManager.setSelectedAudioDeviceId(deviceId);
+      if (!trackController.hasAudioTrack()) {
+        deviceSelector.setSelectedAudioDeviceId(deviceId);
         return true;
       }
 
-      const newTrack = await mediaManager.switchAudioDevice(deviceId);
+      const newTrack = await deviceSelector.switchAudioDevice(deviceId);
 
       if (!newTrack) {
         console.error('[DeviceSwitching] Failed to get new audio track');
@@ -85,7 +86,7 @@ export function useDeviceSwitching(): UseDeviceSwitchingReturn {
     } finally {
       isSwitchingRef.current = false;
     }
-  }, [mediaManager, sfuManager]);
+  }, [deviceSelector, trackController, sfuManager]);
 
   const switchSpeakerDevice = useCallback(
     async (element: HTMLMediaElement | null, deviceId: string): Promise<boolean> => {

@@ -273,7 +273,12 @@ export function useMediasoup({
 
   const produceTrack = useCallback(
     async (track: MediaStreamTrack): Promise<boolean> => {
+      const kind = track.kind as 'audio' | 'video';
+      producedKindsRef.current.add(kind);
       const producer = await sfuManager.produce(track);
+      if (!producer) {
+        producedKindsRef.current.delete(kind);
+      }
       return producer !== null;
     },
     [sfuManager]

@@ -3,6 +3,7 @@
  * Manages state and callbacks for media availability and status.
  */
 
+import type { IMediaStateStore } from './interfaces';
 import type {
   MediaStatus,
   MediaStatusCallback,
@@ -13,7 +14,7 @@ import type {
  * Observable state store for media.
  * Handles status and track availability notifications.
  */
-export class MediaStateStore {
+export class MediaStateStore implements IMediaStateStore {
   private status: MediaStatus = 'idle';
   private videoAvailable = false;
   private audioAvailable = false;

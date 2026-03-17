@@ -10,6 +10,7 @@ import { RegisterPage } from "./routes/register.tsx";
 import { RoomPage } from "./routes/room.tsx";
 import { AuthProvider } from "./features/auth/contexts/auth.context.tsx";
 import { queryClient } from "./lib/react-query/query-client";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 import "./index.css";
 
@@ -37,7 +38,9 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <RouterProvider router={router} />
+        <TooltipProvider>
+          <RouterProvider router={router} />
+        </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>
   </StrictMode>,

@@ -3,7 +3,7 @@
  * Handles getUserMedia orchestration with fallback strategies.
  */
 
-import { MediaStateStore } from './state-store';
+import type { IMediaStateStore } from './interfaces';
 import type { UserMediaConstraints } from './types';
 import { DEFAULT_CONSTRAINTS } from './types';
 
@@ -85,12 +85,12 @@ export class MediaAcquisition {
   private stream: MediaStream | null = null;
   private pendingPromise: Promise<MediaStream> | null = null;
   private cancelled = false;
-  private stateStore: MediaStateStore;
+  private stateStore: IMediaStateStore;
   private fallbackStrategies: AcquisitionFallbackStrategy[];
   private preferenceProvider: MediaPreferenceProvider | null;
 
   constructor(
-    stateStore: MediaStateStore,
+    stateStore: IMediaStateStore,
     fallbackStrategies: AcquisitionFallbackStrategy[] = [],
     preferenceProvider?: MediaPreferenceProvider
   ) {

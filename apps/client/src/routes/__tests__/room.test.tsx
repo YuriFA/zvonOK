@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 const mockUseRoom = vi.hoisted(() => vi.fn());
 const mockUseEndRoom = vi.hoisted(() => vi.fn());
@@ -70,6 +71,11 @@ const mockMediaManager = {
 
 vi.mock('@/features/media/contexts/media-manager.context', () => ({
   useMediaManager: () => mockMediaManager,
+  useMediaAcquisition: () => mockMediaManager,
+  useMediaTrackController: () => mockMediaManager,
+  useMediaDeviceSelector: () => mockMediaManager,
+  useMediaPermissionChecker: () => mockMediaManager,
+  useMediaStateNotifier: () => mockMediaManager,
   MediaManagerProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
@@ -184,11 +190,13 @@ describe('RoomPage', () => {
 
   const renderRoomPage = () =>
     render(
-      <MemoryRouter initialEntries={[`/room/${room.slug}`]}>
-        <Routes>
-          <Route path="/room/:slug" element={<RoomPage />} />
-        </Routes>
-      </MemoryRouter>
+      <TooltipProvider>
+        <MemoryRouter initialEntries={[`/room/${room.slug}`]}>
+          <Routes>
+            <Route path="/room/:slug" element={<RoomPage />} />
+          </Routes>
+        </MemoryRouter>
+      </TooltipProvider>
     );
 
   it('renders room details, starts media, and shows remote SFU peers', async () => {
@@ -224,8 +232,8 @@ describe('RoomPage', () => {
     });
 
     await act(async () => {
-      fireEvent.click(screen.getByTitle('Turn off camera'));
-      fireEvent.click(screen.getByTitle('Mute microphone'));
+      fireEvent.click(screen.getByLabelText('Turn off camera'));
+      fireEvent.click(screen.getByLabelText('Mute microphone'));
       fireEvent.click(screen.getByRole('button', { name: 'End Room' }));
     });
 

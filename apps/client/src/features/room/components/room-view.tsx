@@ -35,7 +35,6 @@ export const RoomView = ({ room }: Props) => {
 
       <RoomAlerts
         endRoomError={!!endRoom.error}
-        mediaError={session.mediaError}
         wasKicked={session.wasKicked}
       />
 

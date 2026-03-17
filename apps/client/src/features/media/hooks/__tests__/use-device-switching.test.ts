@@ -18,6 +18,16 @@ vi.mock('@/features/media/contexts/media-manager.context', () => ({
     setSelectedVideoDeviceId: mockSetSelectedVideoDeviceId,
     setSelectedAudioDeviceId: mockSetSelectedAudioDeviceId,
   }),
+  useMediaDeviceSelector: () => ({
+    switchVideoDevice: mockSwitchVideoDevice,
+    switchAudioDevice: mockSwitchAudioDevice,
+    setSelectedVideoDeviceId: mockSetSelectedVideoDeviceId,
+    setSelectedAudioDeviceId: mockSetSelectedAudioDeviceId,
+  }),
+  useMediaTrackController: () => ({
+    hasVideoTrack: mockHasVideoTrack,
+    hasAudioTrack: mockHasAudioTrack,
+  }),
 }));
 
 vi.mock('@/features/sfu/contexts/sfu-manager.context', () => ({
