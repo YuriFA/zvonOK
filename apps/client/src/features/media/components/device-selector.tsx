@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { useMediaControls } from '../hooks/use-media-controls';
 import { DeviceSettingsPanel } from './device-settings-panel';
 import { Button } from '@/components/ui/button';
@@ -5,6 +6,7 @@ import { LocalVideo } from '@/components/local-video';
 import { cn } from '@/lib/utils';
 import { Video, VideoOff, Mic, MicOff } from 'lucide-react';
 import { useMediaStreamContext } from '../contexts/media-stream.context';
+import { useMediaManager } from '../contexts/media-manager.context';
 
 interface DeviceSelectorProps {
   className?: string;
@@ -12,7 +14,26 @@ interface DeviceSelectorProps {
 
 export function DeviceSelector({ className }: DeviceSelectorProps) {
   const { stream, error, isLoading } = useMediaStreamContext();
+  const mediaManager = useMediaManager();
   const mediaControls = useMediaControls();
+
+  const handleToggleVideo = useCallback(async () => {
+    const nextEnabled = !mediaControls.isVideoEnabled;
+    mediaControls.setVideoEnabled(nextEnabled);
+    const success = await mediaManager.toggleVideo(nextEnabled);
+    if (!success) {
+      mediaControls.setVideoEnabled(false);
+    }
+  }, [mediaManager, mediaControls]);
+
+  const handleToggleAudio = useCallback(async () => {
+    const nextEnabled = !mediaControls.isAudioEnabled;
+    mediaControls.setAudioEnabled(nextEnabled);
+    const success = await mediaManager.toggleAudio(nextEnabled);
+    if (!success) {
+      mediaControls.setAudioEnabled(false);
+    }
+  }, [mediaManager, mediaControls]);
 
   return (
     <div className={cn('space-y-4', className)}>
@@ -42,7 +63,7 @@ export function DeviceSelector({ className }: DeviceSelectorProps) {
             type="button"
             variant="secondary"
             size="icon"
-            onClick={() => mediaControls.toggleVideo()}
+            onClick={handleToggleVideo}
             disabled={!stream || !!error}
           >
             {mediaControls.isVideoEnabled ? (
@@ -55,7 +76,7 @@ export function DeviceSelector({ className }: DeviceSelectorProps) {
             type="button"
             variant="secondary"
             size="icon"
-            onClick={() => mediaControls.toggleAudio()}
+            onClick={handleToggleAudio}
             disabled={!stream || !!error}
           >
             {mediaControls.isAudioEnabled ? (

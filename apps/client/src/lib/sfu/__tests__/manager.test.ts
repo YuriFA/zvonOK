@@ -82,6 +82,10 @@ const testContext = vi.hoisted(() => {
     }),
     emit: vi.fn(),
     disconnect: vi.fn(),
+    removeAllListeners: vi.fn(() => {
+      socketHandlers.clear();
+      return mockSocket;
+    }),
   };
 
   const reset = () => {
@@ -93,6 +97,7 @@ const testContext = vi.hoisted(() => {
     mockSocket.off.mockClear();
     mockSocket.emit.mockClear();
     mockSocket.disconnect.mockClear();
+    mockSocket.removeAllListeners.mockClear();
     mockProducer.on.mockClear();
     mockProducer.close.mockClear();
     mockProducer.pause.mockClear();
@@ -145,6 +150,7 @@ vi.mock('mediasoup-client', () => ({
     createSendTransport = testContext.mockCreateSendTransport;
     createRecvTransport = testContext.mockCreateRecvTransport;
     rtpCapabilities = { codecs: ['vp8'] };
+    recvRtpCapabilities = { codecs: ['vp8'] };
 
     constructor() {
       testContext.latestDevice.current = this;

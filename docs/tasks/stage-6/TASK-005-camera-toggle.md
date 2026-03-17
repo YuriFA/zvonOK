@@ -1,7 +1,7 @@
 # TASK-065 — Proper Camera Toggle Implementation
 
 ## Status
-in_progress
+completed
 
 ## Priority
 high

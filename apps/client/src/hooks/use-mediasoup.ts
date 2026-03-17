@@ -1,14 +1,17 @@
+/**
+ * Mediasoup hook for SFU integration.
+ * Uses dependency injection via SfuManagerContext.
+ */
+
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/features/auth/contexts/auth.context';
-import { sfuManager } from '@/lib/sfu/manager';
-import { mediaManager } from '@/lib/media/manager';
+import { useSfuManager } from '@/features/sfu/contexts/sfu-manager.context';
 import type { SfuPeerInfo, SfuState } from '@/lib/sfu/types';
 
 export interface UseMediasoupOptions {
   roomId?: string;
   roomOwnerId?: string;
   localStream: MediaStream | null;
-  /** When false, the SFU connection will not be established. Defaults to true. */
   enabled?: boolean;
 }
 
@@ -23,10 +26,13 @@ export interface RemotePeerMedia {
 export interface UseMediasoupResult {
   state: SfuState;
   remotePeers: RemotePeerMedia[];
-  toggleVideoWithHardware: (enabled: boolean) => Promise<boolean>;
-  toggleAudioWithHardware: (enabled: boolean) => Promise<boolean>;
   kickPeer: (userId: string) => void;
   wasKicked: boolean;
+  produceTrack: (track: MediaStreamTrack) => Promise<boolean>;
+  pauseProducer: (kind: 'audio' | 'video') => void;
+  resumeProducer: (kind: 'audio' | 'video') => void;
+  replaceTrack: (kind: 'audio' | 'video', track: MediaStreamTrack | null) => Promise<boolean>;
+  hasProducer: (kind: 'audio' | 'video') => boolean;
 }
 
 type RemotePeerMap = Map<string, RemotePeerMedia>;
@@ -34,7 +40,7 @@ type RemotePeerMap = Map<string, RemotePeerMedia>;
 function updateRemotePeer(
   peers: RemotePeerMap,
   userId: string,
-  updater: (peer: RemotePeerMedia) => RemotePeerMedia,
+  updater: (peer: RemotePeerMedia) => RemotePeerMedia
 ): RemotePeerMap {
   const next = new Map(peers);
   const current = next.get(userId) ?? {
@@ -49,8 +55,14 @@ function updateRemotePeer(
   return next;
 }
 
-export function useMediasoup({ roomId, roomOwnerId, localStream, enabled = true }: UseMediasoupOptions): UseMediasoupResult {
+export function useMediasoup({
+  roomId,
+  roomOwnerId,
+  localStream,
+  enabled = true,
+}: UseMediasoupOptions): UseMediasoupResult {
   const { user } = useAuth();
+  const sfuManager = useSfuManager();
   const [state, setState] = useState<SfuState>(() => sfuManager.getState());
   const [remotePeers, setRemotePeers] = useState<RemotePeerMap>(new Map());
   const [wasKicked, setWasKicked] = useState(false);
@@ -94,15 +106,19 @@ export function useMediasoup({ roomId, roomOwnerId, localStream, enabled = true 
       setRemotePeers((prev) =>
         updateRemotePeer(prev, userId, (current) => {
           const stream = new MediaStream(
-            current.stream.getTracks().filter((existingTrack) => existingTrack.kind !== kind),
+            current.stream.getTracks().filter(
+              (existingTrack) => existingTrack.kind !== kind
+            )
           );
           stream.addTrack(track);
 
           return {
             ...current,
             stream,
-            isVideoEnabled: kind === 'video' ? track.enabled : current.isVideoEnabled,
-            isAudioEnabled: kind === 'audio' ? track.enabled : current.isAudioEnabled,
+            isVideoEnabled:
+              kind === 'video' ? track.enabled : current.isVideoEnabled,
+            isAudioEnabled:
+              kind === 'audio' ? track.enabled : current.isAudioEnabled,
           };
         })
       );
@@ -111,8 +127,10 @@ export function useMediasoup({ roomId, roomOwnerId, localStream, enabled = true 
         setRemotePeers((prev) =>
           updateRemotePeer(prev, userId, (current) => ({
             ...current,
-            isVideoEnabled: kind === 'video' ? false : current.isVideoEnabled,
-            isAudioEnabled: kind === 'audio' ? false : current.isAudioEnabled,
+            isVideoEnabled:
+              kind === 'video' ? false : current.isVideoEnabled,
+            isAudioEnabled:
+              kind === 'audio' ? false : current.isAudioEnabled,
           }))
         );
       };
@@ -121,8 +139,10 @@ export function useMediasoup({ roomId, roomOwnerId, localStream, enabled = true 
         setRemotePeers((prev) =>
           updateRemotePeer(prev, userId, (current) => ({
             ...current,
-            isVideoEnabled: kind === 'video' ? true : current.isVideoEnabled,
-            isAudioEnabled: kind === 'audio' ? true : current.isAudioEnabled,
+            isVideoEnabled:
+              kind === 'video' ? true : current.isVideoEnabled,
+            isAudioEnabled:
+              kind === 'audio' ? true : current.isAudioEnabled,
           }))
         );
       };
@@ -136,14 +156,18 @@ export function useMediasoup({ roomId, roomOwnerId, localStream, enabled = true 
           }
 
           const stream = new MediaStream(
-            current.stream.getTracks().filter((existingTrack) => existingTrack.id !== track.id),
+            current.stream
+              .getTracks()
+              .filter((existingTrack) => existingTrack.id !== track.id)
           );
 
           next.set(userId, {
             ...current,
             stream,
-            isVideoEnabled: kind === 'video' ? false : current.isVideoEnabled,
-            isAudioEnabled: kind === 'audio' ? false : current.isAudioEnabled,
+            isVideoEnabled:
+              kind === 'video' ? false : current.isVideoEnabled,
+            isAudioEnabled:
+              kind === 'audio' ? false : current.isAudioEnabled,
           });
 
           return next;
@@ -180,10 +204,15 @@ export function useMediasoup({ roomId, roomOwnerId, localStream, enabled = true 
       sfuManager.leaveRoom();
       sfuManager.disconnect();
     };
-  }, [roomId, enabled]);
+  }, [roomId, enabled, sfuManager]);
 
   useEffect(() => {
-    if (!roomId || !enabled || state.connectionState !== 'connected' || joinedRef.current) {
+    if (
+      !roomId ||
+      !enabled ||
+      state.connectionState !== 'connected' ||
+      joinedRef.current
+    ) {
       return;
     }
 
@@ -195,13 +224,19 @@ export function useMediasoup({ roomId, roomOwnerId, localStream, enabled = true 
       ...(roomOwnerId ? { roomOwnerId } : {}),
     };
 
-    void sfuManager.joinRoom({
-      ...joinPayload,
-    }).catch((error) => {
+    void sfuManager.joinRoom({ ...joinPayload }).catch((error) => {
       console.error('[SFU] Failed to join room:', error);
       joinedRef.current = false;
     });
-  }, [enabled, identity.userId, identity.username, roomId, roomOwnerId, state.connectionState]);
+  }, [
+    enabled,
+    identity.userId,
+    identity.username,
+    roomId,
+    roomOwnerId,
+    state.connectionState,
+    sfuManager,
+  ]);
 
   useEffect(() => {
     if (!localStream || !state.isSendTransportCreated) {
@@ -209,121 +244,84 @@ export function useMediasoup({ roomId, roomOwnerId, localStream, enabled = true 
     }
 
     localStream.getTracks().forEach((track) => {
-      if ((track.kind === 'audio' || track.kind === 'video') && !producedKindsRef.current.has(track.kind)) {
+      if (
+        (track.kind === 'audio' || track.kind === 'video') &&
+        !producedKindsRef.current.has(track.kind)
+      ) {
         producedKindsRef.current.add(track.kind);
-        sfuManager.produce(track).then((producer) => {
-          if (!producer) {
+        sfuManager
+          .produce(track)
+          .then((producer) => {
+            if (!producer) {
+              producedKindsRef.current.delete(track.kind as 'audio' | 'video');
+            }
+          })
+          .catch((error) => {
+            console.error('[SFU] Failed to produce track:', track.kind, error);
             producedKindsRef.current.delete(track.kind as 'audio' | 'video');
-          }
-        }).catch((error) => {
-          console.error('[SFU] Failed to produce track:', track.kind, error);
-          producedKindsRef.current.delete(track.kind as 'audio' | 'video');
-        });
+          });
       }
     });
-  }, [localStream, state.isSendTransportCreated]);
+  }, [localStream, state.isSendTransportCreated, sfuManager]);
 
-  const toggleVideoWithHardware = useCallback(async (enabled: boolean): Promise<boolean> => {
-    if (enabled) {
-      const newTrack = await mediaManager.startVideoTrack();
-      if (!newTrack) {
-        return false;
-      }
+  const kickPeer = useCallback(
+    (userId: string) => {
+      sfuManager.kickPeer(userId);
+    },
+    [sfuManager]
+  );
 
-      const producer = sfuManager.getProducerByKind('video');
-      if (!producer) {
-        const nextProducer = await sfuManager.produce(newTrack);
-        if (!nextProducer) {
-          mediaManager.stopVideoTrack('Failed to publish camera');
-          return false;
-        }
+  const produceTrack = useCallback(
+    async (track: MediaStreamTrack): Promise<boolean> => {
+      const producer = await sfuManager.produce(track);
+      return producer !== null;
+    },
+    [sfuManager]
+  );
 
-        return true;
-      }
-
-      const replaced = await sfuManager.replaceTrack('video', newTrack);
-      if (!replaced) {
-        console.error('[useMediasoup] Failed to replace video track in SFU');
-        mediaManager.stopVideoTrack('Failed to publish camera');
-        return false;
-      }
-
-      sfuManager.resumeProducer(producer.id);
-
-      return true;
-    } else {
-      const producer = sfuManager.getProducerByKind('video');
+  const pauseProducer = useCallback(
+    (kind: 'audio' | 'video') => {
+      const producer = sfuManager.getProducerByKind(kind);
       if (producer) {
         sfuManager.pauseProducer(producer.id);
       }
+    },
+    [sfuManager]
+  );
 
-      const replaced = await sfuManager.replaceTrack('video', null);
-      if (!replaced) {
-        console.warn('[useMediasoup] Failed to detach video track from SFU producer; producer remains paused');
-      }
-
-      mediaManager.stopVideoTrack();
-
-      return true;
-    }
-  }, []);
-
-  const toggleAudioWithHardware = useCallback(async (enabled: boolean): Promise<boolean> => {
-    if (enabled) {
-      const newTrack = await mediaManager.startAudioTrack();
-      if (!newTrack) {
-        return false;
-      }
-
-      const producer = sfuManager.getProducerByKind('audio');
-      if (!producer) {
-        const nextProducer = await sfuManager.produce(newTrack);
-        if (!nextProducer) {
-          mediaManager.stopAudioTrack('Failed to publish microphone');
-          return false;
-        }
-
-        return true;
-      }
-
-      const replaced = await sfuManager.replaceTrack('audio', newTrack);
-      if (!replaced) {
-        console.error('[useMediasoup] Failed to replace audio track in SFU');
-        mediaManager.stopAudioTrack('Failed to publish microphone');
-        return false;
-      }
-
-      sfuManager.resumeProducer(producer.id);
-
-      return true;
-    } else {
-      const producer = sfuManager.getProducerByKind('audio');
+  const resumeProducer = useCallback(
+    (kind: 'audio' | 'video') => {
+      const producer = sfuManager.getProducerByKind(kind);
       if (producer) {
-        sfuManager.pauseProducer(producer.id);
+        sfuManager.resumeProducer(producer.id);
       }
+    },
+    [sfuManager]
+  );
 
-      const replaced = await sfuManager.replaceTrack('audio', null);
-      if (!replaced) {
-        console.warn('[useMediasoup] Failed to detach audio track from SFU producer; producer remains paused');
-      }
+  const replaceTrack = useCallback(
+    async (kind: 'audio' | 'video', track: MediaStreamTrack | null): Promise<boolean> => {
+      return sfuManager.replaceTrack(kind, track);
+    },
+    [sfuManager]
+  );
 
-      mediaManager.stopAudioTrack();
-
-      return true;
-    }
-  }, []);
-
-  const kickPeer = useCallback((userId: string) => {
-    sfuManager.kickPeer(userId);
-  }, []);
+  const hasProducer = useCallback(
+    (kind: 'audio' | 'video'): boolean => {
+      return sfuManager.getProducerByKind(kind) !== undefined;
+    },
+    [sfuManager]
+  );
 
   return {
     state,
     remotePeers: useMemo(() => Array.from(remotePeers.values()), [remotePeers]),
-    toggleVideoWithHardware,
-    toggleAudioWithHardware,
     kickPeer,
     wasKicked,
+    produceTrack,
+    pauseProducer,
+    resumeProducer,
+    replaceTrack,
+    hasProducer,
   };
 }
-

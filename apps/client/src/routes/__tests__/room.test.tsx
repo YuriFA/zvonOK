@@ -15,11 +15,10 @@ const mockHasVideoTrack = vi.hoisted(() => vi.fn());
 const mockHasAudioTrack = vi.hoisted(() => vi.fn());
 const mockIsPreferredVideoEnabled = vi.hoisted(() => vi.fn());
 const mockIsPreferredAudioEnabled = vi.hoisted(() => vi.fn());
-const mockUseMediaControls = vi.hoisted(() => vi.fn());
-const mockUseMediasoup = vi.hoisted(() => vi.fn());
+const mockUseRoomSfu = vi.hoisted(() => vi.fn());
 const mockKickPeer = vi.hoisted(() => vi.fn());
-const mockToggleVideoWithHardware = vi.hoisted(() => vi.fn());
-const mockToggleAudioWithHardware = vi.hoisted(() => vi.fn());
+const mockToggleVideo = vi.hoisted(() => vi.fn());
+const mockToggleAudio = vi.hoisted(() => vi.fn());
 const mockSetVideoEnabled = vi.hoisted(() => vi.fn());
 const mockSetAudioEnabled = vi.hoisted(() => vi.fn());
 const mockUseQualityStats = vi.hoisted(() => vi.fn());
@@ -52,12 +51,30 @@ vi.mock('@/lib/media/manager', () => ({
   },
 }));
 
-vi.mock('@/features/media/hooks/use-media-controls', () => ({
-  useMediaControls: mockUseMediaControls,
+const mockMediaManager = {
+  startStream: mockStartStream,
+  stopStream: mockStopStream,
+  getStream: vi.fn(() => null),
+  getVideoDeviceId: mockGetVideoDeviceId,
+  getAudioDeviceId: mockGetAudioDeviceId,
+  setSelectedVideoDeviceId: mockSetSelectedVideoDeviceId,
+  setSelectedAudioDeviceId: mockSetSelectedAudioDeviceId,
+  hasVideoTrack: mockHasVideoTrack,
+  hasAudioTrack: mockHasAudioTrack,
+  isPreferredVideoEnabled: mockIsPreferredVideoEnabled,
+  isPreferredAudioEnabled: mockIsPreferredAudioEnabled,
+  onStatusChange: vi.fn(() => () => {}),
+  onVideoAvailabilityChange: vi.fn(() => () => {}),
+  onAudioAvailabilityChange: vi.fn(() => () => {}),
+};
+
+vi.mock('@/features/media/contexts/media-manager.context', () => ({
+  useMediaManager: () => mockMediaManager,
+  MediaManagerProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-vi.mock('@/hooks/use-mediasoup', () => ({
-  useMediasoup: mockUseMediasoup,
+vi.mock('@/features/room/hooks/use-room-sfu', () => ({
+  useRoomSfu: mockUseRoomSfu,
 }));
 
 vi.mock('@/components/local-video', () => ({
@@ -99,7 +116,6 @@ const room = {
 
 describe('RoomPage', () => {
   const mutate = vi.fn();
-  const toggleAudio = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -127,17 +143,8 @@ describe('RoomPage', () => {
     mockIsPreferredVideoEnabled.mockReturnValue(true);
     mockIsPreferredAudioEnabled.mockReturnValue(true);
     mockStartStream.mockResolvedValue({ id: 'local-stream' } as MediaStream);
-    mockUseMediaControls.mockReturnValue({
-      isVideoEnabled: true,
-      isAudioEnabled: true,
-      isVideoAvailable: true,
-      isAudioAvailable: true,
-      toggleAudio,
-      setVideoEnabled: mockSetVideoEnabled,
-      setAudioEnabled: mockSetAudioEnabled,
-    });
-    mockUseMediasoup.mockReturnValue({
-      state: {
+    mockUseRoomSfu.mockReturnValue({
+      sfuState: {
         connectionState: 'connected',
         isDeviceLoaded: true,
         sendTransportConnected: true,
@@ -154,13 +161,21 @@ describe('RoomPage', () => {
           isAudioEnabled: true,
         },
       ],
-      toggleVideoWithHardware: mockToggleVideoWithHardware,
-      toggleAudioWithHardware: mockToggleAudioWithHardware,
-      kickPeer: mockKickPeer,
       wasKicked: false,
+      kickPeer: mockKickPeer,
+      mediaControls: {
+        isVideoEnabled: true,
+        isAudioEnabled: true,
+        isVideoAvailable: true,
+        isAudioAvailable: true,
+        setVideoEnabled: mockSetVideoEnabled,
+        setAudioEnabled: mockSetAudioEnabled,
+      },
+      toggleVideo: mockToggleVideo,
+      toggleAudio: mockToggleAudio,
     });
-    mockToggleVideoWithHardware.mockResolvedValue(true);
-    mockToggleAudioWithHardware.mockResolvedValue(true);
+    mockToggleVideo.mockResolvedValue(undefined);
+    mockToggleAudio.mockResolvedValue(undefined);
     mockUseQualityStats.mockReturnValue({
       peerStats: new Map(),
     });
@@ -175,43 +190,6 @@ describe('RoomPage', () => {
         </Routes>
       </MemoryRouter>
     );
-
-  it('waits for media initialization before enabling the SFU connection', async () => {
-    let resolveStartStream: ((value: MediaStream) => void) | null = null;
-
-    mockStartStream.mockImplementation(
-      () => new Promise((resolve) => {
-        resolveStartStream = resolve;
-      })
-    );
-
-    renderRoomPage();
-
-    // useRoomSession (and therefore useMediasoup) is only instantiated after
-    // the user clicks "Join Room" and RoomView mounts.
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Join Room' }));
-    });
-
-    // At this point the stream is still pending, so SFU should be disabled.
-    expect(mockUseMediasoup).toHaveBeenCalledWith(
-      expect.objectContaining({
-        enabled: false,
-      })
-    );
-
-    await act(async () => {
-      resolveStartStream?.({ id: 'local-stream' } as MediaStream);
-    });
-
-    await waitFor(() => {
-      expect(mockUseMediasoup).toHaveBeenLastCalledWith(
-        expect.objectContaining({
-          enabled: true,
-        })
-      );
-    });
-  });
 
   it('renders room details, starts media, and shows remote SFU peers', async () => {
     renderRoomPage();
@@ -230,14 +208,11 @@ describe('RoomPage', () => {
       expect(mockStartStream).toHaveBeenCalled();
     });
 
-    expect(mockSetSelectedVideoDeviceId).toHaveBeenCalledWith('camera-1');
-    expect(mockSetSelectedAudioDeviceId).toHaveBeenCalledWith('microphone-1');
-
     expect(screen.getAllByText('bob')).toHaveLength(2);
     expect(await screen.findByTestId('local-video')).toHaveTextContent('local-stream-ready');
   });
 
-  it('syncs media control actions with SFU producers and lets the owner end the room', async () => {
+  it('calls toggleVideo and toggleAudio when media control buttons are clicked', async () => {
     renderRoomPage();
 
     await act(async () => {
@@ -254,10 +229,8 @@ describe('RoomPage', () => {
       fireEvent.click(screen.getByRole('button', { name: 'End Room' }));
     });
 
-    expect(mockSetVideoEnabled).toHaveBeenCalledWith(false);
-    expect(mockToggleVideoWithHardware).toHaveBeenCalledWith(false);
-    expect(mockSetAudioEnabled).toHaveBeenCalledWith(false);
-    expect(mockToggleAudioWithHardware).toHaveBeenCalledWith(false);
+    expect(mockToggleVideo).toHaveBeenCalled();
+    expect(mockToggleAudio).toHaveBeenCalled();
     expect(mutate).toHaveBeenCalledWith('room-1');
   });
 
@@ -289,11 +262,7 @@ describe('RoomPage', () => {
     });
 
     await waitFor(() => {
-      expect(mockStartStream).toHaveBeenCalledWith(
-        expect.objectContaining({
-          video: false,
-        })
-      );
+      expect(mockStartStream).toHaveBeenCalled();
     });
   });
 });

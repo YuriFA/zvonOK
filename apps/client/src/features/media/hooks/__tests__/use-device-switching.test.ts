@@ -9,21 +9,21 @@ const mockSetSelectedVideoDeviceId = vi.hoisted(() => vi.fn());
 const mockSetSelectedAudioDeviceId = vi.hoisted(() => vi.fn());
 const mockSfuReplaceTrack = vi.hoisted(() => vi.fn());
 
-vi.mock('@/lib/media/manager', () => ({
-  mediaManager: {
+vi.mock('@/features/media/contexts/media-manager.context', () => ({
+  useMediaManager: () => ({
     switchVideoDevice: mockSwitchVideoDevice,
     switchAudioDevice: mockSwitchAudioDevice,
     hasVideoTrack: mockHasVideoTrack,
     hasAudioTrack: mockHasAudioTrack,
     setSelectedVideoDeviceId: mockSetSelectedVideoDeviceId,
     setSelectedAudioDeviceId: mockSetSelectedAudioDeviceId,
-  },
+  }),
 }));
 
-vi.mock('@/lib/sfu/manager', () => ({
-  sfuManager: {
+vi.mock('@/features/sfu/contexts/sfu-manager.context', () => ({
+  useSfuManager: () => ({
     replaceTrack: mockSfuReplaceTrack,
-  },
+  }),
 }));
 
 import { useDeviceSwitching } from '../use-device-switching';

@@ -19,8 +19,8 @@ export function ActiveRoomView({ session, room, currentUserId, currentUsername }
     localStream,
     mediaError,
     mediaControls,
-    handleToggleVideo,
-    handleToggleAudio,
+    toggleVideo,
+    toggleAudio,
     sfuState,
     remotePeers,
     activeSpeakerId,
@@ -42,8 +42,8 @@ export function ActiveRoomView({ session, room, currentUserId, currentUsername }
               isAudioEnabled={mediaControls.isAudioEnabled}
               isActiveSpeaker={activeSpeakerId === localUserId}
               mediaError={mediaError}
-              onToggleVideo={handleToggleVideo}
-              onToggleAudio={handleToggleAudio}
+              onToggleVideo={toggleVideo}
+              onToggleAudio={toggleAudio}
             />
 
             {remotePeers.map((peer) => (

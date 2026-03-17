@@ -1,717 +1,199 @@
-export type MediaStatus = 'idle' | 'starting' | 'active' | 'stopped' | 'error';
+/**
+ * Media manager facade.
+ * Composes state store, acquisition, track controller, and permissions
+ * into a unified interface implementing IMediaManager.
+ */
 
-export type MediaStatusCallback = (status: MediaStatus) => void;
+import { MediaStateStore } from './state-store';
+import {
+  MediaAcquisition,
+  PermissionDeniedStrategy,
+  DeviceNotFoundStrategy,
+} from './acquisition';
+import { MediaTrackController } from './track-controller';
+import { checkPermissions } from './permissions';
+import type { IMediaManager } from './interfaces';
+import type {
+  UserMediaConstraints,
+  MediaDeviceInfo,
+  MediaPermissionStatus,
+  MediaStatus,
+  TrackAvailabilityCallback,
+  MediaStatusCallback,
+} from './types';
 
-export interface MediaStreamConstraints {
-  video?: boolean | MediaTrackConstraints;
-  audio?: boolean | MediaTrackConstraints;
-}
+// Re-export types for backward compatibility
+export type {
+  MediaStatus,
+  MediaStatusCallback,
+  UserMediaConstraints as MediaStreamConstraints,
+  MediaPermissionStatus,
+  TrackAvailabilityCallback,
+} from './types';
 
-export interface MediaPermissionStatus {
-  hasVideo: boolean;
-  hasAudio: boolean;
-  videoPermission: PermissionState | 'unknown';
-  audioPermission: PermissionState | 'unknown';
-}
+/**
+ * Facade for media management.
+ * Implements IMediaManager by composing focused modules.
+ */
+export class MediaStreamManager implements IMediaManager {
+  private stateStore = new MediaStateStore();
+  private trackController: MediaTrackController;
+  private acquisition: MediaAcquisition;
 
-const defaultConstraints: MediaStreamConstraints = {
-  video: {
-    width: { ideal: 1280 },
-    height: { ideal: 720 },
-    facingMode: 'user',
-  },
-  audio: {
-    echoCancellation: true,
-    noiseSuppression: true,
-    autoGainControl: true,
-  },
-};
-
-export type VideoAvailabilityCallback = (available: boolean, reason?: string) => void;
-
-export type AudioAvailabilityCallback = (available: boolean, reason?: string) => void;
-
-export class MediaStreamManager {
-  private localStream: MediaStream | null = null;
-  private status: MediaStatus = 'idle';
-  private statusCallbacks: Set<MediaStatusCallback> = new Set();
-  private error: Error | null = null;
-  private preferredVideoEnabled = true;
-  private preferredAudioEnabled = true;
-  private selectedVideoDeviceId: string | null = null;
-  private selectedAudioDeviceId: string | null = null;
-  private videoAvailabilityCallbacks: Set<VideoAvailabilityCallback> = new Set();
-  private audioAvailabilityCallbacks: Set<AudioAvailabilityCallback> = new Set();
-  private pendingStartPromise: Promise<MediaStream> | null = null;
-  private startCancelled = false;
-
-  async startStream(constraints?: MediaStreamConstraints): Promise<MediaStream> {
-    this.startCancelled = false;
-
-    if (this.localStream) {
-      return this.localStream;
-    }
-
-    // Deduplicate concurrent calls (e.g. React StrictMode double-mount)
-    if (this.pendingStartPromise) {
-      return this.pendingStartPromise;
-    }
-
-    this.pendingStartPromise = this.doStartStream(constraints);
-
-    try {
-      return await this.pendingStartPromise;
-    } finally {
-      this.pendingStartPromise = null;
-    }
+  constructor() {
+    // Track controller is the single source of truth for preferences.
+    // Create it first so acquisition can reference it via callback.
+    this.trackController = new MediaTrackController(
+      () => this.acquisition.getStream(),
+      this.stateStore
+    );
+    this.acquisition = new MediaAcquisition(
+      this.stateStore,
+      [new PermissionDeniedStrategy(), new DeviceNotFoundStrategy()],
+      this.trackController
+    );
   }
 
-  private async doStartStream(constraints?: MediaStreamConstraints): Promise<MediaStream> {
-    this.setStatus('starting');
-    this.error = null;
-
-    const mergedConstraints: MediaStreamConstraints = {
-      video: constraints?.video ?? (this.preferredVideoEnabled ? defaultConstraints.video : false),
-      audio: constraints?.audio ?? (this.preferredAudioEnabled ? defaultConstraints.audio : false),
-    };
-    const wantsVideo = mergedConstraints.video !== false;
-    const wantsAudio = mergedConstraints.audio !== false;
-
-    if (!wantsVideo && !wantsAudio) {
-      this.localStream = new MediaStream();
-      this.updateDerivedState();
-      this.setStatus('active');
-      this.notifyCurrentAvailability();
-
-      return this.localStream
-    }
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia(mergedConstraints);
-
-      if (this.startCancelled) {
-        stream.getTracks().forEach((t) => { t.stop(); });
-        throw new Error('Stream start was cancelled');
-      }
-
-      this.localStream = stream;
-      this.updateSelectedDeviceIdsFromStream(this.localStream);
-      this.updateDerivedState();
-      this.setStatus('active');
-      this.notifyCurrentAvailability();
-
-      return this.localStream;
-    } catch (videoAudioError) {
-      const err = videoAudioError instanceof Error ? videoAudioError : new Error('Unknown error');
-
-      if (this.startCancelled) {
-        this.setStatus('stopped');
-        throw new Error('Stream start was cancelled');
-      }
-
-      console.warn('[Media] Failed to get video+audio stream:', err.message);
-
-      if (!wantsVideo || !wantsAudio) {
-        this.error = err;
-        this.setStatus('error');
-        this.notifyCurrentAvailability();
-        throw err;
-      }
-
-      if (err.name === 'NotAllowedError') {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            audio: mergedConstraints.audio,
-          });
-
-          if (this.startCancelled) {
-            stream.getTracks().forEach((t) => { t.stop(); });
-            throw new Error('Stream start was cancelled');
-          }
-
-          this.localStream = stream;
-          this.updateSelectedDeviceIdsFromStream(this.localStream);
-          this.setStatus('active');
-          this.notifyCurrentAvailability();
-          console.log('[Media] Running in audio-only mode');
-          return this.localStream;
-        } catch (error) {
-          console.error('[Media] Failed to get audio stream after video permission denied:', error);
-          this.error = new Error('Camera and microphone permissions denied');
-          this.setStatus('error');
-          this.notifyCurrentAvailability();
-          throw this.error;
-        }
-      }
-
-      if (err.name === 'NotFoundError' || err.name === 'OverconstrainedError') {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: true,
-            audio: true,
-          });
-
-          if (this.startCancelled) {
-            stream.getTracks().forEach((t) => { t.stop(); });
-            throw new Error('Stream start was cancelled');
-          }
-
-          this.localStream = stream;
-          this.updateSelectedDeviceIdsFromStream(this.localStream);
-          this.updateDerivedState();
-          this.setStatus('active');
-          this.notifyCurrentAvailability();
-          return this.localStream;
-        } catch {
-          try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-            if (this.startCancelled) {
-              stream.getTracks().forEach((t) => { t.stop(); });
-              throw new Error('Stream start was cancelled');
-            }
-
-            this.localStream = stream;
-            this.updateSelectedDeviceIdsFromStream(this.localStream);
-            this.setStatus('active');
-            this.notifyCurrentAvailability();
-            return this.localStream;
-          } catch (error) {
-            console.error('[Media] Failed to get audio stream after no camera found:', error);
-            this.error = new Error('No camera or microphone found');
-            this.setStatus('error');
-            this.notifyCurrentAvailability();
-            throw this.error;
-          }
-        }
-      }
-
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: mergedConstraints.audio,
-        });
-
-        if (this.startCancelled) {
-          stream.getTracks().forEach((t) => { t.stop(); });
-          throw new Error('Stream start was cancelled');
-        }
-
-        this.localStream = stream;
-        this.updateSelectedDeviceIdsFromStream(this.localStream);
-        this.setStatus('active');
-        this.notifyCurrentAvailability();
-        return this.localStream
-      } catch (error) {
-        console.error('[Media] Failed to get audio stream after video error:', error);
-        this.error = err;
-        this.setStatus('error');
-        this.notifyCurrentAvailability();
-        throw this.error;
-      }
-    }
+  // IMediaAcquisition
+  async startStream(constraints?: UserMediaConstraints): Promise<MediaStream> {
+    return this.acquisition.start(constraints);
   }
 
   stopStream(): void {
-    // Cancel any in-flight getUserMedia so it stops tracks on resolution
-    this.startCancelled = true;
-
-    if (this.localStream) {
-      this.localStream.getTracks().forEach((track) => {
-        track.stop();
-      });
-      this.localStream = null;
-    }
-    this.updateDerivedState();
-    this.setStatus('stopped');
-    this.notifyCurrentAvailability();
+    this.acquisition.stop();
   }
 
   getStream(): MediaStream | null {
-    return this.localStream;
+    return this.acquisition.getStream();
   }
 
-  getVideoTracks(): MediaStreamTrack[] {
-    return this.localStream?.getVideoTracks() ?? [];
-  }
-
-  getAudioTracks(): MediaStreamTrack[] {
-    return this.localStream?.getAudioTracks() ?? [];
-  }
-
+  // IMediaTrackController
   async startVideoTrack(): Promise<MediaStreamTrack | null> {
-    if (!this.localStream) {
-      console.error('[Media] No active stream to add video track');
-      return null;
-    }
-
-    this.preferredVideoEnabled = true;
-
-    const existingTrack = this.getVideoTracks()[0];
-    if (existingTrack) {
-      existingTrack.enabled = true;
-      this.updateDerivedState();
-      this.notifyVideoAvailability(true);
-      return existingTrack;
-    }
-
-    const constraints = this.buildVideoConstraints(this.selectedVideoDeviceId);
-
-    let newStream: MediaStream;
-    try {
-      newStream = await navigator.mediaDevices.getUserMedia({ video: constraints });
-    } catch (err) {
-      console.error('[Media] Failed to re-acquire video track:', err);
-      this.notifyVideoAvailability(false, err instanceof Error ? err.message : 'Failed to access camera');
-      return null;
-    }
-
-    const newTrack = newStream.getVideoTracks()[0];
-    if (!newTrack) {
-      console.error('[Media] No video track in new stream');
-      newStream.getTracks().forEach((track) => {
-        track.stop();
-      });
-      return null;
-    }
-
-    this.selectedVideoDeviceId = newTrack.getSettings().deviceId ?? null;
-    this.localStream.addTrack(newTrack);
-    this.updateDerivedState();
-    this.notifyVideoAvailability(true);
-
-    newStream.getAudioTracks().forEach((track) => {
-      track.stop();
-    });
-
-    return newTrack;
+    return this.trackController.startVideoTrack();
   }
 
-  stopVideoTrack(reason: string = 'Camera turned off'): void {
-    const tracks = this.getVideoTracks();
-
-    if (!tracks.length) {
-      this.notifyVideoAvailability(false, 'Camera turned off');
-      return;
-    }
-
-    console.log('[Media] Stopping video track. Current tracks:', tracks.map((track) => track.id));
-    this.preferredVideoEnabled = false;
-
-    if (tracks.length === 0) {
-      this.updateDerivedState();
-      this.notifyVideoAvailability(false, reason);
-      return;
-    }
-
-    tracks.forEach((track) => {
-      track.stop();
-      console.log('[Media] Stopping video track:', track.id, 'Reason:', reason);
-      this.localStream?.removeTrack(track);
-    });
-
-    this.updateDerivedState();
-    this.notifyVideoAvailability(false, reason);
-    console.log('[Media] Video track stopped. Remaining video tracks:', this.getVideoTracks().length);
-  }
-
-  toggleVideo(enabled: boolean): void {
-    if (enabled) {
-      this.startVideoTrack()
-    } else {
-      this.stopVideoTrack();
-    }
-  }
-
-  /**
-   * Check if video track is currently available (not stopped).
-   */
-  hasVideoTrack(): boolean {
-    return this.getVideoTracks().length > 0;
-  }
-
-  /**
-   * Set the preferred video device ID for re-acquisition.
-   */
-  setSelectedVideoDeviceId(deviceId: string | null): void {
-    this.selectedVideoDeviceId = deviceId;
-  }
-
-  setPreferredVideoEnabled(enabled: boolean): void {
-    this.preferredVideoEnabled = enabled;
-  }
-
-  isPreferredVideoEnabled(): boolean {
-    return this.preferredVideoEnabled;
-  }
-
-  /**
-   * Subscribe to video availability changes.
-   */
-  onVideoAvailabilityChange(callback: VideoAvailabilityCallback): () => void {
-    this.videoAvailabilityCallbacks.add(callback);
-    return () => {
-      this.videoAvailabilityCallbacks.delete(callback);
-    };
-  }
-
-  private notifyVideoAvailability(available: boolean, reason?: string): void {
-    this.videoAvailabilityCallbacks.forEach((callback) => {
-      callback(available, reason);
-    });
-  }
-
-  /**
-   * Check if audio track is currently available (not stopped).
-   */
-  hasAudioTrack(): boolean {
-    return this.getAudioTracks().length > 0;
-  }
-
-  /**
-   * Set the preferred audio device ID for re-acquisition.
-   */
-  setSelectedAudioDeviceId(deviceId: string | null): void {
-    this.selectedAudioDeviceId = deviceId;
-  }
-
-  setPreferredAudioEnabled(enabled: boolean): void {
-    this.preferredAudioEnabled = enabled;
-  }
-
-  isPreferredAudioEnabled(): boolean {
-    return this.preferredAudioEnabled;
-  }
-
-  /**
-   * Subscribe to audio availability changes.
-   */
-  onAudioAvailabilityChange(callback: AudioAvailabilityCallback): () => void {
-    this.audioAvailabilityCallbacks.add(callback);
-    return () => {
-      this.audioAvailabilityCallbacks.delete(callback);
-    };
-  }
-
-  private notifyAudioAvailability(available: boolean, reason?: string): void {
-    this.audioAvailabilityCallbacks.forEach((callback) => {
-      callback(available, reason);
-    });
+  stopVideoTrack(reason?: string): void {
+    this.trackController.stopVideoTrack(reason);
   }
 
   async startAudioTrack(): Promise<MediaStreamTrack | null> {
-    if (!this.localStream) {
-      console.error('[Media] No active stream to add audio track');
-      return null;
-    }
-
-    this.preferredAudioEnabled = true;
-
-    const existingTrack = this.getAudioTracks()[0];
-    if (existingTrack) {
-      existingTrack.enabled = true;
-      this.updateDerivedState();
-      this.notifyAudioAvailability(true);
-      return existingTrack;
-    }
-
-    const constraints = this.buildAudioConstraints(this.selectedAudioDeviceId);
-
-    let newStream: MediaStream;
-    try {
-      newStream = await navigator.mediaDevices.getUserMedia({ audio: constraints });
-    } catch (err) {
-      console.error('[Media] Failed to re-acquire audio track:', err);
-      this.notifyAudioAvailability(false, err instanceof Error ? err.message : 'Failed to access microphone');
-      return null;
-    }
-
-    const newTrack = newStream.getAudioTracks()[0];
-    if (!newTrack) {
-      console.error('[Media] No audio track in new stream');
-      newStream.getTracks().forEach((track) => {
-        track.stop();
-      });
-      return null;
-    }
-
-    this.selectedAudioDeviceId = newTrack.getSettings().deviceId ?? null;
-    this.localStream.addTrack(newTrack);
-    this.updateDerivedState();
-    this.notifyAudioAvailability(true);
-
-    newStream.getVideoTracks().forEach((track) => {
-      track.stop();
-    });
-
-    return newTrack;
+    return this.trackController.startAudioTrack();
   }
 
-  stopAudioTrack(reason: string = 'Microphone turned off'): void {
-    const tracks = this.getAudioTracks();
-    this.preferredAudioEnabled = false;
-
-    if (tracks.length === 0) {
-      this.updateDerivedState();
-      this.notifyAudioAvailability(false, reason);
-      return;
-    }
-
-    tracks.forEach((track) => {
-      console.log('[Media] Stopping audio track:', track.id, 'Reason:', reason);
-      track.stop();
-      this.localStream?.removeTrack(track);
-    });
-
-    this.updateDerivedState();
-    this.notifyAudioAvailability(false, reason);
+  stopAudioTrack(reason?: string): void {
+    this.trackController.stopAudioTrack(reason);
   }
 
-  toggleAudio(enabled: boolean): void {
-    if (enabled) {
-      this.startAudioTrack()
-    } else {
-      this.stopAudioTrack();
-    }
+  hasVideoTrack(): boolean {
+    return this.trackController.hasVideoTrack();
+  }
+
+  hasAudioTrack(): boolean {
+    return this.trackController.hasAudioTrack();
   }
 
   isVideoEnabled(): boolean {
-    const tracks = this.getVideoTracks();
-    return tracks.length > 0 && tracks.every((track) => track.enabled);
+    return this.trackController.isVideoEnabled();
   }
 
   isAudioEnabled(): boolean {
-    const tracks = this.getAudioTracks();
-    return tracks.length > 0 && tracks.every((track) => track.enabled);
+    return this.trackController.isAudioEnabled();
   }
 
-  /**
-   * Check available media devices and their permission states.
-   */
+  isPreferredVideoEnabled(): boolean {
+    return this.trackController.isPreferredVideoEnabled();
+  }
+
+  isPreferredAudioEnabled(): boolean {
+    return this.trackController.isPreferredAudioEnabled();
+  }
+
+  setPreferredVideoEnabled(enabled: boolean): void {
+    this.trackController.setPreferredVideoEnabled(enabled);
+  }
+
+  setPreferredAudioEnabled(enabled: boolean): void {
+    this.trackController.setPreferredAudioEnabled(enabled);
+  }
+
+  // IMediaDeviceSelector
+  async enumerateDevices(): Promise<MediaDeviceInfo[]> {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    return devices
+      .filter((d) => d.kind === 'videoinput' || d.kind === 'audioinput')
+      .map((d) => ({
+        deviceId: d.deviceId,
+        kind: d.kind as 'videoinput' | 'audioinput',
+        label: d.label,
+      }));
+  }
+
+  async switchVideoDevice(deviceId: string): Promise<MediaStreamTrack | null> {
+    return this.trackController.switchVideoDevice(deviceId);
+  }
+
+  async switchAudioDevice(deviceId: string): Promise<MediaStreamTrack | null> {
+    return this.trackController.switchAudioDevice(deviceId);
+  }
+
+  getVideoDeviceId(): string | null {
+    return this.trackController.getVideoDeviceId();
+  }
+
+  getAudioDeviceId(): string | null {
+    return this.trackController.getAudioDeviceId();
+  }
+
+  setSelectedVideoDeviceId(deviceId: string | null): void {
+    this.trackController.setSelectedVideoDeviceId(deviceId);
+  }
+
+  setSelectedAudioDeviceId(deviceId: string | null): void {
+    this.trackController.setSelectedAudioDeviceId(deviceId);
+  }
+
+  // IMediaPermissionChecker
   async checkPermissions(): Promise<MediaPermissionStatus> {
-    let hasVideo = false;
-    let hasAudio = false;
-    let videoPermission: PermissionState | 'unknown' = 'unknown';
-    let audioPermission: PermissionState | 'unknown' = 'unknown';
-
-    // Try to use the Permissions API (not supported in all browsers)
-    if (navigator.permissions) {
-      try {
-        const videoStatus = await navigator.permissions.query({ name: 'camera' as PermissionName });
-        videoPermission = videoStatus.state;
-      } catch {
-        // Permissions API not supported for camera
-      }
-
-      try {
-        const audioStatus = await navigator.permissions.query({ name: 'microphone' as PermissionName });
-        audioPermission = audioStatus.state;
-      } catch {
-        // Permissions API not supported for microphone
-      }
-    }
-
-    // Check for available devices
-    try {
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      hasVideo = devices.some((d) => d.kind === 'videoinput');
-      hasAudio = devices.some((d) => d.kind === 'audioinput');
-    } catch {
-      // enumerateDevices failed
-    }
-
-    return {
-      hasVideo,
-      hasAudio,
-      videoPermission,
-      audioPermission,
-    };
+    return checkPermissions();
   }
 
-  private setStatus(status: MediaStatus): void {
-    this.status = status;
-    this.statusCallbacks.forEach((callback) => {
-      callback(status);
-    });
+  // IMediaStateNotifier
+  getStatus(): MediaStatus {
+    return this.stateStore.getStatus();
   }
 
   onStatusChange(callback: MediaStatusCallback): () => void {
-    this.statusCallbacks.add(callback);
-    callback(this.status);
-    return () => {
-      this.statusCallbacks.delete(callback);
-    };
+    return this.stateStore.onStatusChange(callback);
   }
 
-  /**
-   * Switch video input device (camera).
-   * Returns the new track or null on failure.
-   */
-  async switchVideoDevice(deviceId: string): Promise<MediaStreamTrack | null> {
-    const localStream = this.localStream;
-    this.selectedVideoDeviceId = deviceId;
-
-    if (!localStream || !this.hasVideoTrack()) {
-      return null;
-    }
-
-    let newStream: MediaStream;
-    try {
-      newStream = await navigator.mediaDevices.getUserMedia({
-        video: this.buildVideoConstraints(deviceId),
-      });
-    } catch {
-      console.warn('[Media] Failed to get video device, falling back to default');
-      try {
-        newStream = await navigator.mediaDevices.getUserMedia({ video: true });
-      } catch (err) {
-        console.error('[Media] Failed to get any video device:', err);
-        return null;
-      }
-    }
-
-    const newTrack = newStream.getVideoTracks()[0];
-    if (!newTrack) {
-      console.error('[Media] No video track in new stream');
-      newStream.getTracks().forEach((track) => {
-        track.stop();
-      });
-      return null;
-    }
-
-    localStream.getVideoTracks().forEach((track) => {
-      track.stop();
-    });
-
-    localStream.getVideoTracks().forEach((track) => {
-      localStream.removeTrack(track);
-    });
-    localStream.addTrack(newTrack);
-    this.selectedVideoDeviceId = newTrack.getSettings().deviceId ?? deviceId;
-    this.updateDerivedState();
-    this.notifyVideoAvailability(true);
-
-    newStream.getAudioTracks().forEach((track) => {
-      track.stop();
-    });
-
-    return newTrack;
+  onVideoAvailabilityChange(callback: TrackAvailabilityCallback): () => void {
+    return this.stateStore.onVideoAvailabilityChange(callback);
   }
 
-  /**
-   * Switch audio input device (microphone).
-   * Returns the new track or null on failure.
-   */
-  async switchAudioDevice(deviceId: string): Promise<MediaStreamTrack | null> {
-    const localStream = this.localStream;
-    this.selectedAudioDeviceId = deviceId;
-
-    if (!localStream || !this.hasAudioTrack()) {
-      return null;
-    }
-
-    let newStream: MediaStream;
-    try {
-      newStream = await navigator.mediaDevices.getUserMedia({
-        audio: this.buildAudioConstraints(deviceId),
-      });
-    } catch {
-      console.warn('[Media] Failed to get audio device, falling back to default');
-      try {
-        newStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      } catch (err) {
-        console.error('[Media] Failed to get any audio device:', err);
-        return null;
-      }
-    }
-
-    const newTrack = newStream.getAudioTracks()[0];
-    if (!newTrack) {
-      console.error('[Media] No audio track in new stream');
-      newStream.getTracks().forEach((track) => {
-        track.stop();
-      });
-      return null;
-    }
-
-    localStream.getAudioTracks().forEach((track) => {
-      track.stop();
-    });
-
-    localStream.getAudioTracks().forEach((track) => {
-      localStream.removeTrack(track);
-    });
-    localStream.addTrack(newTrack);
-    this.selectedAudioDeviceId = newTrack.getSettings().deviceId ?? deviceId;
-    this.updateDerivedState();
-    this.notifyAudioAvailability(true);
-
-    newStream.getVideoTracks().forEach((track) => {
-      track.stop();
-    });
-
-    return newTrack;
+  onAudioAvailabilityChange(callback: TrackAvailabilityCallback): () => void {
+    return this.stateStore.onAudioAvailabilityChange(callback);
   }
 
-  /**
-   * Get the current video track's device ID.
-   */
-  getVideoDeviceId(): string | null {
-    const track = this.localStream?.getVideoTracks()[0];
-    return track?.getSettings().deviceId ?? this.selectedVideoDeviceId;
-  }
-
-  /**
-   * Get the current audio track's device ID.
-   */
-  getAudioDeviceId(): string | null {
-    const track = this.localStream?.getAudioTracks()[0];
-    return track?.getSettings().deviceId ?? this.selectedAudioDeviceId;
-  }
-
-  private updateSelectedDeviceIdsFromStream(stream: MediaStream): void {
-    const videoTrack = stream.getVideoTracks()[0];
-    if (videoTrack) {
-      this.selectedVideoDeviceId = videoTrack.getSettings().deviceId ?? this.selectedVideoDeviceId;
-    }
-
-    const audioTrack = stream.getAudioTracks()[0];
-    if (audioTrack) {
-      this.selectedAudioDeviceId = audioTrack.getSettings().deviceId ?? this.selectedAudioDeviceId;
+  async toggleVideo(enabled: boolean): Promise<boolean> {
+    if (enabled) {
+      const track = await this.startVideoTrack();
+      return track !== null;
+    } else {
+      this.stopVideoTrack();
+      return true;
     }
   }
 
-  private updateDerivedState(): void {
-    // No-op for now, but keeping the method for future extensibility
-  }
-
-  private notifyCurrentAvailability(): void {
-    this.notifyVideoAvailability(this.hasVideoTrack());
-    this.notifyAudioAvailability(this.hasAudioTrack());
-  }
-
-  private buildVideoConstraints(deviceId: string | null): MediaTrackConstraints {
-    return deviceId
-      ? {
-        deviceId: { exact: deviceId },
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
-      }
-      : {
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
-        facingMode: 'user',
-      };
-  }
-
-  private buildAudioConstraints(deviceId: string | null): MediaTrackConstraints {
-    return deviceId
-      ? { deviceId: { exact: deviceId } }
-      : {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
-      };
+  async toggleAudio(enabled: boolean): Promise<boolean> {
+    if (enabled) {
+      const track = await this.startAudioTrack();
+      return track !== null;
+    } else {
+      this.stopAudioTrack();
+      return true;
+    }
   }
 }
 
+/** Singleton instance for backward compatibility */
 export const mediaManager = new MediaStreamManager();

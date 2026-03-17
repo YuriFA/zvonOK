@@ -7,7 +7,7 @@ planned
 medium
 
 ## Description
-Currently, when camera or microphone is not found or has an error, text badges are displayed at the top of the page. Instead, these errors should be shown as warning/error icons with tooltips directly on the camera and microphone toggle buttons in the MediaControls component.
+When camera or microphone is not found or has an error, should be shown as warning/error icons with tooltips directly on the camera and microphone toggle buttons in the MediaControls component.
 
 ## Scope
 - Remove text badges from top of room page for media errors

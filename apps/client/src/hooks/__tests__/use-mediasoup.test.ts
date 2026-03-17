@@ -40,12 +40,6 @@ const testContext = vi.hoisted(() => ({
 }));
 
 const mockUseAuth = vi.hoisted(() => vi.fn());
-const mediaManagerMock = vi.hoisted(() => ({
-  startVideoTrack: vi.fn(),
-  stopVideoTrack: vi.fn(),
-  startAudioTrack: vi.fn(),
-  stopAudioTrack: vi.fn(),
-}));
 const sfuMock = vi.hoisted(() => {
   const { baseState } = testContext;
   let currentState = { ...baseState };
@@ -149,12 +143,8 @@ vi.mock('@/features/auth/contexts/auth.context', () => ({
   useAuth: mockUseAuth,
 }));
 
-vi.mock('@/lib/media/manager', () => ({
-  mediaManager: mediaManagerMock,
-}));
-
-vi.mock('@/lib/sfu/manager', () => ({
-  sfuManager: sfuMock,
+vi.mock('@/features/sfu/contexts/sfu-manager.context', () => ({
+  useSfuManager: () => sfuMock,
 }));
 
 import { useMediasoup } from '../use-mediasoup';
@@ -173,10 +163,6 @@ describe('useMediasoup', () => {
 
   beforeEach(() => {
     sfuMock.reset();
-    mediaManagerMock.startVideoTrack.mockReset();
-    mediaManagerMock.stopVideoTrack.mockReset();
-    mediaManagerMock.startAudioTrack.mockReset();
-    mediaManagerMock.stopAudioTrack.mockReset();
     mockUseAuth.mockReturnValue({
       user: {
         id: 'user-1',
@@ -266,47 +252,51 @@ describe('useMediasoup', () => {
     });
   });
 
-  it('replaces and resumes the video producer when camera is re-enabled', async () => {
-    const newTrack = createTrack('video-2', 'video');
-    mediaManagerMock.startVideoTrack.mockResolvedValue(newTrack);
+  it('sets wasKicked and clears remote peers when kicked event fires', async () => {
+    const { result } = renderHook(() =>
+      useMediasoup({ roomId: 'room-1', localStream: null, enabled: true })
+    );
+
+    act(() => {
+      sfuMock.emitPeerJoined({ userId: 'user-2', username: 'bob', producers: new Map() });
+    });
+
+    await waitFor(() => {
+      expect(result.current.remotePeers).toHaveLength(1);
+    });
+
+    act(() => {
+      sfuMock.emitKicked({ roomId: 'room-1' });
+    });
+
+    await waitFor(() => {
+      expect(result.current.wasKicked).toBe(true);
+      expect(result.current.remotePeers).toHaveLength(0);
+    });
+  });
+
+  it('exposes pauseProducer and resumeProducer that delegate to sfuManager', async () => {
     sfuMock.getProducerByKind.mockReturnValue({ id: 'video-producer' });
 
     const { result } = renderHook(() =>
       useMediasoup({ roomId: 'room-1', localStream: null, enabled: true })
     );
 
-    let success = false;
-    await act(async () => {
-      success = await result.current.toggleVideoWithHardware(true);
+    act(() => {
+      result.current.pauseProducer('video');
     });
 
-    expect(success).toBe(true);
-    expect(mediaManagerMock.startVideoTrack).toHaveBeenCalled();
-    expect(sfuMock.replaceTrack).toHaveBeenCalledWith('video', newTrack);
+    expect(sfuMock.pauseProducer).toHaveBeenCalledWith('video-producer');
+
+    act(() => {
+      result.current.resumeProducer('video');
+    });
+
     expect(sfuMock.resumeProducer).toHaveBeenCalledWith('video-producer');
   });
 
-  it('rolls back the local camera track when SFU replacement fails', async () => {
-    const newTrack = createTrack('video-3', 'video');
-    mediaManagerMock.startVideoTrack.mockResolvedValue(newTrack);
-    sfuMock.getProducerByKind.mockReturnValue({ id: 'video-producer' });
-    sfuMock.replaceTrack.mockResolvedValue(false);
-
-    const { result } = renderHook(() =>
-      useMediasoup({ roomId: 'room-1', localStream: null, enabled: true })
-    );
-
-    let success = true;
-    await act(async () => {
-      success = await result.current.toggleVideoWithHardware(true);
-    });
-
-    expect(success).toBe(false);
-    expect(mediaManagerMock.stopVideoTrack).toHaveBeenCalledWith('Failed to publish camera');
-  });
-
-  it('pauses the producer and stops the local track when camera is disabled', async () => {
-    sfuMock.getProducerByKind.mockReturnValue({ id: 'video-producer' });
+  it('exposes replaceTrack that delegates to sfuManager', async () => {
+    const newTrack = createTrack('video-2', 'video');
 
     const { result } = renderHook(() =>
       useMediasoup({ roomId: 'room-1', localStream: null, enabled: true })
@@ -314,69 +304,23 @@ describe('useMediasoup', () => {
 
     let success = false;
     await act(async () => {
-      success = await result.current.toggleVideoWithHardware(false);
+      success = await result.current.replaceTrack('video', newTrack);
     });
 
     expect(success).toBe(true);
-    expect(sfuMock.pauseProducer).toHaveBeenCalledWith('video-producer');
-    expect(sfuMock.replaceTrack).toHaveBeenCalledWith('video', null);
-    expect(mediaManagerMock.stopVideoTrack).toHaveBeenCalledWith();
+    expect(sfuMock.replaceTrack).toHaveBeenCalledWith('video', newTrack);
   });
 
-  it('replaces and resumes the audio producer when microphone is re-enabled', async () => {
-    const newTrack = createTrack('audio-2', 'audio');
-    mediaManagerMock.startAudioTrack.mockResolvedValue(newTrack);
+  it('exposes hasProducer that reflects sfuManager.getProducerByKind', () => {
     sfuMock.getProducerByKind.mockReturnValue({ id: 'audio-producer' });
 
     const { result } = renderHook(() =>
       useMediasoup({ roomId: 'room-1', localStream: null, enabled: true })
     );
 
-    let success = false;
-    await act(async () => {
-      success = await result.current.toggleAudioWithHardware(true);
-    });
+    expect(result.current.hasProducer('audio')).toBe(true);
 
-    expect(success).toBe(true);
-    expect(mediaManagerMock.startAudioTrack).toHaveBeenCalled();
-    expect(sfuMock.replaceTrack).toHaveBeenCalledWith('audio', newTrack);
-    expect(sfuMock.resumeProducer).toHaveBeenCalledWith('audio-producer');
-  });
-
-  it('rolls back the local audio track when SFU replacement fails', async () => {
-    const newTrack = createTrack('audio-3', 'audio');
-    mediaManagerMock.startAudioTrack.mockResolvedValue(newTrack);
-    sfuMock.getProducerByKind.mockReturnValue({ id: 'audio-producer' });
-    sfuMock.replaceTrack.mockResolvedValue(false);
-
-    const { result } = renderHook(() =>
-      useMediasoup({ roomId: 'room-1', localStream: null, enabled: true })
-    );
-
-    let success = true;
-    await act(async () => {
-      success = await result.current.toggleAudioWithHardware(true);
-    });
-
-    expect(success).toBe(false);
-    expect(mediaManagerMock.stopAudioTrack).toHaveBeenCalledWith('Failed to publish microphone');
-  });
-
-  it('pauses the producer and stops the local track when microphone is disabled', async () => {
-    sfuMock.getProducerByKind.mockReturnValue({ id: 'audio-producer' });
-
-    const { result } = renderHook(() =>
-      useMediasoup({ roomId: 'room-1', localStream: null, enabled: true })
-    );
-
-    let success = false;
-    await act(async () => {
-      success = await result.current.toggleAudioWithHardware(false);
-    });
-
-    expect(success).toBe(true);
-    expect(sfuMock.pauseProducer).toHaveBeenCalledWith('audio-producer');
-    expect(sfuMock.replaceTrack).toHaveBeenCalledWith('audio', null);
-    expect(mediaManagerMock.stopAudioTrack).toHaveBeenCalledWith();
+    sfuMock.getProducerByKind.mockReturnValue(undefined);
+    expect(result.current.hasProducer('video')).toBe(false);
   });
 });

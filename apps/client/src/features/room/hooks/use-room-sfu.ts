@@ -1,13 +1,14 @@
 import { useCallback, useEffect } from 'react';
 import { useMediasoup, type RemotePeerMedia } from '@/hooks/use-mediasoup';
-import type { UseMediaControlsReturn } from '@/features/media/hooks/use-media-controls';
+import { useMediaControls, type UseMediaControlsReturn } from '@/features/media/hooks/use-media-controls';
+import { useMediaManager } from '@/features/media/contexts/media-manager.context';
+import { useSfuManager } from '@/features/sfu/contexts/sfu-manager.context';
 import type { SfuState } from '@/lib/sfu/types';
 
 export interface UseRoomSfuOptions {
   roomId: string;
   roomOwnerId: string;
   localStream: MediaStream | null;
-  mediaControls: UseMediaControlsReturn;
   onKicked: () => void;
 }
 
@@ -16,28 +17,30 @@ export interface UseRoomSfuResult {
   remotePeers: RemotePeerMedia[];
   wasKicked: boolean;
   kickPeer: (userId: string) => void;
-  handleToggleVideo: () => Promise<void>;
-  handleToggleAudio: () => Promise<void>;
+  mediaControls: UseMediaControlsReturn;
+  toggleVideo: () => Promise<void>;
+  toggleAudio: () => Promise<void>;
 }
 
-/**
- * Manages the SFU connection lifecycle and hardware media toggling.
- * Bridge layer between mediaControls (UI state) and useMediasoup (SFU).
- */
 export function useRoomSfu({
   roomId,
   roomOwnerId,
   localStream,
-  mediaControls,
   onKicked,
 }: UseRoomSfuOptions): UseRoomSfuResult {
+  const mediaManager = useMediaManager();
+  const sfuManager = useSfuManager();
+  const mediaControls = useMediaControls();
+
   const {
     state: sfuState,
     remotePeers,
-    toggleVideoWithHardware,
-    toggleAudioWithHardware,
     kickPeer,
     wasKicked,
+    pauseProducer,
+    resumeProducer,
+    replaceTrack,
+    hasProducer,
   } = useMediasoup({
     roomId,
     roomOwnerId,
@@ -50,30 +53,89 @@ export function useRoomSfu({
     }
   }, [wasKicked, onKicked]);
 
-  const handleToggleVideo = useCallback(async () => {
+  const toggleVideo = useCallback(async () => {
     const nextEnabled = !mediaControls.isVideoEnabled;
     mediaControls.setVideoEnabled(nextEnabled);
-    const success = await toggleVideoWithHardware(nextEnabled);
-    if (!success && nextEnabled) {
-      mediaControls.setVideoEnabled(false);
-    }
-  }, [mediaControls, toggleVideoWithHardware]);
 
-  const handleToggleAudio = useCallback(async () => {
+    if (nextEnabled) {
+      const newTrack = await mediaManager.startVideoTrack();
+      if (!newTrack) {
+        mediaControls.setVideoEnabled(false);
+        return;
+      }
+
+      if (!hasProducer('video')) {
+        const produced = await sfuManager.produce(newTrack);
+        if (!produced) {
+          mediaManager.stopVideoTrack('Failed to publish camera');
+          mediaControls.setVideoEnabled(false);
+        }
+        return;
+      }
+
+      const replaced = await replaceTrack('video', newTrack);
+      if (!replaced) {
+        mediaManager.stopVideoTrack('Failed to publish camera');
+        mediaControls.setVideoEnabled(false);
+        return;
+      }
+
+      resumeProducer('video');
+    } else {
+      if (hasProducer('video')) {
+        pauseProducer('video');
+      }
+
+      await replaceTrack('video', null);
+      mediaManager.stopVideoTrack();
+    }
+  }, [mediaManager, sfuManager, mediaControls, hasProducer, pauseProducer, resumeProducer, replaceTrack]);
+
+  const toggleAudio = useCallback(async () => {
     const nextEnabled = !mediaControls.isAudioEnabled;
     mediaControls.setAudioEnabled(nextEnabled);
-    const success = await toggleAudioWithHardware(nextEnabled);
-    if (!success && nextEnabled) {
-      mediaControls.setAudioEnabled(false);
+
+    if (nextEnabled) {
+      const newTrack = await mediaManager.startAudioTrack();
+      if (!newTrack) {
+        mediaControls.setAudioEnabled(false);
+        return;
+      }
+
+      if (!hasProducer('audio')) {
+        const produced = await sfuManager.produce(newTrack);
+        if (!produced) {
+          mediaManager.stopAudioTrack('Failed to publish microphone');
+          mediaControls.setAudioEnabled(false);
+        }
+        return;
+      }
+
+      const replaced = await replaceTrack('audio', newTrack);
+      if (!replaced) {
+        mediaManager.stopAudioTrack('Failed to publish microphone');
+        mediaControls.setAudioEnabled(false);
+        return;
+      }
+
+      resumeProducer('audio');
+    } else {
+      if (hasProducer('audio')) {
+        pauseProducer('audio');
+      }
+
+      await replaceTrack('audio', null);
+      mediaManager.stopAudioTrack();
     }
-  }, [mediaControls, toggleAudioWithHardware]);
+  }, [mediaManager, sfuManager, mediaControls, hasProducer, pauseProducer, resumeProducer, replaceTrack]);
 
   return {
     sfuState,
     remotePeers,
     wasKicked,
     kickPeer,
-    handleToggleVideo,
-    handleToggleAudio,
+    mediaControls,
+    toggleVideo,
+    toggleAudio,
   };
 }

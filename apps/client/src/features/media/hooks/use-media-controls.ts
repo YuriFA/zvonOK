@@ -1,5 +1,10 @@
+/**
+ * Media controls hook.
+ * Uses dependency injection via MediaManagerContext.
+ */
+
 import { useCallback, useEffect, useState } from 'react';
-import { mediaManager } from '@/lib/media/manager';
+import { useMediaManager } from '../contexts/media-manager.context';
 
 export interface MediaControlsState {
   isVideoEnabled: boolean;
@@ -9,38 +14,55 @@ export interface MediaControlsState {
 }
 
 export interface UseMediaControlsReturn extends MediaControlsState {
-  toggleVideo: () => void;
-  toggleAudio: () => void;
   setVideoEnabled: (enabled: boolean) => void;
   setAudioEnabled: (enabled: boolean) => void;
 }
 
-export function useMediaControls(initialState?: Partial<MediaControlsState>): UseMediaControlsReturn {
-  const [isVideoEnabled, setIsVideoEnabled] = useState(initialState?.isVideoEnabled ?? mediaManager.isPreferredVideoEnabled());
-  const [isAudioEnabled, setIsAudioEnabled] = useState(initialState?.isAudioEnabled ?? mediaManager.isPreferredAudioEnabled());
-  const [isVideoAvailable, setIsVideoAvailable] = useState(initialState?.isVideoAvailable ?? mediaManager.hasVideoTrack());
-  const [isAudioAvailable, setIsAudioAvailable] = useState(initialState?.isAudioAvailable ?? mediaManager.hasAudioTrack());
+export function useMediaControls(
+): UseMediaControlsReturn {
+  const manager = useMediaManager();
+
+  const [isVideoEnabled, setIsVideoEnabled] = useState(
+    () => manager.isPreferredVideoEnabled()
+  );
+  const [isAudioEnabled, setIsAudioEnabled] = useState(
+    () => manager.isPreferredAudioEnabled()
+  );
+  const [isVideoAvailable, setIsVideoAvailable] = useState(
+    () => manager.hasVideoTrack()
+  );
+  const [isAudioAvailable, setIsAudioAvailable] = useState(
+    () => manager.hasAudioTrack()
+  );
 
   useEffect(() => {
     const syncState = () => {
-      const hasStream = mediaManager.getStream() !== null;
-      setIsVideoEnabled(hasStream ? mediaManager.isVideoEnabled() : mediaManager.isPreferredVideoEnabled());
-      setIsAudioEnabled(hasStream ? mediaManager.isAudioEnabled() : mediaManager.isPreferredAudioEnabled());
-      setIsVideoAvailable(mediaManager.hasVideoTrack());
-      setIsAudioAvailable(mediaManager.hasAudioTrack());
+      const hasStream = manager.getStream() !== null;
+      setIsVideoEnabled(
+        hasStream ? manager.isVideoEnabled() : manager.isPreferredVideoEnabled()
+      );
+      setIsAudioEnabled(
+        hasStream ? manager.isAudioEnabled() : manager.isPreferredAudioEnabled()
+      );
+      setIsVideoAvailable(manager.hasVideoTrack());
+      setIsAudioAvailable(manager.hasAudioTrack());
     };
 
-    const unsubscribeStatus = mediaManager.onStatusChange(() => {
+    const unsubscribeStatus = manager.onStatusChange(() => {
       syncState();
     });
-    const unsubscribeVideoAvailability = mediaManager.onVideoAvailabilityChange((available) => {
-      setIsVideoAvailable(available);
-      setIsVideoEnabled(available && mediaManager.isVideoEnabled());
-    });
-    const unsubscribeAudioAvailability = mediaManager.onAudioAvailabilityChange((available) => {
-      setIsAudioAvailable(available);
-      setIsAudioEnabled(available && mediaManager.isAudioEnabled());
-    });
+    const unsubscribeVideoAvailability = manager.onVideoAvailabilityChange(
+      (available) => {
+        setIsVideoAvailable(available);
+        setIsVideoEnabled(available && manager.isVideoEnabled());
+      }
+    );
+    const unsubscribeAudioAvailability = manager.onAudioAvailabilityChange(
+      (available) => {
+        setIsAudioAvailable(available);
+        setIsAudioEnabled(available && manager.isAudioEnabled());
+      }
+    );
 
     syncState();
 
@@ -49,36 +71,31 @@ export function useMediaControls(initialState?: Partial<MediaControlsState>): Us
       unsubscribeVideoAvailability();
       unsubscribeAudioAvailability();
     };
-  }, []);
+  }, [manager]);
 
+  const setVideoEnabled = useCallback(
+    (enabled: boolean) => {
+      manager.setPreferredVideoEnabled(enabled);
+      setIsVideoEnabled(enabled);
+      setIsVideoAvailable(manager.hasVideoTrack());
+    },
+    [manager]
+  );
 
-  const toggleVideo = useCallback(() => {
-    mediaManager.toggleVideo(!isVideoEnabled);
-  }, [isVideoEnabled]);
-
-  const toggleAudio = useCallback(() => {
-    mediaManager.toggleAudio(!isAudioEnabled);
-  }, [isAudioEnabled]);
-
-  const setVideoEnabled = useCallback((enabled: boolean) => {
-    mediaManager.setPreferredVideoEnabled(enabled);
-    setIsVideoEnabled(enabled);
-    setIsVideoAvailable(mediaManager.hasVideoTrack());
-  }, []);
-
-  const setAudioEnabled = useCallback((enabled: boolean) => {
-    mediaManager.setPreferredAudioEnabled(enabled);
-    setIsAudioEnabled(enabled);
-    setIsAudioAvailable(mediaManager.hasAudioTrack());
-  }, []);
+  const setAudioEnabled = useCallback(
+    (enabled: boolean) => {
+      manager.setPreferredAudioEnabled(enabled);
+      setIsAudioEnabled(enabled);
+      setIsAudioAvailable(manager.hasAudioTrack());
+    },
+    [manager]
+  );
 
   return {
     isVideoEnabled,
     isAudioEnabled,
     isVideoAvailable,
     isAudioAvailable,
-    toggleAudio,
-    toggleVideo,
     setVideoEnabled,
     setAudioEnabled,
   };

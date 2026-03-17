@@ -6,6 +6,10 @@ import { PrejoinView } from '@/features/room/components/prejoin-view';
 import { useState } from 'react';
 import { RoomView } from '@/features/room/components/room-view';
 import { MediaStreamProvider } from '@/features/media/contexts/media-stream.context';
+import { MediaManagerProvider } from '@/features/media/contexts/media-manager.context';
+import { SfuManagerProvider } from '@/features/sfu/contexts/sfu-manager.context';
+import { sfuManager } from '@/lib/sfu/manager';
+import { mediaManager } from '@/lib/media/manager';
 
 export const RoomPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -39,12 +43,16 @@ export const RoomPage = () => {
   const roomUrl = `${window.location.origin}/room/${room.slug}`;
 
   return (
-    <MediaStreamProvider>
-      {viewState === 'prejoin' ? (
-        <PrejoinView room={room} roomUrl={roomUrl} onJoin={handleJoin} />
-      ) : (
-        <RoomView room={room} />
-      )}
-    </MediaStreamProvider>
+    <MediaManagerProvider manager={mediaManager}>
+      <SfuManagerProvider manager={sfuManager}>
+        <MediaStreamProvider>
+          {viewState === 'prejoin' ? (
+            <PrejoinView room={room} roomUrl={roomUrl} onJoin={handleJoin} />
+          ) : (
+            <RoomView room={room} />
+          )}
+        </MediaStreamProvider>
+      </SfuManagerProvider>
+    </MediaManagerProvider>
   );
 };

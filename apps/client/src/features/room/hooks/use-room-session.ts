@@ -4,11 +4,11 @@ import { useActiveSpeaker } from '@/features/room/hooks/use-active-speaker';
 import { useRemoteMediaElements } from '@/features/room/hooks/use-remote-media-elements';
 import { useRoomParticipants } from '@/features/room/hooks/use-room-participants';
 import { useRoomSfu } from '@/features/room/hooks/use-room-sfu';
-import { useMediaControls, type UseMediaControlsReturn } from '@/features/media/hooks/use-media-controls';
 import type { RemotePeerMedia } from '@/hooks/use-mediasoup';
 import type { Participant } from '@/components/room/ParticipantsList';
 import type { Room } from '@/features/room/types/room.types';
 import type { SfuState } from '@/lib/sfu/types';
+import type { UseMediaControlsReturn } from '@/features/media/hooks/use-media-controls';
 import { useMediaStreamContext } from '@/features/media/contexts/media-stream.context';
 
 export interface UseRoomSessionOptions {
@@ -21,8 +21,8 @@ export interface UseRoomSessionResult {
   localStream: MediaStream | null;
   mediaError: string | null;
   mediaControls: UseMediaControlsReturn;
-  handleToggleVideo: () => Promise<void>;
-  handleToggleAudio: () => Promise<void>;
+  toggleVideo: () => Promise<void>;
+  toggleAudio: () => Promise<void>;
   sfuState: SfuState;
   remotePeers: RemotePeerMedia[];
   wasKicked: boolean;
@@ -38,7 +38,6 @@ export function useRoomSession({ room, userId, username }: UseRoomSessionOptions
   const { setElement: handleRemoteMediaElement, primaryElement: primaryRemoteMediaElement } = useRemoteMediaElements();
 
   const { stream: localStream, error: mediaError, stop: stopMedia } = useMediaStreamContext();
-  const mediaControls = useMediaControls();
 
   const localUserId = userId ?? 'local';
 
@@ -46,11 +45,18 @@ export function useRoomSession({ room, userId, username }: UseRoomSessionOptions
     stopMedia();
   }, [stopMedia]);
 
-  const { sfuState, remotePeers, wasKicked, kickPeer, handleToggleVideo, handleToggleAudio } = useRoomSfu({
+  const {
+    sfuState,
+    remotePeers,
+    wasKicked,
+    kickPeer,
+    mediaControls,
+    toggleVideo,
+    toggleAudio,
+  } = useRoomSfu({
     roomId: room.id,
     roomOwnerId: room.ownerId,
     localStream,
-    mediaControls,
     onKicked: handleKicked,
   });
 
@@ -73,30 +79,12 @@ export function useRoomSession({ room, userId, username }: UseRoomSessionOptions
     peerStats,
   });
 
-  // Start local media when the session mounts. The SFU (useRoomSfu) gates its
-  // connection on isMediaInitialized, so the order is automatically correct.
-  // Device IDs and preferred constraints are read from mediaManager so pre-join
-  // device selection and camera-off preference are honoured.
-  // useEffect(() => {
-  //   const videoDeviceId = mediaManager.getVideoDeviceId() ?? undefined;
-  //   const audioDeviceId = mediaManager.getAudioDeviceId() ?? undefined;
-  //   const constraints: MediaStreamConstraints = {
-  //     video: mediaManager.isPreferredVideoEnabled()
-  //       ? (videoDeviceId ? { deviceId: videoDeviceId } : true)
-  //       : false,
-  //     audio: mediaManager.isPreferredAudioEnabled()
-  //       ? (audioDeviceId ? { deviceId: audioDeviceId } : true)
-  //       : false,
-  //   };
-  //   startMedia({ constraints, deviceId: { video: videoDeviceId, audio: audioDeviceId } });
-  // }, [startMedia]);
-
   return {
     localStream,
     mediaError,
     mediaControls,
-    handleToggleVideo,
-    handleToggleAudio,
+    toggleVideo,
+    toggleAudio,
     sfuState,
     remotePeers,
     wasKicked,

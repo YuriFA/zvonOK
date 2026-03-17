@@ -1,6 +1,6 @@
 import { useCallback, useRef } from 'react';
-import { mediaManager } from '@/lib/media/manager';
-import { sfuManager } from '@/lib/sfu/manager';
+import { useMediaManager } from '@/features/media/contexts/media-manager.context';
+import { useSfuManager } from '@/features/sfu/contexts/sfu-manager.context';
 
 export interface UseDeviceSwitchingReturn {
   switchVideoDevice: (deviceId: string) => Promise<boolean>;
@@ -10,6 +10,8 @@ export interface UseDeviceSwitchingReturn {
 }
 
 export function useDeviceSwitching(): UseDeviceSwitchingReturn {
+  const mediaManager = useMediaManager();
+  const sfuManager = useSfuManager();
   const isSwitchingRef = useRef(false);
 
   const switchVideoDevice = useCallback(async (deviceId: string): Promise<boolean> => {
@@ -46,7 +48,7 @@ export function useDeviceSwitching(): UseDeviceSwitchingReturn {
     } finally {
       isSwitchingRef.current = false;
     }
-  }, []);
+  }, [mediaManager, sfuManager]);
 
   const switchAudioDevice = useCallback(async (deviceId: string): Promise<boolean> => {
     if (isSwitchingRef.current) {
@@ -83,7 +85,7 @@ export function useDeviceSwitching(): UseDeviceSwitchingReturn {
     } finally {
       isSwitchingRef.current = false;
     }
-  }, []);
+  }, [mediaManager, sfuManager]);
 
   const switchSpeakerDevice = useCallback(
     async (element: HTMLMediaElement | null, deviceId: string): Promise<boolean> => {

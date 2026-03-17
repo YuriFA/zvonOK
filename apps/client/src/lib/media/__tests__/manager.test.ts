@@ -88,8 +88,8 @@ describe('MediaStreamManager', () => {
         autoGainControl: true,
       },
     });
-    expect(manager.getVideoTracks()).toEqual([initialVideoTrack]);
-    expect(manager.getAudioTracks()).toEqual([initialAudioTrack]);
+    expect(manager.getStream()?.getVideoTracks()).toEqual([initialVideoTrack]);
+    expect(manager.getStream()?.getAudioTracks()).toEqual([initialAudioTrack]);
     expect(manager.getVideoDeviceId()).toBe('video-device-1');
     expect(manager.getAudioDeviceId()).toBe('audio-device-1');
   });
@@ -151,7 +151,7 @@ describe('MediaStreamManager', () => {
     manager.onVideoAvailabilityChange(videoAvailability);
     videoAvailability.mockClear();
 
-    await expect(manager.toggleVideo(false)).resolves.toBe(true);
+    await manager.toggleVideo(false);
     expect(manager.hasVideoTrack()).toBe(false);
     expect(manager.getVideoDeviceId()).toBe('video-device-1');
     expect(videoAvailability).toHaveBeenCalledWith(false, 'Camera turned off');
@@ -160,8 +160,8 @@ describe('MediaStreamManager', () => {
     const replacementVideoStream = new MockMediaStream([replacementVideoTrack]) as unknown as MediaStream;
     mockGetUserMedia.mockResolvedValueOnce(replacementVideoStream);
 
-    await expect(manager.toggleVideo(true)).resolves.toBe(true);
-    expect(manager.getVideoTracks()).toEqual([replacementVideoTrack]);
+    await manager.toggleVideo(true);
+    expect(manager.getStream()?.getVideoTracks()).toEqual([replacementVideoTrack]);
     expect(manager.getVideoDeviceId()).toBe('video-device-2');
   });
 
@@ -172,7 +172,7 @@ describe('MediaStreamManager', () => {
     manager.onAudioAvailabilityChange(audioAvailability);
     audioAvailability.mockClear();
 
-    await expect(manager.toggleAudio(false)).resolves.toBe(true);
+    await manager.toggleAudio(false);
     expect(manager.hasAudioTrack()).toBe(false);
     expect(manager.getAudioDeviceId()).toBe('audio-device-1');
     expect(audioAvailability).toHaveBeenCalledWith(false, 'Microphone turned off');
@@ -181,8 +181,8 @@ describe('MediaStreamManager', () => {
     const replacementAudioStream = new MockMediaStream([replacementAudioTrack]) as unknown as MediaStream;
     mockGetUserMedia.mockResolvedValueOnce(replacementAudioStream);
 
-    await expect(manager.toggleAudio(true)).resolves.toBe(true);
-    expect(manager.getAudioTracks()).toEqual([replacementAudioTrack]);
+    await manager.toggleAudio(true);
+    expect(manager.getStream()?.getAudioTracks()).toEqual([replacementAudioTrack]);
     expect(manager.getAudioDeviceId()).toBe('audio-device-2');
   });
 
