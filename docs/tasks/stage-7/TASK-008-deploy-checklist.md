@@ -1,7 +1,7 @@
 # TASK-073 — Production Deployment Checklist
 
 ## Status
-planned
+done
 
 ## Priority
 high
@@ -74,12 +74,12 @@ docker compose up -d --build
 ```
 
 ## Acceptance Criteria
-- [ ] `docs/deployment.md` exists with complete step-by-step guide
-- [ ] All required ports and firewall rules documented
-- [ ] `.env` configuration walkthrough covers all variables
-- [ ] Verification steps included (manual smoke test)
-- [ ] Troubleshooting section covers common media/TURN/TLS issues
-- [ ] Update procedure documented
+- [x] `docs/deployment.md` exists with complete step-by-step guide
+- [x] All required ports and firewall rules documented
+- [x] `.env` configuration walkthrough covers all variables
+- [x] Verification steps included (manual smoke test)
+- [x] Troubleshooting section covers common media/TURN/TLS issues
+- [x] Update procedure documented
 
 ## Definition of Done
 - Deployment guide written and reviewed

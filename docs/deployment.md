@@ -7,15 +7,18 @@ This guide covers deploying ZvonOK with Docker Compose on a Linux server (or loc
 ```
 Internet
    │
-   ├─ HTTPS (443) ──▶ Caddy ──┬── Static files (React SPA from /srv/client)
-   │                           ├── /auth/*, /users/*, /rooms/* ──▶ NestJS :3000
-   │                           ├── /socket.io/* ──▶ NestJS :3000 (WebSocket)
-   │                           └── /* (fallback) ──▶ index.html (SPA routing)
+   ├─ HTTPS (443) ──────────▶ Caddy ──┬── Static files (React SPA from /srv/client)
+   │                                   ├── /auth/*, /users/*, /rooms/* ──▶ NestJS :3000
+   │                                   ├── /socket.io/* ──▶ NestJS :3000 (WebSocket)
+   │                                   └── /* (fallback) ──▶ index.html (SPA routing)
    │
-   └─ UDP/TCP (40000-40099) ──▶ NestJS (mediasoup RTC media) ──▶ directly exposed
+   ├─ UDP/TCP (40000-40099) ──▶ NestJS (mediasoup RTC media) ──▶ directly exposed
+   │
+   └─ UDP/TCP (3478, 5349) ──▶ coturn (STUN/TURN relay)
+     └─ UDP (49152-49252)     relay port range (host network mode)
 ```
 
-**Five services** run via `docker-compose.yml`:
+**Six services** run via `docker-compose.yml`:
 
 | Service    | Image / Dockerfile         | Role |
 |------------|---------------------------|------|
@@ -24,40 +27,129 @@ Internet
 | `server`   | `apps/server/Dockerfile` (target: `production`) | NestJS API + mediasoup SFU |
 | `client`   | `apps/client/Dockerfile`   | Builds React SPA, copies to shared volume, then exits |
 | `caddy`    | `caddy:2-alpine`           | Reverse proxy + automatic HTTPS + serves static files |
+| `coturn`   | `coturn/coturn:alpine`     | STUN/TURN server for NAT traversal (host network mode) |
 
 ## Prerequisites
 
+### VPS Requirements
+
+- **CPU**: 2+ cores (mediasoup compiles a native worker and processes real-time media)
+- **RAM**: 2 GB minimum, 4 GB recommended
+- **OS**: Ubuntu 22.04+, Debian 12+, or any Docker-compatible Linux
+- **Disk**: 20 GB+ (Docker images, database, logs)
+- **Network**: Public IPv4 address with unrestricted UDP
+
+### Software Requirements
+
 - Docker Engine 24+ and Docker Compose v2
-- A domain name pointing to your server's public IP (for Let's Encrypt HTTPS)
-- Ports **80**, **443**, and **40000–40099** (UDP+TCP) open on the firewall
+- `git` (to clone the repository)
+- A domain name with DNS A record pointing to the server's public IP (for Let's Encrypt HTTPS)
+
+### Ports
+
+The following ports must be open on the server firewall:
+
+| Port(s) | Protocol | Service | Purpose |
+|---------|----------|---------|---------|
+| 80 | TCP | Caddy | HTTP redirect + ACME challenge |
+| 443 | TCP + UDP | Caddy | HTTPS + HTTP/3 |
+| 3478 | UDP + TCP | coturn | STUN/TURN |
+| 5349 | UDP + TCP | coturn | TURNS (TLS) |
+| 40000–40099 | UDP + TCP | mediasoup | WebRTC media transport |
+| 49152–49252 | UDP | coturn | TURN relay range |
 
 > For local testing without a domain, `SITE_ADDRESS=localhost` uses Caddy's self-signed certificate.
 
-## Quick Start
+## Step 1: DNS & Domain Setup
+
+Before deploying, point your domain to the server:
 
 ```bash
-# 1. Clone the repo
-git clone <repo-url> && cd webrtc-chat
-
-# 2. Create env file from template
-make setup
-
-# 3. Edit .env (see Environment Variables below)
-$EDITOR .env
-
-# 4. Build and start
-make deploy
-
-# 5. Check all services are healthy
-make status
+# Create a DNS A record:
+#   chat.example.com  →  YOUR_SERVER_PUBLIC_IP
+#
+# Verify propagation:
+dig +short chat.example.com
+# Should return your server IP
 ```
 
-> Run `make help` to see all available targets.
->
-> If you prefer raw Docker commands, `make deploy` is equivalent to
-> `docker compose up -d --build` and `make status` to `docker compose ps -a`.
+If you don't have a domain yet, you can use `SITE_ADDRESS=localhost` for initial testing (Caddy will use a self-signed certificate).
 
-Open `https://your-domain.com` (or `https://localhost` for local testing).
+## Step 2: Server Firewall
+
+Configure the firewall before starting services. With `ufw`:
+
+```bash
+# SSH (if not already allowed)
+sudo ufw allow 22/tcp
+
+# HTTP + HTTPS (Caddy)
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw allow 443/udp     # HTTP/3
+
+# STUN/TURN (coturn)
+sudo ufw allow 3478/tcp
+sudo ufw allow 3478/udp
+sudo ufw allow 5349/tcp
+sudo ufw allow 5349/udp
+
+# mediasoup RTC media
+sudo ufw allow 40000:40099/tcp
+sudo ufw allow 40000:40099/udp
+
+# coturn relay range
+sudo ufw allow 49152:49252/udp
+
+# Enable if not already active
+sudo ufw enable
+```
+
+## Step 3: Clone and Configure
+
+```bash
+# Clone the repo
+git clone <repo-url> && cd webrtc-chat
+
+# Create env file from template
+make setup     # equivalent to: cp .env.production.example .env
+
+# Edit .env — fill in ALL required values (see Environment Variables below)
+$EDITOR .env
+```
+
+Key values to change:
+- `SITE_ADDRESS` — your domain (e.g., `chat.example.com`)
+- `CLIENT_URL` — full URL (e.g., `https://chat.example.com`)
+- `POSTGRES_PASSWORD` — generate a strong random password
+- `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` — generate with `openssl rand -hex 64`
+- `MEDIASOUP_ANNOUNCED_IP` — your server's public IPv4 address
+- `TURN_EXTERNAL_IP` — same public IP as `MEDIASOUP_ANNOUNCED_IP`
+- `TURN_PASSWORD` — generate a strong password for TURN auth
+
+## Step 4: Deploy
+
+```bash
+# Build and start all services
+make deploy    # equivalent to: docker compose up -d --build
+
+# Check all services are healthy
+make status    # equivalent to: docker compose ps -a
+```
+
+> Run `make help` to see all available Makefile targets.
+
+Expected output of `make status`: `postgres` should show "healthy", `migrate` and `client` should show "Exited (0)", and `server`, `caddy`, `coturn` should show "Up".
+
+## Step 5: Verify
+
+1. **Open the app**: Navigate to `https://your-domain.com` — you should see the login page
+2. **Register**: Create two user accounts
+3. **Test a call**: Create a room, join from two different browsers (or browser + incognito)
+4. **Verify media flows**: Both participants should see/hear each other
+5. **Test TURN relay**: To specifically verify TURN is working, use [Trickle ICE](https://webrtc.github.io/samples/src/content/peerconnection/trickle-ice/) with your TURN server credentials, or test from a restrictive network (e.g., mobile hotspot)
+
+If media doesn't flow, see the [Troubleshooting](#troubleshooting) section.
 
 ## Environment Variables
 
@@ -115,6 +207,20 @@ All variables are set in the root `.env` file. Copy from `.env.production.exampl
 
 **Important**: If `MEDIASOUP_ANNOUNCED_IP` is wrong, video/audio will not work for remote participants. Set it to the server's public IPv4 address. For local Docker testing, use your machine's LAN IP (not `127.0.0.1`, unless testing on the same machine).
 
+### TURN / coturn
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `TURN_USER` | Yes | — | Username for TURN authentication (long-term credentials) |
+| `TURN_PASSWORD` | Yes | — | Password for TURN authentication. Use a strong random value. |
+| `TURN_EXTERNAL_IP` | **Yes** | — | **Server's public IP address** (same as `MEDIASOUP_ANNOUNCED_IP`). coturn uses this to rewrite relay candidates. |
+| `TURN_URL` | Yes | — | TURN server URL for clients. Format: `turn:YOUR_SERVER_IP:3478` |
+| `TURNS_URL` | No | — | TURNS (TLS) server URL. Format: `turns:YOUR_SERVER_IP:5349` |
+
+> coturn runs in `network_mode: host` to avoid NAT hairpin issues. Its listening ports (3478, 5349) and relay ports (49152–49252) are bound directly to the host.
+>
+> TURN credentials are never exposed in client source code — the server sends them via the `sfu:transport-created` WebSocket event.
+
 ## Example `.env` for Production
 
 ```env
@@ -140,6 +246,13 @@ MEDIASOUP_LISTEN_IP=0.0.0.0
 MEDIASOUP_ANNOUNCED_IP=203.0.113.42
 RTC_MIN_PORT=40000
 RTC_MAX_PORT=40099
+
+# TURN (coturn)
+TURN_USER=zvonok
+TURN_PASSWORD=super-secret-turn-password-here
+TURN_EXTERNAL_IP=203.0.113.42
+TURN_URL=turn:203.0.113.42:3478
+TURNS_URL=turns:203.0.113.42:5349
 ```
 
 ## Caddy Routing
@@ -234,33 +347,72 @@ docker compose down
 docker compose down -v
 ```
 
-## Firewall Rules
+## Updating
 
-Minimum required open ports:
-
-| Port | Protocol | Purpose |
-|------|----------|---------|
-| 80 | TCP | HTTP (Caddy redirect + ACME challenge) |
-| 443 | TCP + UDP | HTTPS + HTTP/3 |
-| 40000–40099 | UDP + TCP | WebRTC media (mediasoup RTC) |
-
-Example with `ufw`:
+To update the application after pulling new code:
 
 ```bash
-sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
-sudo ufw allow 443/udp
-sudo ufw allow 40000:40099/tcp
-sudo ufw allow 40000:40099/udp
+# Pull latest changes
+git pull
+
+# Rebuild and restart (migrations run automatically)
+make deploy    # docker compose up -d --build
+
+# Verify all services restarted correctly
+make status
+
+# Check logs for any errors
+make logs
 ```
+
+For partial updates:
+
+```bash
+# Server-only update (no client rebuild)
+make rebuild-server
+
+# Client-only update (rebuilds static files + restarts Caddy)
+make rebuild-client
+```
+
+> Database migrations run automatically via the `migrate` init container on every `docker compose up`. No manual migration step is needed.
+
+## Firewall Rules
+
+See [Step 2: Server Firewall](#step-2-server-firewall) for the full `ufw` commands.
+
+Summary of required open ports:
+
+| Port(s) | Protocol | Service | Purpose |
+|---------|----------|---------|---------|
+| 80 | TCP | Caddy | HTTP redirect + ACME challenge |
+| 443 | TCP + UDP | Caddy | HTTPS + HTTP/3 |
+| 3478 | UDP + TCP | coturn | STUN/TURN |
+| 5349 | UDP + TCP | coturn | TURNS (TLS) |
+| 40000–40099 | UDP + TCP | mediasoup | WebRTC media transport |
+| 49152–49252 | UDP | coturn | TURN relay range |
 
 ## Troubleshooting
 
 ### Video/audio not working for remote participants
 
-- Verify `MEDIASOUP_ANNOUNCED_IP` is set to the server's **public IP** (not `0.0.0.0` or `127.0.0.1`)
-- Check that ports 40000–40099 UDP are open on the firewall
-- Run `docker compose logs server | grep -i mediasoup` to check for errors
+1. Verify `MEDIASOUP_ANNOUNCED_IP` is set to the server's **public IP** (not `0.0.0.0` or `127.0.0.1`)
+2. Check that ports 40000–40099 (UDP+TCP) are open on the firewall
+3. Run `docker compose logs server | grep -i mediasoup` to check for errors
+4. Ensure the client can reach the server's public IP on the RTC port range
+
+### TURN not working
+
+1. Verify coturn is running: `docker compose ps coturn` (should show "Up")
+2. Check coturn logs: `docker compose logs coturn`
+3. Verify `TURN_EXTERNAL_IP` matches the server's **public IP**
+4. Ensure ports 3478, 5349 (UDP+TCP) and 49152–49252 (UDP) are open
+5. Test TURN with [Trickle ICE](https://webrtc.github.io/samples/src/content/peerconnection/trickle-ice/):
+   - STUN/TURN URI: `turn:YOUR_SERVER_IP:3478`
+   - Username: value of `TURN_USER`
+   - Credential: value of `TURN_PASSWORD`
+   - You should see `relay` candidates in the results
+6. If coturn logs show `error 401`, the username/password in `.env` doesn't match what clients send — check `TURN_USER` and `TURN_PASSWORD`
 
 ### 405 Method Not Allowed on POST /rooms
 
@@ -271,15 +423,24 @@ sudo ufw allow 40000:40099/udp
 
 - Check that the `client` service completed successfully: `docker compose ps client` (should show "Exited (0)")
 - Verify static files exist: `docker compose exec caddy ls /srv/client/index.html`
+- Check browser console for errors (mismatched `VITE_API_BASE_URL` or CORS issues)
 
 ### Database connection errors
 
 - Ensure `postgres` is healthy: `docker compose ps postgres`
 - Check that `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB` match between services
 - The `migrate` service must complete before `server` starts (handled by `depends_on` conditions)
+- Check migrate logs: `docker compose logs migrate`
 
 ### Caddy not getting Let's Encrypt certificate
 
-- Ensure DNS A record exists and propagated (`dig +short your-domain.com`)
-- Port 80 must be open for the ACME HTTP-01 challenge
+- Ensure DNS A record exists and propagated: `dig +short your-domain.com`
+- Port 80 **must** be open for the ACME HTTP-01 challenge
 - Check Caddy logs: `docker compose logs caddy`
+- If behind a load balancer, ensure the LB forwards port 80 to the server
+
+### Services keep restarting
+
+- Check logs for the crashing service: `docker compose logs <service>`
+- Common causes: missing env vars, wrong `MEDIASOUP_ANNOUNCED_IP`, database not ready
+- Verify `.env` has no typos or missing required values
