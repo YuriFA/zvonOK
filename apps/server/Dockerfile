@@ -93,8 +93,10 @@ ENV NODE_ENV=production
 
 WORKDIR /app/apps/server
 
-# Expose port
+# Expose HTTP + RTC ports
 EXPOSE 3000
+EXPOSE 40000-40099/udp
+EXPOSE 40000-40099/tcp
 
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]

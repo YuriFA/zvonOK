@@ -1,7 +1,7 @@
 # TASK-070 — mediasoup Production Network Configuration
 
 ## Status
-planned
+done
 
 ## Priority
 critical

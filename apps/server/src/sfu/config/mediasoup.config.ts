@@ -8,12 +8,17 @@ export const config = {
   worker: {
     logLevel: 'warn',
     logTags: ['info', 'ice', 'dtls', 'rtp', 'srtp', 'rtcp'],
-    rtcMinPort: 40000,
-    rtcMaxPort: 49999,
+    rtcMinPort: parseInt(process.env.RTC_MIN_PORT || '40000', 10),
+    rtcMaxPort: parseInt(process.env.RTC_MAX_PORT || '40099', 10),
   } satisfies WorkerSettings,
 
   webRtcTransport: {
-    listenIps: [{ ip: '127.0.0.1', announcedIp: '127.0.0.1' }],
+    listenIps: [
+      {
+        ip: process.env.MEDIASOUP_LISTEN_IP || '127.0.0.1',
+        announcedIp: process.env.MEDIASOUP_ANNOUNCED_IP || undefined,
+      },
+    ],
     enableUdp: true,
     enableTcp: true,
     preferUdp: true,

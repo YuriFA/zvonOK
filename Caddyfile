@@ -28,6 +28,10 @@
 		reverse_proxy server:3000
 	}
 
+	handle /rooms {
+		reverse_proxy server:3000
+	}
+
 	handle /rooms/* {
 		reverse_proxy server:3000
 	}
