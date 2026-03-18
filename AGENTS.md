@@ -104,6 +104,12 @@ pnpm -C apps/client test:e2e -- --grep "login"
 
 - TypeScript everywhere; prefer explicit types at module boundaries.
 - Keep code small and purpose-driven; avoid "flexible" abstractions unless asked.
+- **Follow SOLID principles:**
+  - **S** — Single Responsibility: each class/module/function does one thing.
+  - **O** — Open/Closed: extend behavior via composition or new implementations, not by editing existing stable code.
+  - **L** — Liskov Substitution: subtypes must be usable wherever their base type is expected.
+  - **I** — Interface Segregation: prefer small, focused interfaces over large catch-all ones.
+  - **D** — Dependency Inversion: depend on abstractions (interfaces/tokens), not concrete implementations; use NestJS DI on the server and context/hooks on the client.
 - Remove unused imports/vars introduced by your changes.
 - Do not commit secrets (`.env*`, credentials, tokens).
 

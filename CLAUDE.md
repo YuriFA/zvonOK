@@ -219,6 +219,12 @@ if (error.response?.status === 401) {
 - No "flexibility" or "configurability" that wasn't requested.
 - No error handling for impossible scenarios.
 - If you write 200 lines and it could be 50, rewrite it.
+- **Follow SOLID principles:**
+  - **S** — Single Responsibility: each class/module/function does one thing.
+  - **O** — Open/Closed: extend behavior via composition or new implementations, not by editing existing stable code.
+  - **L** — Liskov Substitution: subtypes must be usable wherever their base type is expected.
+  - **I** — Interface Segregation: prefer small, focused interfaces over large catch-all ones.
+  - **D** — Dependency Inversion: depend on abstractions (interfaces/tokens), not concrete implementations; use NestJS DI on the server and context/hooks on the client.
 - Follow API contracts and architecture from SDD
 - If architecture changes → update SDD first, then implement
 - Follow existing patterns in codebase
