@@ -1,8 +1,8 @@
 # Software Design Document: WebRTC Chat
 
-> **Version:** 1.6
+> **Version:** 1.7
 >
-> **Date:** 2025-02-07 / Updated: 2026-03-14
+> **Date:** 2025-02-07 / Updated: 2026-03-18
 >
 > **Status:** Living Document
 
@@ -630,12 +630,53 @@ cd apps/client
 pnpm dev             # Vite dev server on port 5173
 ```
 
-### 9.2 Production (planned)
+### 9.2 Production Deployment
 
-- **Reverse Proxy:** Caddy (automatic HTTPS)
-- **TURN Server:** coturn
-- **Process Manager:** PM2
-- **Database:** Managed PostgreSQL (e.g., Railway, Supabase)
+**Stack:** Docker Compose with Caddy + NestJS + PostgreSQL
+
+**Architecture:**
+```
+┌──────────┐      ┌────────────────┐      ┌──────────┐
+│ Browser  │─────▶│  Caddy (:443)  │─────▶│  NestJS  │
+│          │ HTTPS│  - static SPA  │ HTTP │  (:3000)  │
+│          │◀─────│  - reverse     │◀─────│  API+WS   │
+└──────────┘      │    proxy       │      └──────────┘
+                  └────────────────┘           │
+                                               ▼
+                                        ┌──────────┐
+                                        │PostgreSQL│
+                                        │  (:5432) │
+                                        └──────────┘
+```
+
+**Components:**
+- **Reverse Proxy:** Caddy (automatic HTTPS via Let's Encrypt, or self-signed for localhost)
+- **Client:** Vite static build served by Caddy (`/srv/client`)
+- **Server:** NestJS production image with pre-built mediasoup worker
+- **Database:** PostgreSQL 16
+
+**Deployment:**
+```bash
+# 1. Copy and configure environment
+cp .env.production.example .env
+# Edit .env with real secrets and domain
+
+# 2. Build and start all services
+docker compose up -d --build
+
+# 3. Run database migrations
+docker compose exec server npx prisma migrate deploy
+```
+
+**Key Files:**
+- `docker-compose.yml` — Full stack orchestration
+- `Caddyfile` — Reverse proxy configuration
+- `apps/server/Dockerfile` — Server multi-stage build (mediasoup worker + NestJS)
+- `apps/client/Dockerfile` — Client multi-stage build (node + Vite → static files)
+- `.env.production.example` — Environment variable template
+
+**TURN Server:** coturn (planned, see TASK-046)
+**Process Manager:** Not needed with Docker (container restart policies handle this)
 
 ---
 
@@ -669,14 +710,23 @@ pnpm dev             # Vite dev server on port 5173
 | `JWT_REFRESH_SECRET` | Yes | — | Secret for signing refresh tokens |
 | `JWT_ACCESS_EXPIRES_IN_MINUTES` | No | 15 | Access token lifetime in minutes |
 | `JWT_REFRESH_EXPIRES_IN_DAYS` | No | 7 | Refresh token lifetime in days |
-| `CLIENT_URL` | No | http://localhost:5173 | Allowed CORS origin for WebSocket |
+| `CLIENT_URL` | No | http://localhost:5173 | Allowed CORS origin for REST API and WebSocket |
 
 **Client** (`apps/client/.env.local`):
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `VITE_API_BASE_URL` | Yes | — | REST API base URL (e.g. `http://localhost:3000`) |
-| `VITE_SOCKET_URL` | Yes | — | Socket.io server URL |
+| `VITE_API_BASE_URL` | No | http://localhost:3000 | REST API base URL (empty string for same-origin behind proxy) |
+| `VITE_SOCKET_URL` | No | http://localhost:3000 | Socket.io server URL (empty string for same-origin behind proxy) |
+
+**Docker Compose** (`.env` at repo root):
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `SITE_ADDRESS` | No | localhost | Caddy site address (domain for Let's Encrypt, or `localhost` for self-signed) |
+| `POSTGRES_USER` | Yes | — | PostgreSQL user |
+| `POSTGRES_PASSWORD` | Yes | — | PostgreSQL password |
+| `POSTGRES_DB` | Yes | — | PostgreSQL database name |
 
 ---
 
@@ -793,3 +843,4 @@ sequenceDiagram
 | 1.4 | 2026-02-08 | — | Added product goals, MVP scope, and operational assumptions |
 | 1.5 | 2026-03-03 | — | Synced REQ statuses, expanded Room API table, added GatewayModule/SFUModule to Sec 5.1, added Testing Strategy (Sec 11) and Environment Variables (Sec 9.5), fixed concurrent sessions doc |
 | 1.6 | 2026-03-14 | — | Removed P2P signalling documentation; project uses SFU-only architecture. Updated diagrams, events, and component overview to reflect mediasoup implementation. |
+| 1.7 | 2026-03-18 | — | Added Caddy reverse proxy deployment (Sec 9.2). Docker Compose full-stack setup, client Dockerfile, env-driven CORS, production environment template. |

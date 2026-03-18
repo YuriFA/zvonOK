@@ -10,5 +10,18 @@
     "test": "pnpm -r run test",
     "test:client": "pnpm -C apps/client test:run",
     "test:server": "pnpm -C apps/server test"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "bcrypt",
+      "mediasoup",
+      "@prisma/engines",
+      "prisma",
+      "@nestjs/core",
+      "esbuild",
+      "@tailwindcss/oxide",
+      "unrs-resolver",
+      "@scarf/scarf"
+    ]
   }
 }

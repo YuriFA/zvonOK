@@ -1,0 +1,64 @@
+# Caddyfile — Caddy reverse proxy for WebRTC Chat
+#
+# Usage:
+#   Development (localhost with self-signed TLS):
+#     SITE_ADDRESS=localhost is the default
+#
+#   Production (real domain with automatic Let's Encrypt):
+#     Set SITE_ADDRESS=your-domain.com in environment
+#
+# The {$SITE_ADDRESS:localhost} syntax means:
+#   use env var SITE_ADDRESS, default to "localhost" if unset.
+#
+# Routing strategy:
+#   NestJS has no /api prefix. Backend routes (/auth, /users, /rooms, etc.)
+#   are proxied explicitly. Everything else is served as static files
+#   with SPA fallback to index.html.
+
+{$SITE_ADDRESS:localhost} {
+	# Serve client static files (built by Vite)
+	root * /srv/client
+
+	# --- Backend API routes -> NestJS ---
+	handle /auth/* {
+		reverse_proxy server:3000
+	}
+
+	handle /users/* {
+		reverse_proxy server:3000
+	}
+
+	handle /rooms/* {
+		reverse_proxy server:3000
+	}
+
+	# Swagger UI and JSON spec
+	handle /swagger* {
+		reverse_proxy server:3000
+	}
+
+	# Socket.io transport (SFU WebSocket + polling fallback)
+	handle /socket.io/* {
+		reverse_proxy server:3000
+	}
+
+	# --- Static files + SPA fallback ---
+	handle {
+		try_files {path} /index.html
+		file_server
+	}
+
+	# Security headers
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	# Logging
+	log {
+		output stdout
+		format console
+	}
+}
