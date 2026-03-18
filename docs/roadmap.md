@@ -143,7 +143,7 @@ Tasks:
 
 ## Stage 6 — Call UX
 
-**Status:** In Progress
+**Status:** Completed
 **Goal:** Canonical room entry flow and adaptive in-call experience
 
 Tasks:
@@ -163,16 +163,18 @@ Tasks:
 
 ## Stage 7 — Deployment
 
-**Status:** Planned
-**Goal:** Production-ready deployment with HTTPS and TURN
+**Status:** In Progress
+**Goal:** Production-ready deployment with HTTPS, TURN, and media connectivity outside localhost
 
-Tasks:
-- [task-1](./tasks/stage-7/TASK-001-https-caddy.md) — Caddy reverse proxy with auto HTTPS
-- [task-2](./tasks/stage-7/TASK-002-turn-coturn.md) — coturn TURN server setup
-- [task-3](./tasks/stage-7/TASK-003-deploy-process.md) — Production deployment process
-- [task-4](./tasks/stage-7/TASK-004-client-build.md) — Client build and deployment
+Tasks (execution order):
+- [task-1](./tasks/stage-7/TASK-001-https-caddy.md) — Caddy reverse proxy with auto HTTPS ✅
+- [task-5](./tasks/stage-7/TASK-005-mediasoup-network.md) — mediasoup production network config (listenIps, announcedIp, RTC ports)
+- [task-6](./tasks/stage-7/TASK-006-turn-coturn.md) — coturn TURN server in Docker Compose
+- [task-7](./tasks/stage-7/TASK-007-ice-servers.md) — Configurable ICE servers (STUN/TURN credentials to client)
+- [task-8](./tasks/stage-7/TASK-008-deploy-checklist.md) — Production deployment checklist (VPS guide)
+- [task-9](./tasks/stage-7/TASK-009-client-build-optimization.md) — Client build optimization (code splitting, bundle size)
 
-**Result:** Application available via HTTPS, works through NAT
+**Result:** Application available via HTTPS on a VPS, media works through NAT with TURN fallback
 
 ---
 
@@ -253,8 +255,8 @@ Tasks:
 | Stage 3 | Completed | 3-4 days (media only) |
 | Stage 4 | Completed | 1-2 days |
 | Stage 5 | Completed | 5-7 days |
-| Stage 6 | In Progress | 3-5 days |
-| Stage 7 | Planned | 2-3 days |
+| Stage 6 | Completed | 3-5 days |
+| Stage 7 | In Progress | 2-3 days |
 | Stage 8 | Planned | 1-2 days |
 | Stage 9 | Planned | 2-3 days |
 | Stage 10 | Planned | 2-3 days |
@@ -274,7 +276,7 @@ Tasks:
 
 ## Next Steps
 
-1. **Stage 6** (Call UX) — Canonical room entry flow and adaptive in-call experience
+1. **Stage 7** (Deployment) — mediasoup network config -> coturn -> ICE servers -> deploy checklist -> build optimization
 2. Follow task dependencies, not raw filename order
 3. Update task status as work progresses
 4. Refer to [SDD](./SDD.md) for architecture and design decisions
