@@ -655,21 +655,38 @@ pnpm dev             # Vite dev server on port 5173
 - **Server:** NestJS production image with pre-built mediasoup worker
 - **Database:** PostgreSQL 16
 
-**Deployment:**
+**Deployment (via Makefile):**
 ```bash
-# 1. Copy and configure environment
-cp .env.production.example .env
+# 1. First-time setup: create .env from template
+make setup
 # Edit .env with real secrets and domain
 
 # 2. Build and start all services
-docker compose up -d --build
+make deploy
 
-# 3. Run database migrations
-docker compose exec server npx prisma migrate deploy
+# 3. Run database migrations only (if needed separately)
+make migrate
 ```
 
+Common Makefile targets:
+
+| Target | Description |
+|--------|-------------|
+| `make deploy` | Build images and start all services |
+| `make down` | Stop all services |
+| `make restart` | Stop and start all services |
+| `make rebuild-server` | Rebuild and restart only the server |
+| `make rebuild-client` | Rebuild client and restart Caddy |
+| `make logs` | Follow logs for all services |
+| `make status` | Show service status and health |
+| `make clean` | Stop and remove containers/networks |
+| `make clean-all` | Remove everything including volumes and images |
+
+Run `make help` for the full list.
+
 **Key Files:**
-- `docker-compose.yml` — Full stack orchestration
+- `Makefile` — Production Docker orchestration
+- `docker-compose.yml` — Full stack service definitions
 - `Caddyfile` — Reverse proxy configuration
 - `apps/server/Dockerfile` — Server multi-stage build (mediasoup worker + NestJS)
 - `apps/client/Dockerfile` — Client multi-stage build (node + Vite → static files)

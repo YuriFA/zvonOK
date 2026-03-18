@@ -1,8 +1,11 @@
 # docker-compose.yml — Full stack deployment
 #
 # Usage:
+#   make setup    # create .env from template
+#   make deploy   # build and start everything
+#
+# Or manually:
 #   cp .env.production.example .env
-#   # Edit .env with your values
 #   docker compose up -d --build
 #
 # Services:

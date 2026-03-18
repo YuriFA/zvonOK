@@ -84,14 +84,16 @@ See **[docs/deployment.md](docs/deployment.md)** for the full production setup g
 Quick version:
 
 ```bash
-cp .env.production.example .env
-# Edit .env with real secrets and your domain/IP
-docker compose up -d --build
+make setup          # create .env from template
+$EDITOR .env        # edit with real secrets and your domain/IP
+make deploy         # build and start all services
 ```
 
 This starts 5 services: PostgreSQL, migrations, NestJS server, client build, and Caddy reverse proxy with automatic HTTPS.
 
 Open: `https://localhost` (self-signed) or `https://your-domain.com` (Let's Encrypt).
+
+Run `make help` to see all available targets.
 
 ## Project Structure
 
@@ -114,11 +116,29 @@ webrtc-chat/
 │           └── lib/        # API client, SFU manager, utilities
 ├── docs/                   # Documentation (SDD, deployment, tasks)
 ├── docker-compose.yml      # Production full-stack deployment
+├── Makefile                # Production Docker orchestration (make help)
 ├── Caddyfile               # Caddy reverse proxy config
 └── .env.production.example # Production env template
 ```
 
 ## Available Commands
+
+### Production (Makefile)
+
+| Command | Description |
+|---------|-------------|
+| `make help` | Show all available targets |
+| `make setup` | Create `.env` from template |
+| `make deploy` | Build images and start all services |
+| `make down` | Stop all services |
+| `make restart` | Restart all services |
+| `make rebuild-server` | Rebuild and restart only the server |
+| `make rebuild-client` | Rebuild client and restart Caddy |
+| `make migrate` | Run database migrations |
+| `make logs` | Follow logs for all services |
+| `make status` | Show service status and health |
+| `make clean` | Stop and remove containers/networks |
+| `make clean-all` | Remove everything (volumes, images) |
 
 ### Root
 

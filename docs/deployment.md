@@ -40,17 +40,22 @@ Internet
 git clone <repo-url> && cd webrtc-chat
 
 # 2. Create env file from template
-cp .env.production.example .env
+make setup
 
 # 3. Edit .env (see Environment Variables below)
 $EDITOR .env
 
 # 4. Build and start
-docker compose up -d --build
+make deploy
 
 # 5. Check all services are healthy
-docker compose ps
+make status
 ```
+
+> Run `make help` to see all available targets.
+>
+> If you prefer raw Docker commands, `make deploy` is equivalent to
+> `docker compose up -d --build` and `make status` to `docker compose ps -a`.
 
 Open `https://your-domain.com` (or `https://localhost` for local testing).
 
@@ -165,27 +170,26 @@ The default `SITE_ADDRESS=localhost` makes Caddy use a self-signed certificate. 
 
 ```bash
 # All services
-docker compose logs -f
+make logs
 
 # Specific service
-docker compose logs -f server
-docker compose logs -f caddy
-docker compose logs -f postgres
+make logs-server
+make logs-caddy
+make logs-postgres
 ```
 
 ### Rebuilding After Code Changes
 
 ```bash
 # Rebuild everything
-docker compose up -d --build
+make deploy
 
 # Rebuild only the server
-docker compose up -d --build server
+make rebuild-server
 
 # Rebuild only the client (e.g., after changing VITE_* vars)
-docker compose up -d --build client
-# Restart caddy to pick up new static files
-docker compose restart caddy
+# This also restarts Caddy to pick up new static files
+make rebuild-client
 ```
 
 ### Reloading Caddy Config
@@ -199,11 +203,11 @@ docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
 ### Database Operations
 
 ```bash
+# Run migrations manually (the migrate service already runs on startup)
+make migrate
+
 # Access PostgreSQL shell
 docker compose exec postgres psql -U $POSTGRES_USER -d $POSTGRES_DB
-
-# Run migrations manually (the migrate service already runs on startup)
-docker compose run --rm migrate
 
 # Back up the database
 docker compose exec postgres pg_dump -U $POSTGRES_USER $POSTGRES_DB > backup.sql
@@ -218,7 +222,7 @@ The default 100-port range (40000–40099) supports approximately 50 concurrent 
 
 1. Increase `RTC_MAX_PORT` in `.env` (e.g., `40199` for ~100 participants)
 2. Open the additional ports on your firewall
-3. Rebuild: `docker compose up -d --build server`
+3. Rebuild: `make rebuild-server`
 
 ### Stopping
 
