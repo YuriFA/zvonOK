@@ -15,13 +15,17 @@ import { SkipAuthGuard } from '../auth/skip-auth.guard';
 import { User } from '../user/decorators/user.decorator';
 import { JwtPayloadDto } from '../auth/dto/jwt-payload.dto';
 import { RoomService } from './room.service';
+import { SfuService } from '../sfu/sfu.service';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 
 @ApiTags('rooms')
 @Controller('rooms')
 export class RoomController {
-  constructor(private readonly roomService: RoomService) {}
+  constructor(
+    private readonly roomService: RoomService,
+    private readonly sfuService: SfuService,
+  ) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -60,5 +64,6 @@ export class RoomController {
       throw new ForbiddenException('Only the owner can end this room');
     }
     await this.roomService.softDeleteRoom(id);
+    await this.sfuService.endRoom(id);
   }
 }

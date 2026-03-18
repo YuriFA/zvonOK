@@ -100,6 +100,10 @@ export interface SfuKickedPayload {
   roomId: string;
 }
 
+export interface SfuRoomEndedPayload {
+  roomId: string;
+}
+
 // Peer info for tracking remote producers
 export interface SfuPeerInfo {
   userId: string;

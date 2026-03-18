@@ -79,6 +79,14 @@ vi.mock('@/features/media/contexts/media-manager.context', () => ({
   MediaManagerProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
+const mockOnRoomEnded = vi.hoisted(() => vi.fn(() => () => {}));
+
+vi.mock('@/lib/sfu/manager', () => ({
+  sfuManager: {
+    onRoomEnded: mockOnRoomEnded,
+  },
+}));
+
 vi.mock('@/features/room/hooks/use-room-sfu', () => ({
   useRoomSfu: mockUseRoomSfu,
 }));
@@ -117,6 +125,7 @@ const room = {
   name: 'Alpha Room',
   ownerId: 'user-1',
   maxParticipants: 6,
+  status: 'active' as const,
   createdAt: '2026-03-12T00:00:00.000Z',
 };
 
@@ -272,5 +281,21 @@ describe('RoomPage', () => {
     await waitFor(() => {
       expect(mockStartStream).toHaveBeenCalled();
     });
+  });
+
+  it('shows the ended state when the room status is ended', () => {
+    mockUseRoom.mockReturnValue({
+      data: { ...room, status: 'ended', endedAt: '2026-03-12T01:00:00.000Z' },
+      isLoading: false,
+      error: null,
+    });
+
+    renderRoomPage();
+
+    expect(screen.getByText('Call Ended')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Back to Lobby' })).toHaveAttribute('href', '/');
+    // Ensure no media setup is shown
+    expect(screen.queryByText('Join Room')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('device-selector')).not.toBeInTheDocument();
   });
 });

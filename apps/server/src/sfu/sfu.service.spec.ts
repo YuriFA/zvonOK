@@ -319,4 +319,77 @@ describe('SfuService', () => {
       userId: 'user-2',
     });
   });
+
+  it('emits sfu:room-ended to all peers and cleans up when a room is ended', async () => {
+    const socket1 = createSocket('socket-1');
+    const socket2 = createSocket('socket-2');
+    const serviceState = service as unknown as {
+      peers: Map<
+        string,
+        {
+          id: string;
+          userId: string;
+          username: string;
+          socket: Socket;
+          sendTransport?: { close: jest.Mock };
+          recvTransport?: { close: jest.Mock };
+          producers: Map<string, unknown>;
+          consumers: Map<string, unknown>;
+        }
+      >;
+      rooms: Map<string, Set<string>>;
+      roomOwners: Map<string, string>;
+    };
+
+    const sendClose1 = jest.fn();
+    const recvClose1 = jest.fn();
+    const sendClose2 = jest.fn();
+
+    serviceState.peers.set(socket1.id, {
+      id: socket1.id,
+      userId: 'user-1',
+      username: 'alice',
+      socket: socket1,
+      sendTransport: { close: sendClose1 } as never,
+      recvTransport: { close: recvClose1 } as never,
+      producers: new Map(),
+      consumers: new Map(),
+    });
+    serviceState.peers.set(socket2.id, {
+      id: socket2.id,
+      userId: 'user-2',
+      username: 'bob',
+      socket: socket2,
+      sendTransport: { close: sendClose2 } as never,
+      producers: new Map(),
+      consumers: new Map(),
+    });
+    serviceState.rooms.set('room-1', new Set([socket1.id, socket2.id]));
+    serviceState.roomOwners.set('room-1', 'user-1');
+
+    await service.endRoom('room-1');
+
+    expect(socket1.emit).toHaveBeenCalledWith('sfu:room-ended', {
+      roomId: 'room-1',
+    });
+    expect(socket2.emit).toHaveBeenCalledWith('sfu:room-ended', {
+      roomId: 'room-1',
+    });
+    expect(sendClose1).toHaveBeenCalled();
+    expect(recvClose1).toHaveBeenCalled();
+    expect(sendClose2).toHaveBeenCalled();
+    expect(workerManager.closeRouter).toHaveBeenCalledWith('room-1');
+
+    // Room should be fully cleaned up
+    expect(serviceState.rooms.has('room-1')).toBe(false);
+    expect(serviceState.roomOwners.has('room-1')).toBe(false);
+    expect(serviceState.peers.has(socket1.id)).toBe(false);
+    expect(serviceState.peers.has(socket2.id)).toBe(false);
+  });
+
+  it('handles endRoom gracefully when room has no SFU peers', async () => {
+    await service.endRoom('nonexistent-room');
+    // Should not throw
+    expect(workerManager.closeRouter).not.toHaveBeenCalled();
+  });
 });

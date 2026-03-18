@@ -13,6 +13,7 @@ import type {
   SfuPeerCallback,
   SfuPeerInfo,
   SfuKickedPayload,
+  SfuRoomEndedPayload,
   SfuJoinPayload,
   QualityStatsCallback,
   PeerQualityStats,
@@ -46,6 +47,8 @@ interface ISfuRoomMembership {
   kickPeer(userId: string): boolean;
   /** Subscribe to kicked events */
   onKicked(callback: (payload: SfuKickedPayload) => void): () => void;
+  /** Subscribe to room-ended events */
+  onRoomEnded(callback: (payload: SfuRoomEndedPayload) => void): () => void;
 }
 
 /**

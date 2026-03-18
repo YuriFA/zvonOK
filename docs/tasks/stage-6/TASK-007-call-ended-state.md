@@ -1,7 +1,7 @@
 # TASK-067 — Call Ended State
 
 ## Status
-planned
+completed
 
 ## Priority
 high
@@ -72,11 +72,11 @@ When the owner ends a room (`DELETE /rooms/:id`), the server must notify all con
 - Primary action to return to `/`
 
 ## Acceptance Criteria
-- [ ] Visiting `/room/:slug` for an ended room shows the ended state instead of pre-join or active call
-- [ ] Ended rooms do not start media acquisition, signalling, or SFU setup
-- [ ] If the owner ends the room during a call, connected users transition to the ended state via `sfu:room-ended` WebSocket event
-- [ ] Ended state provides a clear action to return to the lobby
-- [ ] Refreshing an ended room keeps the user in ended state
+- [x] Visiting `/room/:slug` for an ended room shows the ended state instead of pre-join or active call
+- [x] Ended rooms do not start media acquisition, signalling, or SFU setup
+- [x] If the owner ends the room during a call, connected users transition to the ended state via `sfu:room-ended` WebSocket event
+- [x] Ended state provides a clear action to return to the lobby
+- [x] Refreshing an ended room keeps the user in ended state
 
 ## Definition of Done
 - Ended state is part of the canonical room-page state machine

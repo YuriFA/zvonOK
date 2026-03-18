@@ -26,6 +26,7 @@ import type {
   SfuProducerCreatedPayload,
   SfuJoinPayload,
   SfuKickedPayload,
+  SfuRoomEndedPayload,
   SfuPeerInfo,
   SfuPeerJoinedPayload,
   SfuExistingPeersPayload,
@@ -69,6 +70,7 @@ export class SfuManager implements ISfuManager {
   private peerJoinedCallbacks = new Set<SfuPeerCallback>();
   private peerLeftCallbacks = new Set<(userId: string) => void>();
   private kickedCallbacks = new Set<(payload: SfuKickedPayload) => void>();
+  private roomEndedCallbacks = new Set<(payload: SfuRoomEndedPayload) => void>();
 
   // Event router
   private eventRouter = new SfuEventRouter(
@@ -98,6 +100,7 @@ export class SfuManager implements ISfuManager {
       onConsumerCreated: (p) => this.handleConsumerCreated(p),
       onPeerLeft: (p) => this.handlePeerLeft(p),
       onKicked: (p) => this.handleKicked(p),
+      onRoomEnded: (p) => this.handleRoomEnded(p),
     };
   }
 
@@ -152,6 +155,11 @@ export class SfuManager implements ISfuManager {
   onKicked(callback: (payload: SfuKickedPayload) => void): () => void {
     this.kickedCallbacks.add(callback);
     return () => this.kickedCallbacks.delete(callback);
+  }
+
+  onRoomEnded(callback: (payload: SfuRoomEndedPayload) => void): () => void {
+    this.roomEndedCallbacks.add(callback);
+    return () => this.roomEndedCallbacks.delete(callback);
   }
 
   // ISfuProducerManager
@@ -584,6 +592,13 @@ export class SfuManager implements ISfuManager {
   private handleKicked(payload: SfuKickedPayload): void {
     console.log('[SFU] Kicked from room:', payload.roomId);
     this.kickedCallbacks.forEach((callback) => callback(payload));
+    this.closeAll();
+    this.updateState({ connectionState: 'disconnected' });
+  }
+
+  private handleRoomEnded(payload: SfuRoomEndedPayload): void {
+    console.log('[SFU] Room ended:', payload.roomId);
+    this.roomEndedCallbacks.forEach((callback) => callback(payload));
     this.closeAll();
     this.updateState({ connectionState: 'disconnected' });
   }

@@ -11,6 +11,7 @@ import type {
   SfuPeerCallback,
   SfuPeerInfo,
   SfuKickedPayload,
+  SfuRoomEndedPayload,
   SfuJoinPayload,
   QualityStatsCallback,
   PeerQualityStats,
@@ -44,6 +45,7 @@ export function createMockSfuManager(
   simulatePeerLeft(userId: string): void;
   simulateTrackReceived(track: MediaStreamTrack, kind: 'audio' | 'video', userId: string): void;
   simulateKicked(roomId: string): void;
+  simulateRoomEnded(roomId: string): void;
   getJoinRoomCalls(): SfuJoinPayload[];
   getProduceCalls(): MediaStreamTrack[];
 } {
@@ -59,6 +61,7 @@ export function createMockSfuManager(
   const peerJoinedCallbacks = new Set<SfuPeerCallback>();
   const peerLeftCallbacks = new Set<(userId: string) => void>();
   const kickedCallbacks = new Set<(payload: SfuKickedPayload) => void>();
+  const roomEndedCallbacks = new Set<(payload: SfuRoomEndedPayload) => void>();
   const qualityStatsCallbacks = new Set<QualityStatsCallback>();
 
   const joinRoomCalls: SfuJoinPayload[] = [];
@@ -116,6 +119,11 @@ export function createMockSfuManager(
     onKicked(callback: (payload: SfuKickedPayload) => void): () => void {
       kickedCallbacks.add(callback);
       return () => kickedCallbacks.delete(callback);
+    },
+
+    onRoomEnded(callback: (payload: SfuRoomEndedPayload) => void): () => void {
+      roomEndedCallbacks.add(callback);
+      return () => roomEndedCallbacks.delete(callback);
     },
 
     // ISfuProducerManager
@@ -292,6 +300,10 @@ export function createMockSfuManager(
 
     simulateKicked(roomId: string): void {
       kickedCallbacks.forEach((cb) => cb({ roomId }));
+    },
+
+    simulateRoomEnded(roomId: string): void {
+      roomEndedCallbacks.forEach((cb) => cb({ roomId }));
     },
 
     getJoinRoomCalls(): SfuJoinPayload[] {

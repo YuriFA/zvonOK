@@ -359,6 +359,7 @@ Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800
 | `sfu:peer-left` | Server → Client | `{ userId }` | Notify peers that a participant left or was removed |
 | `sfu:kick-peer` | Client → Server | `{ userId }` | Room owner removes a participant from the SFU room |
 | `sfu:kicked` | Server → Client | `{ roomId }` | Sent to the removed participant before disconnect |
+| `sfu:room-ended` | Server → Client | `{ roomId }` | Broadcast to all room peers when the owner ends the room |
 
 **Error Payload (Server -> Client):**
 ```json

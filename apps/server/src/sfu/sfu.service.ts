@@ -440,6 +440,34 @@ export class SfuService implements OnModuleDestroy {
     await this.removePeer(socket.id);
   }
 
+  /**
+   * End a room: notify all peers with `sfu:room-ended`, clean up their
+   * transports, and tear down the mediasoup Router.
+   */
+  async endRoom(roomId: string): Promise<void> {
+    const roomPeerIds = this.rooms.get(roomId);
+    if (!roomPeerIds || roomPeerIds.size === 0) {
+      this.logger.log(`No SFU peers in room ${roomId}, nothing to clean up`);
+      return;
+    }
+
+    // Notify every peer that the room has ended, then clean up
+    for (const peerId of Array.from(roomPeerIds)) {
+      const peer = this.peers.get(peerId);
+      if (!peer) continue;
+
+      peer.socket.emit('sfu:room-ended', { roomId });
+      peer.sendTransport?.close();
+      peer.recvTransport?.close();
+      this.peers.delete(peerId);
+    }
+
+    this.rooms.delete(roomId);
+    this.roomOwners.delete(roomId);
+    await this.workerManager.closeRouter(roomId);
+    this.logger.log(`Room ${roomId} ended — all peers notified and cleaned up`);
+  }
+
   private notifyPeersToConsume(socket: Socket, producer: Producer): void {
     const roomId = this.getRoomId(socket);
     const peer = this.getPeer(socket.id);
