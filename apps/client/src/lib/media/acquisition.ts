@@ -45,7 +45,8 @@ export class PermissionDeniedStrategy implements AcquisitionFallbackStrategy {
 
 /**
  * Strategy for handling device not found errors.
- * Falls back to default constraints.
+ * Preserves the working device's constraint when only one kind fails,
+ * falling back to defaults only for the unavailable device.
  */
 export class DeviceNotFoundStrategy implements AcquisitionFallbackStrategy {
   canHandle(error: Error): boolean {
@@ -54,11 +55,34 @@ export class DeviceNotFoundStrategy implements AcquisitionFallbackStrategy {
 
   async execute(
     _error: Error,
-    _originalConstraints: UserMediaConstraints,
+    originalConstraints: UserMediaConstraints,
     attemptFallback: (constraints: UserMediaConstraints) => Promise<MediaStream>
   ): Promise<MediaStream> {
+    const hasVideo = originalConstraints.video !== undefined && originalConstraints.video !== false;
+    const hasAudio = originalConstraints.audio !== undefined && originalConstraints.audio !== false;
+
+    // When both kinds were requested, try relaxing each device constraint
+    // individually so the surviving device's exact selection is preserved.
+    if (hasVideo && hasAudio) {
+      // Try keeping audio exact, relax video to default
+      try {
+        console.log('[Media] Device not found, trying default video + original audio');
+        return await attemptFallback({ video: true, audio: originalConstraints.audio });
+      } catch {
+        // Video default + original audio failed — try the inverse
+      }
+
+      // Try keeping video exact, relax audio to default
+      try {
+        console.log('[Media] Trying original video + default audio');
+        return await attemptFallback({ video: originalConstraints.video, audio: true });
+      } catch {
+        // Both individual relaxations failed
+      }
+    }
+
+    // Fall back to full defaults
     console.log('[Media] Device not found, trying default constraints');
-    // First try video+audio defaults
     try {
       return await attemptFallback({ video: true, audio: true });
     } catch {
@@ -76,6 +100,8 @@ export class DeviceNotFoundStrategy implements AcquisitionFallbackStrategy {
 export interface MediaPreferenceProvider {
   isPreferredVideoEnabled(): boolean;
   isPreferredAudioEnabled(): boolean;
+  getVideoDeviceId(): string | null;
+  getAudioDeviceId(): string | null;
 }
 
 /**
@@ -238,14 +264,37 @@ export class MediaAcquisition {
   private mergeConstraints(constraints?: UserMediaConstraints): UserMediaConstraints {
     const preferredVideo = this.preferenceProvider?.isPreferredVideoEnabled() ?? true;
     const preferredAudio = this.preferenceProvider?.isPreferredAudioEnabled() ?? true;
+    const savedVideoDeviceId = this.preferenceProvider?.getVideoDeviceId() ?? null;
+    const savedAudioDeviceId = this.preferenceProvider?.getAudioDeviceId() ?? null;
 
-    return {
-      video:
-        constraints?.video ??
-        (preferredVideo ? DEFAULT_CONSTRAINTS.video : false),
-      audio:
-        constraints?.audio ??
-        (preferredAudio ? DEFAULT_CONSTRAINTS.audio : false),
-    };
+    let video: UserMediaConstraints['video'];
+    if (constraints?.video !== undefined) {
+      video = constraints.video;
+    } else if (!preferredVideo) {
+      video = false;
+    } else if (savedVideoDeviceId) {
+      video = {
+        ...(DEFAULT_CONSTRAINTS.video as MediaTrackConstraints),
+        deviceId: { exact: savedVideoDeviceId },
+      };
+    } else {
+      video = DEFAULT_CONSTRAINTS.video;
+    }
+
+    let audio: UserMediaConstraints['audio'];
+    if (constraints?.audio !== undefined) {
+      audio = constraints.audio;
+    } else if (!preferredAudio) {
+      audio = false;
+    } else if (savedAudioDeviceId) {
+      audio = {
+        ...(DEFAULT_CONSTRAINTS.audio as MediaTrackConstraints),
+        deviceId: { exact: savedAudioDeviceId },
+      };
+    } else {
+      audio = DEFAULT_CONSTRAINTS.audio;
+    }
+
+    return { video, audio };
   }
 }

@@ -136,10 +136,12 @@ export class MediaTrackController {
       tracks.map((track) => track.id)
     );
 
-    // Preserve the device ID before stopping so getVideoDeviceId()
-    // can still return it while the track kind is disabled.
+    // Preserve the actual device ID before stopping so getVideoDeviceId()
+    // can still return it while the track kind is disabled.  Always update
+    // so that stale IDs (e.g. from a fallback during initial acquisition)
+    // are replaced with the device the user was actually seeing.
     const lastDeviceId = tracks[0]?.getSettings().deviceId;
-    if (lastDeviceId && !this.selectedVideoDeviceId) {
+    if (lastDeviceId) {
       this.selectedVideoDeviceId = lastDeviceId;
     }
 
@@ -241,10 +243,12 @@ export class MediaTrackController {
       return;
     }
 
-    // Preserve the device ID before stopping so getAudioDeviceId()
-    // can still return it while the track kind is disabled.
+    // Preserve the actual device ID before stopping so getAudioDeviceId()
+    // can still return it while the track kind is disabled.  Always update
+    // so that stale IDs (e.g. from a fallback during initial acquisition)
+    // are replaced with the device the user was actually using.
     const lastDeviceId = tracks[0]?.getSettings().deviceId;
-    if (lastDeviceId && !this.selectedAudioDeviceId) {
+    if (lastDeviceId) {
       this.selectedAudioDeviceId = lastDeviceId;
     }
 

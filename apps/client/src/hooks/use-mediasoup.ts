@@ -246,6 +246,7 @@ export function useMediasoup({
     localStream.getTracks().forEach((track) => {
       if (
         (track.kind === 'audio' || track.kind === 'video') &&
+        track.readyState !== 'ended' &&
         !producedKindsRef.current.has(track.kind)
       ) {
         producedKindsRef.current.add(track.kind);

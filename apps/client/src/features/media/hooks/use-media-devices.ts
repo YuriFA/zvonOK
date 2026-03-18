@@ -28,7 +28,12 @@ export interface UseMediaDevicesReturn {
 
 const STORAGE_KEY = 'webrtc-selected-devices';
 
-function loadSelectedDevices(): SelectedDevices {
+/**
+ * Read saved device selections from localStorage.
+ * Used internally by `useMediaDevices` for initial state, and exported for
+ * `MediaStreamProvider` to seed the track controller on mount.
+ */
+export function loadSelectedDevices(): SelectedDevices {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {

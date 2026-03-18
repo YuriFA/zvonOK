@@ -1,6 +1,10 @@
 /**
  * Media stream context.
  * Provides stream management with dependency injection.
+ *
+ * On mount, seeds the device selector with any previously saved device IDs
+ * from localStorage so the initial getUserMedia call targets the user's
+ * last-known devices instead of falling back to browser defaults.
  */
 
 import {
@@ -14,13 +18,14 @@ import {
 } from 'react';
 import { useMediaAcquisition, useMediaDeviceSelector } from './media-manager.context';
 import type { UserMediaConstraints } from '@/lib/media/types';
+import { loadSelectedDevices } from '@/features/media/hooks/use-media-devices';
 
 export interface MediaStreamContextValue {
   stream: MediaStream | null;
   error: string | null;
   isLoading: boolean;
   start: (options?: {
-    deviceId?: { video?: string; audio?: string };
+    deviceId?: { video?: string | null; audio?: string | null };
     constraints?: UserMediaConstraints;
   }) => Promise<void>;
   stop: () => void;
@@ -49,7 +54,7 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
 
   const start = useCallback(
     async (options?: {
-      deviceId?: { video?: string; audio?: string };
+      deviceId?: { video?: string | null; audio?: string | null };
       constraints?: UserMediaConstraints;
     }) => {
       if (options?.deviceId?.video) {
@@ -89,15 +94,22 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
     setError(null);
   }, [acquisition]);
 
+  // Seed device selector with saved device IDs on mount, then start stream.
+  // Deps intentionally empty: `acquisition`, `start`, and `loadSelectedDevices`
+  // are stable (singleton manager + useCallback + pure import) so this only
+  // needs to run once on mount.
   useEffect(() => {
     if (!mountedRef.current) return;
 
-    start();
+    const saved = loadSelectedDevices();
+
+    start({ deviceId: { video: saved.videoDeviceId, audio: saved.audioDeviceId } });
 
     return () => {
       acquisition.stopStream();
     };
-  }, [acquisition, start]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <MediaStreamContext.Provider value={{ stream, error, isLoading, start, stop }}>

@@ -60,7 +60,7 @@ The WebRTC Chat application provides:
 | REQ-003 | Room management via REST with slug-based invite codes. | Completed |
 | REQ-004 | WebSocket signalling for join/leave and offer/answer/ICE exchange. | Completed |
 | REQ-005 | SFU signalling for group calls (mediasoup). | In Progress |
-| REQ-006 | Client UI with lobby/auth/room routes consuming REST + WebSocket APIs. | Completed |
+| REQ-006 | Client UI with home/auth/room routes consuming REST + WebSocket APIs. | Completed |
 | REQ-007 | Security baseline: bcrypt hashing, env-based JWT secrets, timing-safe refresh validation. | Completed |
 | REQ-008 | Performance targets and monitoring for media and UI. | Planned |
 
@@ -448,17 +448,16 @@ Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800
 ### 5.2 Frontend Architecture
 
 **Pages:**
-- `LobbyPage` (`/`) — Room join/create, auth-aware navigation
+- `HomePage` (`/`) — Room join/create, auth-aware navigation
 - `LoginPage` (`/login`) — Email/password login form
 - `RegisterPage` (`/register`) — Registration with password confirmation
 - `RoomPage` (`/room/:slug`) — Canonical room experience with three states: pre-join, active call, ended
-- `RoomLobbyPage` (`/room/:slug/lobby`) — Legacy compatibility entry that redirects to the canonical pre-join state
 
 **Features:**
 - `AuthContext` — Global auth state with `useAuth()` hook
 - `authApi` — API client with automatic token refresh on 401
 - `ProfileDropdown` — User menu with logout
-- `Room media setup state` — Client-side room entry state that preserves selected input devices and mic/camera enabled intent from pre-join into the active call lifecycle
+- `Room media setup state` — Client-side room entry state that preserves selected input devices and mic/camera enabled intent from pre-join into the active call lifecycle. The `MediaStreamProvider` seeds the `MediaTrackController` with device IDs from `localStorage` on mount so the initial `getUserMedia` call targets saved devices. Device selections and toggle preferences in the track controller singleton survive the prejoin-to-active transition without re-mount. Device availability is validated at join time; missing devices surface recoverable UI errors in the pre-join view.
 
 **UI Components (Radix UI):**
 - `Button` — Primary/secondary/outline/ghost variants
