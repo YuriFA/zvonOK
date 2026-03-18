@@ -44,7 +44,7 @@ Client: http://localhost:5173
 ```
 src/
 ├── main.tsx          # Entry point, React Router setup
-├── routes/           # File-based routing (lobby.tsx, room.tsx)
+├── routes/           # File-based routing (home.tsx, room.tsx)
 ├── components/ui/    # Radix UI components (button.tsx, input.tsx)
 └── lib/
     ├── config.ts     # WebRTC config (STUN servers, constraints)

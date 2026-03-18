@@ -13,7 +13,7 @@ Implement client-side room functionality for the WebRTC chat application. Users 
 - Room type definitions matching backend DTOs
 - RoomApi service (create, get by slug, update, delete)
 - Create room dialog with form validation
-- Update lobby with "Create Room" button
+- Update home page with "Create Room" button
 - Room page with placeholder video elements
 
 ## Out of Scope
@@ -55,7 +55,7 @@ interface Room {
 - `apps/client/src/components/ui/dialog.tsx` (if not exists)
 
 ### Components to Modify
-- `apps/client/src/routes/lobby.tsx` - Add Create Room button
+- `apps/client/src/routes/home.tsx` - Add Create Room button
 - `apps/client/src/routes/room.tsx` - Create room page (new file)
 - `apps/client/src/main.tsx` - Add /room/:slug route
 
@@ -63,7 +63,7 @@ interface Room {
 - [ ] Room types defined matching backend DTOs
 - [ ] RoomApi service created with CRUD methods (create, get by slug, update, delete)
 - [ ] Create room dialog with validation (name max 100 chars, maxParticipants 2-50)
-- [ ] Lobby shows "Create Room" button for authenticated users
+- [ ] Home page shows "Create Room" button for authenticated users
 - [ ] Room page loads room by slug
 - [ ] Room page shows placeholder video elements
 - [ ] "End Room" button only visible for room owner
@@ -79,7 +79,7 @@ interface Room {
 - `apps/client/src/features/room/types/room.types.ts` - Room type definitions
 - `apps/client/src/features/room/services/room-api.ts` - Room API service
 - `apps/client/src/features/room/components/create-room-dialog.tsx` - Create dialog
-- `apps/client/src/routes/lobby.tsx` - Lobby with create/join
+- `apps/client/src/routes/home.tsx` - Home page with create/join
 - `apps/client/src/routes/room.tsx` - Room page
 - `apps/server/src/room/room.controller.ts` - Backend API contract
 

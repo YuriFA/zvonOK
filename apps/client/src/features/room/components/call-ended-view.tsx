@@ -18,7 +18,7 @@ export function CallEndedView({ room }: CallEndedViewProps) {
       </div>
 
       <Button asChild size="lg">
-        <Link to="/">Back to Lobby</Link>
+        <Link to="/">Back to Home</Link>
       </Button>
     </div>
   );

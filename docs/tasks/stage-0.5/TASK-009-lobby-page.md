@@ -1,4 +1,4 @@
-# TASK-013 — Lobby Page
+# TASK-013 — Home Page
 
 ## Status
 completed
@@ -7,10 +7,10 @@ completed
 high
 
 ## Description
-Implement main lobby page with room joining functionality and user authentication status display.
+Implement main home page with room joining functionality and user authentication status display.
 
 ## Scope
-- Create lobby page layout
+- Create home page layout
 - Display user info when authenticated
 - Show login/register links when not authenticated
 - Room join input with button
@@ -39,14 +39,14 @@ Implement main lobby page with room joining functionality and user authenticatio
 4. Room page handles actual WebRTC setup
 
 ## Acceptance Criteria
-- Lobby page displays correctly
+- Home page displays correctly
 - Authenticated users see room join form
 - Unauthenticated users see login/register links
 - Room join navigates to room page
 - Logout functionality works
 
 ## Definition of Done
-- Lobby page implemented
+- Home page implemented
 - User authentication status checked
 - Room join form works
 - Navigation to room page works
@@ -55,7 +55,7 @@ Implement main lobby page with room joining functionality and user authenticatio
 ## Implementation Guide
 
 ## Related Files
-- `apps/client/src/routes/lobby.tsx`
+- `apps/client/src/routes/home.tsx`
 
 ## Next Task
 TASK-014 — PostgreSQL + Prisma Setup

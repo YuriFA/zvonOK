@@ -293,7 +293,7 @@ describe('RoomPage', () => {
     renderRoomPage();
 
     expect(screen.getByText('Call Ended')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Back to Lobby' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: 'Back to Home' })).toHaveAttribute('href', '/');
     // Ensure no media setup is shown
     expect(screen.queryByText('Join Room')).not.toBeInTheDocument();
     expect(screen.queryByTestId('device-selector')).not.toBeInTheDocument();

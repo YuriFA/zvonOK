@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures/auth.fixture';
+import { HomePage } from './pages/home.page';
 import { LoginPage } from './pages/login.page';
 import { RegisterPage } from './pages/register.page';
-import { LobbyPage } from './pages/lobby.page';
 import { generateTestUser } from './utils/test-data';
 
 test.describe('Registration', () => {
@@ -66,7 +66,7 @@ test.describe('Login', () => {
     await loginPage.login(testUser.email, testUser.password);
 
     await loginPage.expectNoError();
-    await loginPage.expectRedirectToLobby();
+    await loginPage.expectRedirectToHome();
   });
 
   test('should show error for invalid credentials', async () => {
@@ -94,11 +94,11 @@ test.describe('Login', () => {
 
 test.describe('Logout', () => {
   test('should logout successfully', async ({ authenticatedPage }) => {
-    const lobbyPage = new LobbyPage(authenticatedPage);
-    await lobbyPage.goto();
+    const homePage = new HomePage(authenticatedPage);
+    await homePage.goto();
 
     // Verify user is authenticated - create room button should be visible
-    await lobbyPage.expectCreateRoomVisible();
+    await homePage.expectCreateRoomVisible();
 
     // Click on the button that contains the username (opens dropdown)
     await authenticatedPage.locator('button').filter({ hasText: /e2e-user/ }).click();
@@ -107,24 +107,24 @@ test.describe('Logout', () => {
     await authenticatedPage.getByText('Logout').click();
 
     // Should show login prompt (unauthenticated state)
-    await lobbyPage.expectLoginPromptVisible();
+    await homePage.expectLoginPromptVisible();
   });
 });
 
 test.describe('Protected Routes', () => {
-  test('should show login prompt in lobby when unauthenticated', async ({ page }) => {
-    const lobbyPage = new LobbyPage(page);
-    await lobbyPage.goto();
+  test('should show login prompt on home page when unauthenticated', async ({ page }) => {
+    const homePage = new HomePage(page);
+    await homePage.goto();
 
     // Should show login button for unauthenticated users
     await expect(page.getByRole('link', { name: /login/i }).first()).toBeVisible();
-    await lobbyPage.expectCreateRoomNotVisible();
+    await homePage.expectCreateRoomNotVisible();
   });
 
   test('should show create room button when authenticated', async ({ authenticatedPage }) => {
-    const lobbyPage = new LobbyPage(authenticatedPage);
-    await lobbyPage.goto();
+    const homePage = new HomePage(authenticatedPage);
+    await homePage.goto();
 
-    await lobbyPage.expectCreateRoomVisible();
+    await homePage.expectCreateRoomVisible();
   });
 });

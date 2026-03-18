@@ -18,7 +18,7 @@ Create authentication context for managing user state across the application wit
 - Protect routes that require authentication
 
 ## Out of Scope
-- Lobby page (covered in TASK-013)
+- Home page (covered in TASK-013)
 
 ## Technical Design
 
@@ -69,4 +69,4 @@ if (!user) return <Navigate to="/login" />;
 - `apps/client/src/features/auth/use-auth.ts`
 
 ## Next Task
-TASK-013 — Lobby Page
+TASK-013 — Home Page

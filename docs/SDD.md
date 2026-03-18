@@ -377,14 +377,13 @@ Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800
 
 | Route | Component | Auth Required |
 |-------|-----------|---------------|
-| `/` | Lobby | No |
+| `/` | Home Page | No |
 | `/login` | Login Page | No (redirect if authenticated) |
 | `/register` | Register Page | No (redirect if authenticated) |
 | `/room/:slug` | Room Page with pre-join, active call, and ended states | Optional |
-| `/room/:slug/lobby` | Legacy compatibility alias redirecting to `/room/:slug` pre-join state | Optional |
 
 **Room Creation Flow:**
-1. User creates room via dialog on lobby page
+1. User creates room via dialog on home page
 2. Redirect to `/room/:slug`
 3. Room page opens in pre-join state with device setup, video preview, and shareable link
 4. Device selections and local audio/video intent chosen in pre-join are preserved as the source of truth for call entry

@@ -44,7 +44,7 @@ const registerSchema = z.object({
 ### States
 - Idle - initial state
 - Loading - form submitting
-- Success - redirect to lobby or login
+- Success - redirect to home page or login
 - Error - display error message
 
 ### Error Handling

@@ -13,7 +13,7 @@ Show a dedicated ended state on the canonical room link when the call has alread
 - Add an `ended` room-page view state alongside `prejoin` and `active`
 - Show clear messaging when the room has been ended by the owner
 - Prevent media, signalling, and SFU initialization for ended rooms
-- Provide a clear exit path back to the main lobby
+- Provide a clear exit path back to the home page
 - Handle both in-session room ending and direct navigation to an already ended room
 
 ## Out of Scope
@@ -55,7 +55,7 @@ When the owner ends a room (`DELETE /rooms/:id`), the server must notify all con
 ### 5. Create `CallEndedView` Component
 - New component: `apps/client/src/features/room/components/call-ended-view.tsx`
 - Shows a prominent message that the call has ended
-- Primary action: "Back to Lobby" link to `/`
+- Primary action: "Back to Home" link to `/`
 - Must not require media permissions or active connections
 
 ### 6. Prevent Resource Initialization for Ended Rooms
@@ -75,7 +75,7 @@ When the owner ends a room (`DELETE /rooms/:id`), the server must notify all con
 - [x] Visiting `/room/:slug` for an ended room shows the ended state instead of pre-join or active call
 - [x] Ended rooms do not start media acquisition, signalling, or SFU setup
 - [x] If the owner ends the room during a call, connected users transition to the ended state via `sfu:room-ended` WebSocket event
-- [x] Ended state provides a clear action to return to the lobby
+- [x] Ended state provides a clear action to return to the home page
 - [x] Refreshing an ended room keeps the user in ended state
 
 ## Definition of Done
@@ -96,7 +96,7 @@ When the owner ends a room (`DELETE /rooms/:id`), the server must notify all con
 - `apps/server/src/sfu/sfu.service.ts` — SFU service (needs room-end broadcast method)
 
 ## Related Tasks
-- TASK-003 — Pre-Join Lobby Before Call Connection (completed; established `prejoin`/`active` states)
+- TASK-003 — Pre-Join State Before Call Connection (completed; established `prejoin`/`active` states)
 - TASK-005 — Rooms API
 
 ## Next Task

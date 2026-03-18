@@ -38,11 +38,10 @@ React 19 + Vite frontend for the WebRTC chat application. Handles user authentic
 
 | Route | Component | Auth Required | Description |
 |-------|-----------|---------------|-------------|
-| `/` | `LobbyPage` | No | Main lobby, create/join rooms |
+| `/` | `HomePage` | No | Main home page, create/join rooms |
 | `/login` | `LoginPage` | No (redirect if auth) | Email/password login |
 | `/register` | `RegisterPage` | No (redirect if auth) | User registration |
-| `/room/:slug/lobby` | `RoomLobbyPage` | Optional | Device setup, video preview, share link |
-| `/room/:slug` | `RoomPage` | Optional | Video call interface |
+| `/room/:slug` | `RoomPage` | Optional | Room with pre-join, active call, and ended states |
 
 ---
 
@@ -112,8 +111,8 @@ Located in `apps/client/src/components/ui/`:
 - Visual feedback ("Copied!" state)
 - Shareable room link display
 
-**RoomLobbyPage** (`src/routes/room-lobby.tsx`)
-- Pre-room lobby with device setup
+**PrejoinView** (`src/features/room/components/prejoin-view.tsx`)
+- Pre-join state within the room page with device setup
 - Video preview and device configuration
 - Shareable room link (using slug)
 - "Join Room" button to enter call
@@ -282,10 +281,9 @@ VITE_SOCKET_URL=http://localhost:3000
 ```
 apps/client/src/
 ├── routes/              # File-based routing
-│   ├── lobby.tsx
+│   ├── home.tsx
 │   ├── login.tsx
 │   ├── register.tsx
-│   ├── room-lobby.tsx
 │   └── room.tsx
 ├── components/
 │   ├── ui/              # Radix UI primitives

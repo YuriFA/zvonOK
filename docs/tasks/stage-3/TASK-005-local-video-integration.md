@@ -7,7 +7,7 @@ completed
 medium
 
 ## Description
-Integrate LocalVideo component into Room Lobby (DeviceSelector) and Room Page for consistent video display across the application.
+Integrate LocalVideo component into Room Pre-Join (DeviceSelector) and Room Page for consistent video display across the application.
 
 ## Scope
 - Refactor DeviceSelector to use LocalVideo component

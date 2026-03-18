@@ -19,7 +19,7 @@ When a second user joins a call and denies media permissions (camera or micropho
 ## Out of Scope
 - Changes to media permission request flow
 - Audio-only mode handling (separate task)
-- Pre-join lobby implementation
+- Pre-join state implementation
 
 ## Technical Design
 

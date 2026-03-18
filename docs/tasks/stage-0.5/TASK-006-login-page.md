@@ -38,7 +38,7 @@ const loginSchema = z.object({
 ### States
 - Idle - initial state
 - Loading - form submitting
-- Success - redirect to lobby
+- Success - redirect to home page
 - Error - display error message
 
 ### Error Handling
@@ -50,7 +50,7 @@ const loginSchema = z.object({
 - Login form validates input
 - Submit button disabled while loading
 - Error messages display correctly
-- Successful login redirects to lobby
+- Successful login redirects to home page
 - Link to registration page
 
 ## Definition of Done

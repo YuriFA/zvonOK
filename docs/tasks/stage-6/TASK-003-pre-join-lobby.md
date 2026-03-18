@@ -1,4 +1,4 @@
-# TASK-063 — Pre-Join Lobby Before Call Connection
+# TASK-063 — Pre-Join State Before Call Connection
 
 ## Status
 completed
@@ -12,15 +12,14 @@ Make `/room/:slug` the canonical room link with a pre-join state before entering
 ## Scope
 - Show pre-join first when opening a room link or joining a call from the app
 - Use `/room/:slug` as the canonical room entry URL
-- Keep `/room/:slug/lobby` only as a compatibility alias or redirect during migration
-- Reuse the existing room lobby UI where possible
+- Reuse the existing pre-join UI where possible
 - Delay signalling and media transport initialization until explicit confirmation
-- Preserve selected camera and microphone settings from the lobby
+- Preserve selected camera and microphone settings from the pre-join state
 - Keep local preview and mute/camera toggles available before join
 - Define the room page state transition from `prejoin` to `active`
 
 ## Out of Scope
-- Redesign of room lobby visuals
+- Redesign of pre-join visuals
 - Changes to video grid layout logic
 - Ended-call UX after the room is finished
 - Screen sharing and chat features
@@ -38,44 +37,40 @@ type RoomViewState = 'prejoin' | 'active' | 'ended';
 ### Connection Timing
 - Do not join Socket.io room on initial page open
 - Do not create SFU transports or consumers before confirmation
-- Acquire preview media for the lobby separately from the actual call join lifecycle
+- Acquire preview media for the pre-join state separately from the actual call join lifecycle
 - Reuse selected device ids when creating the real call media stream
 
 ### Navigation Rules
 - Opening a shared room link at `/room/:slug` should land in the pre-join state first
 - Creating a room from the app should also land on `/room/:slug` in pre-join state
-- `/room/:slug/lobby` should redirect or delegate to the same pre-join state
-- Refreshing before join should keep the user in the lobby state
-- Leaving the call and re-entering should also pass through the lobby
+- Refreshing before join should keep the user in the pre-join state
+- Leaving the call and re-entering should also pass through the pre-join state
 
 ## Acceptance Criteria
 - [x] Opening `/room/:slug` shows the pre-join state instead of connecting immediately
 - [x] Creating a room from the app lands on the same pre-join flow as a shared link
-- [x] `/room/:slug/lobby` does not create a second independent flow; it redirects to or reuses the canonical pre-join state
 - [x] No signalling room join happens before the user confirms entry
 - [x] No SFU transport or consumer setup starts before confirmation
-- [x] Lobby shows local media preview and device controls before join
+- [x] Pre-join state shows local media preview and device controls before join
 - [x] Selected camera and microphone are applied after joining the call
 - [x] Clicking "Join" switches the room page into active call state and starts connection setup
-- [x] Refreshing the page before joining keeps the user in the lobby flow
+- [x] Refreshing the page before joining keeps the user in the pre-join flow
 - [x] Direct navigation from app UI and shared links both use the same pre-join behavior
 
 ## Definition of Done
 - `/room/:slug` is the default entry point to calls
 - Connection lifecycle starts only after explicit user action
-- Existing room lobby behavior is reused without duplicating logic
-- Legacy `/room/:slug/lobby` behavior is preserved via redirect or delegation, not a separate implementation
+- Existing pre-join behavior is reused without duplicating logic
 - Manual testing covers direct link, in-app join, refresh, and leave/rejoin scenarios
 
 ## Related Files
-- `apps/client/src/routes/room-lobby.tsx`
 - `apps/client/src/routes/room.tsx`
 - `apps/client/src/main.tsx`
 - `apps/client/src/features/media/`
 - `apps/client/src/features/room/`
 
 ## Related Tasks
-- TASK-062 — Room Lobby Page
+- TASK-062 — Room Pre-Join State
 - TASK-041 — SFU Client Integration
 - TASK-059 — SFU Participants List UI
 - TASK-067 — Call Ended State

@@ -1,6 +1,6 @@
 import { type Page, type Locator, expect } from '@playwright/test';
 
-export class LobbyPage {
+export class HomePage {
   readonly page: Page;
   readonly roomCodeInput: Locator;
   readonly joinRoomButton: Locator;
@@ -46,9 +46,5 @@ export class LobbyPage {
     // Login link should be visible for unauthenticated users
     // Use .first() because there may be multiple login links (header + button)
     await expect(this.page.getByRole('link', { name: /login/i }).first()).toBeVisible();
-  }
-
-  async expectRedirectToRoomLobby(slug: string) {
-    await expect(this.page).toHaveURL(new RegExp(`/room/${slug}`));
   }
 }

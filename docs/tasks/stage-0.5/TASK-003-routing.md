@@ -7,12 +7,12 @@ completed
 high
 
 ## Description
-Set up React Router v7 with file-system routing for SPA navigation. Create pages for lobby, login, register, and room views.
+Set up React Router v7 with file-system routing for SPA navigation. Create pages for home, login, register, and room views.
 
 ## Scope
 - Install React Router v7
 - Configure file-based routing in main.tsx
-- Create Lobby page (/)
+- Create Home page (/)
 - Create Login page (/login)
 - Create Register page (/register)
 - Create Room page (/room/:room)
@@ -27,7 +27,7 @@ Set up React Router v7 with file-system routing for SPA navigation. Create pages
 ### Routes Structure
 ```
 src/routes/
-├── lobby.tsx      # / - Main lobby with room join
+├── home.tsx       # / - Main home page with room join
 ├── login.tsx      # /login - Login form
 ├── register.tsx   # /register - Registration form
 └── room.tsx       # /room/:room - Video call room
@@ -66,7 +66,7 @@ useEffect(() => {
 
 ## Related Files
 - `apps/client/src/main.tsx`
-- `apps/client/src/routes/lobby.tsx`
+- `apps/client/src/routes/home.tsx`
 - `apps/client/src/routes/login.tsx`
 - `apps/client/src/routes/register.tsx`
 - `apps/client/src/routes/room.tsx`

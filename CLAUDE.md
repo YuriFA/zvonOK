@@ -118,7 +118,7 @@ apps/
 │   ├── docker-compose.yml         # PostgreSQL + pgAdmin
 │   └── scripts/auth-check.sh      # Auth integration tests
 └── client/src/
-    ├── routes/                    # Pages (lobby.tsx, room.tsx)
+    ├── routes/                    # Pages (home.tsx, room.tsx)
     ├── components/ui/             # Reusable UI components
     ├── lib/                       # Utilities and config
     └── main.tsx                   # Entry point with React Router

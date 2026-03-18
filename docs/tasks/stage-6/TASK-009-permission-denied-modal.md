@@ -23,7 +23,7 @@ When the user has denied browser access to camera and/or microphone, entering th
 - Warning icon disappears when all denied permissions are resolved
 
 ## Out of Scope
-- Changes to the pre-join lobby permission flow
+- Changes to the pre-join permission flow
 - Guiding the user through browser settings (site settings page)
 - Persisting permission state across browser restarts
 - Changes to the existing `PermissionDeniedStrategy` fallback logic in `MediaAcquisition`
@@ -252,7 +252,7 @@ User clicks denied device toggle button
 - TASK-065 — Proper Camera Toggle Implementation (toggle handler wiring)
 - TASK-064 — Fix Missing Participant Without Media (peer visibility without tracks)
 - TASK-030 — Device Permissions Handling (original permission flow)
-- TASK-063 — Pre-Join Lobby Before Call Connection (room entry flow)
+- TASK-063 — Pre-Join State Before Call Connection (room entry flow)
 
 ## Next Task
 (none — end of stage-6 additions)

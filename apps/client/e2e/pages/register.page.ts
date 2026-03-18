@@ -54,7 +54,7 @@ export class RegisterPage {
     await expect(this.errorAlert).not.toBeVisible();
   }
 
-  async expectRedirectToLobby() {
+  async expectRedirectToHome() {
     await expect(this.page).toHaveURL('/');
   }
 }

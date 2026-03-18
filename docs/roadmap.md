@@ -27,7 +27,7 @@ Tasks:
 - [task-6](./tasks/stage-0.5/TASK-006-login-page.md) — Login page
 - [task-7](./tasks/stage-0.5/TASK-007-register-page.md) — Register page
 - [task-8](./tasks/stage-0.5/TASK-008-auth-context.md) — AuthContext state management
-- [task-9](./tasks/stage-0.5/TASK-009-lobby-page.md) — Main lobby page
+- [task-9](./tasks/stage-0.5/TASK-009-lobby-page.md) — Main home page
 
 **Result:** Fully working authentication on frontend
 
@@ -55,8 +55,8 @@ Tasks:
 **Goal:** Client-side room management UI
 
 Tasks:
-- [task-1](./tasks/stage-1.5/TASK-001-client-rooms.md) — Room types, API, create dialog, lobby, room page
-- [task-2](./tasks/stage-1.5/TASK-002-room-lobby.md) — Room lobby page with device selector and share link
+- [task-1](./tasks/stage-1.5/TASK-001-client-rooms.md) — Room types, API, create dialog, home page, room page
+- [task-2](./tasks/stage-1.5/TASK-002-room-lobby.md) — Room pre-join state with device selector and share link
 
 **Result:** Users can create and join rooms via UI
 
@@ -149,7 +149,7 @@ Tasks:
 Tasks:
 - [task-1](./tasks/stage-6/TASK-001-video-grid-layout.md) — CSS Grid adaptive layout
 - [task-2](./tasks/stage-6/TASK-003-pre-join-lobby.md) — Canonical pre-join state on room link
-- [task-3](./tasks/stage-6/TASK-008-device-state-persistence.md) — Persist lobby device state into call join
+- [task-3](./tasks/stage-6/TASK-008-device-state-persistence.md) — Persist pre-join device state into call join
 - [task-4](./tasks/stage-6/TASK-004-peer-without-media.md) — Presence for participants without media
 - [task-5](./tasks/stage-6/TASK-005-camera-toggle.md) — Physical camera release on toggle
 - [task-6](./tasks/stage-6/TASK-006-media-error-indicators.md) — Media error states in call controls

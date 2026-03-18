@@ -55,7 +55,7 @@ export const RoomPage = () => {
       <div className="flex min-h-screen flex-col items-center justify-center gap-4">
         <p className="text-destructive">{error?.message || 'Room not found'}</p>
         <Button asChild>
-          <Link to="/">Back to Lobby</Link>
+          <Link to="/">Back to Home</Link>
         </Button>
       </div>
     );
