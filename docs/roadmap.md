@@ -155,6 +155,7 @@ Tasks:
 - [task-6](./tasks/stage-6/TASK-006-media-error-indicators.md) — Media error states in call controls
 - [task-7](./tasks/stage-6/TASK-002-speaker-detection.md) — Active speaker detection
 - [task-8](./tasks/stage-6/TASK-007-call-ended-state.md) — Ended call state on room link
+- [task-9](./tasks/stage-6/TASK-009-permission-denied-modal.md) — Permission denied warning & re-request modal
 
 **Result:** Room link supports pre-join, active call, and ended states; participant and media UX work predictably in group calls
 
