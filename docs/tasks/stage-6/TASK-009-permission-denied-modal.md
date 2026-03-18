@@ -1,7 +1,7 @@
 # TASK-069 — Permission Denied Warning & Re-Request Modal
 
 ## Status
-planned
+done
 
 ## Priority
 medium
