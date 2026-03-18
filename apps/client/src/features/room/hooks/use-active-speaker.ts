@@ -41,7 +41,7 @@ export function useActiveSpeaker({
   localStream,
   enabled = true,
   sampleInterval = 200,
-  speakingThreshold = 0.01,
+  speakingThreshold = 0.003,
   holdTime = 800,
   switchMargin = 1.3,
 }: UseActiveSpeakerOptions): string | null {
