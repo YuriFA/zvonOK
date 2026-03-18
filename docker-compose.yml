@@ -13,6 +13,7 @@
 #   - server:   NestJS backend (API + WebSocket/SFU)
 #   - client:   Build-only container, produces static files for Caddy
 #   - postgres: PostgreSQL 16 database
+#   - coturn:   TURN/STUN relay server for NAT traversal
 
 services:
   # --- Client build (init container pattern) ---
@@ -67,6 +68,8 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
+      coturn:
+        condition: service_started
     restart: unless-stopped
     # Server is not exposed directly; Caddy proxies to it
     expose:
@@ -116,6 +119,23 @@ services:
         condition: service_completed_successfully
       server:
         condition: service_started
+    restart: unless-stopped
+
+  # --- coturn TURN/STUN server ---
+  # Relays media for clients behind symmetric NAT / restrictive firewalls.
+  # Static config lives in turnserver.conf; dynamic values are passed via CLI.
+  coturn:
+    image: coturn/coturn:alpine
+    container_name: zvonok-coturn
+    network_mode: host
+    volumes:
+      - ./turnserver.conf:/etc/coturn/turnserver.conf:ro
+    command:
+      - -c
+      - /etc/coturn/turnserver.conf
+      - --external-ip=${TURN_EXTERNAL_IP}
+      - --realm=${SITE_ADDRESS:-localhost}
+      - --user=${TURN_USER}:${TURN_PASSWORD}
     restart: unless-stopped
 
 volumes:

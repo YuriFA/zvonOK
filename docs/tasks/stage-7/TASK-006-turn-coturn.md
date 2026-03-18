@@ -1,7 +1,7 @@
 # TASK-071 — coturn TURN Server in Docker Compose
 
 ## Status
-planned
+done
 
 ## Priority
 critical

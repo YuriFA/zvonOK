@@ -1,6 +1,6 @@
 # Software Design Document: WebRTC Chat
 
-> **Version:** 1.7
+> **Version:** 1.8
 >
 > **Date:** 2025-02-07 / Updated: 2026-03-18
 >
@@ -641,12 +641,12 @@ pnpm dev             # Vite dev server on port 5173
 │          │ HTTPS│  - static SPA  │ HTTP │  (:3000)  │
 │          │◀─────│  - reverse     │◀─────│  API+WS   │
 └──────────┘      │    proxy       │      └──────────┘
-                  └────────────────┘           │
-                                               ▼
-                                        ┌──────────┐
-                                        │PostgreSQL│
-                                        │  (:5432) │
-                                        └──────────┘
+     │            └────────────────┘           │
+     │                                         ▼
+     │     ┌──────────┐                 ┌──────────┐
+     └────▶│  coturn   │                │PostgreSQL│
+      TURN │(:3478/5349)                │  (:5432) │
+           └──────────┘                 └──────────┘
 ```
 
 **Components:**
@@ -692,7 +692,7 @@ Run `make help` for the full list.
 - `apps/client/Dockerfile` — Client multi-stage build (node + Vite → static files)
 - `.env.production.example` — Environment variable template
 
-**TURN Server:** coturn (planned, see TASK-046)
+**TURN Server:** coturn in Docker Compose (network_mode: host) for STUN/TURN relay on ports 3478/5349, relay range 49152-49252
 **Process Manager:** Not needed with Docker (container restart policies handle this)
 
 ---
@@ -744,6 +744,9 @@ Run `make help` for the full list.
 | `POSTGRES_USER` | Yes | — | PostgreSQL user |
 | `POSTGRES_PASSWORD` | Yes | — | PostgreSQL password |
 | `POSTGRES_DB` | Yes | — | PostgreSQL database name |
+| `TURN_USER` | Yes | — | coturn static credential username |
+| `TURN_PASSWORD` | Yes | — | coturn static credential password |
+| `TURN_EXTERNAL_IP` | Yes | — | Public IP announced by coturn for TURN relay |
 
 ---
 
@@ -861,3 +864,4 @@ sequenceDiagram
 | 1.5 | 2026-03-03 | — | Synced REQ statuses, expanded Room API table, added GatewayModule/SFUModule to Sec 5.1, added Testing Strategy (Sec 11) and Environment Variables (Sec 9.5), fixed concurrent sessions doc |
 | 1.6 | 2026-03-14 | — | Removed P2P signalling documentation; project uses SFU-only architecture. Updated diagrams, events, and component overview to reflect mediasoup implementation. |
 | 1.7 | 2026-03-18 | — | Added Caddy reverse proxy deployment (Sec 9.2). Docker Compose full-stack setup, client Dockerfile, env-driven CORS, production environment template. |
+| 1.8 | 2026-03-18 | — | Added coturn TURN/STUN server to Docker Compose stack (Sec 9.2). TURN env vars in Sec 9.5. |
