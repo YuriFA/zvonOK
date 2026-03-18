@@ -4,7 +4,11 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { useMediaManager } from '../contexts/media-manager.context';
+import {
+  useMediaTrackController,
+  useMediaAcquisition,
+  useMediaStateNotifier,
+} from '../contexts/media-manager.context';
 
 export interface MediaControlsState {
   isVideoEnabled: boolean;
@@ -20,47 +24,49 @@ export interface UseMediaControlsReturn extends MediaControlsState {
 
 export function useMediaControls(
 ): UseMediaControlsReturn {
-  const manager = useMediaManager();
+  const trackController = useMediaTrackController();
+  const acquisition = useMediaAcquisition();
+  const stateNotifier = useMediaStateNotifier();
 
   const [isVideoEnabled, setIsVideoEnabled] = useState(
-    () => manager.isPreferredVideoEnabled()
+    () => trackController.isPreferredVideoEnabled()
   );
   const [isAudioEnabled, setIsAudioEnabled] = useState(
-    () => manager.isPreferredAudioEnabled()
+    () => trackController.isPreferredAudioEnabled()
   );
   const [isVideoAvailable, setIsVideoAvailable] = useState(
-    () => manager.hasVideoTrack()
+    () => trackController.hasVideoTrack()
   );
   const [isAudioAvailable, setIsAudioAvailable] = useState(
-    () => manager.hasAudioTrack()
+    () => trackController.hasAudioTrack()
   );
 
   useEffect(() => {
     const syncState = () => {
-      const hasStream = manager.getStream() !== null;
+      const hasStream = acquisition.getStream() !== null;
       setIsVideoEnabled(
-        hasStream ? manager.isVideoEnabled() : manager.isPreferredVideoEnabled()
+        hasStream ? trackController.isVideoEnabled() : trackController.isPreferredVideoEnabled()
       );
       setIsAudioEnabled(
-        hasStream ? manager.isAudioEnabled() : manager.isPreferredAudioEnabled()
+        hasStream ? trackController.isAudioEnabled() : trackController.isPreferredAudioEnabled()
       );
-      setIsVideoAvailable(manager.hasVideoTrack());
-      setIsAudioAvailable(manager.hasAudioTrack());
+      setIsVideoAvailable(trackController.hasVideoTrack());
+      setIsAudioAvailable(trackController.hasAudioTrack());
     };
 
-    const unsubscribeStatus = manager.onStatusChange(() => {
+    const unsubscribeStatus = stateNotifier.onStatusChange(() => {
       syncState();
     });
-    const unsubscribeVideoAvailability = manager.onVideoAvailabilityChange(
+    const unsubscribeVideoAvailability = stateNotifier.onVideoAvailabilityChange(
       (available) => {
         setIsVideoAvailable(available);
-        setIsVideoEnabled(available && manager.isVideoEnabled());
+        setIsVideoEnabled(available && trackController.isVideoEnabled());
       }
     );
-    const unsubscribeAudioAvailability = manager.onAudioAvailabilityChange(
+    const unsubscribeAudioAvailability = stateNotifier.onAudioAvailabilityChange(
       (available) => {
         setIsAudioAvailable(available);
-        setIsAudioEnabled(available && manager.isAudioEnabled());
+        setIsAudioEnabled(available && trackController.isAudioEnabled());
       }
     );
 
@@ -71,11 +77,11 @@ export function useMediaControls(
       unsubscribeVideoAvailability();
       unsubscribeAudioAvailability();
     };
-  }, [manager]);
+  }, [trackController, acquisition, stateNotifier]);
 
   const setVideoEnabled = useCallback(
     (enabled: boolean) => {
-      manager.setPreferredVideoEnabled(enabled);
+      trackController.setPreferredVideoEnabled(enabled);
       setIsVideoEnabled(enabled);
       // When enabling, optimistically assume the track will be acquired to
       // prevent a flash of the "no-device" warning while getUserMedia runs.
@@ -85,18 +91,18 @@ export function useMediaControls(
         setIsVideoAvailable(true);
       }
     },
-    [manager]
+    [trackController]
   );
 
   const setAudioEnabled = useCallback(
     (enabled: boolean) => {
-      manager.setPreferredAudioEnabled(enabled);
+      trackController.setPreferredAudioEnabled(enabled);
       setIsAudioEnabled(enabled);
       if (enabled) {
         setIsAudioAvailable(true);
       }
     },
-    [manager]
+    [trackController]
   );
 
   return {

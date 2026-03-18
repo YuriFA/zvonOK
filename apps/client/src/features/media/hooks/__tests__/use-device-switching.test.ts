@@ -10,14 +10,6 @@ const mockSetSelectedAudioDeviceId = vi.hoisted(() => vi.fn());
 const mockSfuReplaceTrack = vi.hoisted(() => vi.fn());
 
 vi.mock('@/features/media/contexts/media-manager.context', () => ({
-  useMediaManager: () => ({
-    switchVideoDevice: mockSwitchVideoDevice,
-    switchAudioDevice: mockSwitchAudioDevice,
-    hasVideoTrack: mockHasVideoTrack,
-    hasAudioTrack: mockHasAudioTrack,
-    setSelectedVideoDeviceId: mockSetSelectedVideoDeviceId,
-    setSelectedAudioDeviceId: mockSetSelectedAudioDeviceId,
-  }),
   useMediaDeviceSelector: () => ({
     switchVideoDevice: mockSwitchVideoDevice,
     switchAudioDevice: mockSwitchAudioDevice,

@@ -70,12 +70,12 @@ const mockMediaManager = {
 };
 
 vi.mock('@/features/media/contexts/media-manager.context', () => ({
-  useMediaManager: () => mockMediaManager,
   useMediaAcquisition: () => mockMediaManager,
   useMediaTrackController: () => mockMediaManager,
   useMediaDeviceSelector: () => mockMediaManager,
   useMediaPermissionChecker: () => mockMediaManager,
   useMediaStateNotifier: () => mockMediaManager,
+  useMediaToggle: () => mockMediaManager,
   MediaManagerProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 

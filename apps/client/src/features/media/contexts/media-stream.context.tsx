@@ -12,7 +12,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { useMediaManager } from './media-manager.context';
+import { useMediaAcquisition, useMediaDeviceSelector } from './media-manager.context';
 import type { UserMediaConstraints } from '@/lib/media/types';
 
 export interface MediaStreamContextValue {
@@ -33,7 +33,8 @@ export interface MediaStreamProviderProps {
 }
 
 export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
-  const manager = useMediaManager();
+  const acquisition = useMediaAcquisition();
+  const deviceSelector = useMediaDeviceSelector();
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -52,17 +53,17 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
       constraints?: UserMediaConstraints;
     }) => {
       if (options?.deviceId?.video) {
-        manager.setSelectedVideoDeviceId(options.deviceId.video);
+        deviceSelector.setSelectedVideoDeviceId(options.deviceId.video);
       }
       if (options?.deviceId?.audio) {
-        manager.setSelectedAudioDeviceId(options.deviceId.audio);
+        deviceSelector.setSelectedAudioDeviceId(options.deviceId.audio);
       }
 
       setIsLoading(true);
       setError(null);
 
       try {
-        const newStream = await manager.startStream(options?.constraints);
+        const newStream = await acquisition.startStream(options?.constraints);
         if (!mountedRef.current) return;
         setStream(newStream);
       } catch (err) {
@@ -79,14 +80,14 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
         }
       }
     },
-    [manager]
+    [acquisition, deviceSelector]
   );
 
   const stop = useCallback(() => {
-    manager.stopStream();
+    acquisition.stopStream();
     setStream(null);
     setError(null);
-  }, [manager]);
+  }, [acquisition]);
 
   useEffect(() => {
     if (!mountedRef.current) return;
@@ -94,9 +95,9 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
     start();
 
     return () => {
-      manager.stopStream();
+      acquisition.stopStream();
     };
-  }, [manager, start]);
+  }, [acquisition, start]);
 
   return (
     <MediaStreamContext.Provider value={{ stream, error, isLoading, start, stop }}>

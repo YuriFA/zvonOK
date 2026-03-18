@@ -6,6 +6,9 @@
  * only the slice of IMediaManager that each consumer actually needs,
  * following the Interface Segregation Principle without requiring separate
  * React contexts.
+ *
+ * useMediaManager is intentionally kept internal (no export) to enforce ISP:
+ * consumers must pick the narrowest hook that covers their needs.
  */
 
 import { createContext, useContext, type ReactNode } from 'react';
@@ -16,6 +19,7 @@ import type {
   IMediaDeviceSelector,
   IMediaPermissionChecker,
   IMediaStateNotifier,
+  IMediaToggle,
 } from '@/lib/media/interfaces';
 
 const MediaManagerContext = createContext<IMediaManager | null>(null);
@@ -36,8 +40,7 @@ export function MediaManagerProvider({
   );
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
-export function useMediaManager(): IMediaManager {
+function useMediaManager(): IMediaManager {
   const manager = useContext(MediaManagerContext);
 
   if (!manager) {
@@ -73,5 +76,10 @@ export function useMediaPermissionChecker(): IMediaPermissionChecker {
 
 // eslint-disable-next-line react-refresh/only-export-components
 export function useMediaStateNotifier(): IMediaStateNotifier {
+  return useMediaManager();
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
+export function useMediaToggle(): IMediaToggle {
   return useMediaManager();
 }

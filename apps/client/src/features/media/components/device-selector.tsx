@@ -6,7 +6,7 @@ import { LocalVideo } from '@/components/local-video';
 import { cn } from '@/lib/utils';
 import { Video, VideoOff, Mic, MicOff } from 'lucide-react';
 import { useMediaStreamContext } from '../contexts/media-stream.context';
-import { useMediaManager } from '../contexts/media-manager.context';
+import { useMediaToggle } from '../contexts/media-manager.context';
 
 interface DeviceSelectorProps {
   className?: string;
@@ -14,26 +14,26 @@ interface DeviceSelectorProps {
 
 export function DeviceSelector({ className }: DeviceSelectorProps) {
   const { stream, error, isLoading } = useMediaStreamContext();
-  const mediaManager = useMediaManager();
+  const mediaToggle = useMediaToggle();
   const mediaControls = useMediaControls();
 
   const handleToggleVideo = useCallback(async () => {
     const nextEnabled = !mediaControls.isVideoEnabled;
     mediaControls.setVideoEnabled(nextEnabled);
-    const success = await mediaManager.toggleVideo(nextEnabled);
+    const success = await mediaToggle.toggleVideo(nextEnabled);
     if (!success) {
       mediaControls.setVideoEnabled(false);
     }
-  }, [mediaManager, mediaControls]);
+  }, [mediaToggle, mediaControls]);
 
   const handleToggleAudio = useCallback(async () => {
     const nextEnabled = !mediaControls.isAudioEnabled;
     mediaControls.setAudioEnabled(nextEnabled);
-    const success = await mediaManager.toggleAudio(nextEnabled);
+    const success = await mediaToggle.toggleAudio(nextEnabled);
     if (!success) {
       mediaControls.setAudioEnabled(false);
     }
-  }, [mediaManager, mediaControls]);
+  }, [mediaToggle, mediaControls]);
 
   return (
     <div className={cn('space-y-4', className)}>

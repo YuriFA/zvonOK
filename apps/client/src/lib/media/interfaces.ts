@@ -117,21 +117,28 @@ export interface IMediaStateStore extends IMediaStateNotifier {
 }
 
 /**
+ * Responsible for toggling video/audio on and off.
+ * Single responsibility: orchestrating track start/stop as a high-level toggle.
+ */
+export interface IMediaToggle {
+  /** Toggle video on/off, returns true if the operation succeeded */
+  toggleVideo(enabled: boolean): Promise<boolean>;
+  /** Toggle audio on/off, returns true if the operation succeeded */
+  toggleAudio(enabled: boolean): Promise<boolean>;
+}
+
+/**
  * Facade combining all media concerns.
  * Use this as the default injection token for components that need
  * full media management capabilities.
  *
- * toggleVideo/toggleAudio live here rather than on IMediaTrackController
- * because they orchestrate track start/stop — a facade responsibility.
+ * Prefer narrow interfaces (IMediaAcquisition, IMediaTrackController, etc.)
+ * when only a subset of functionality is needed (ISP).
  */
 export interface IMediaManager
   extends IMediaAcquisition,
   IMediaTrackController,
   IMediaDeviceSelector,
   IMediaPermissionChecker,
-  IMediaStateNotifier {
-  /** Toggle video on/off, returns true if the operation succeeded */
-  toggleVideo(enabled: boolean): Promise<boolean>;
-  /** Toggle audio on/off, returns true if the operation succeeded */
-  toggleAudio(enabled: boolean): Promise<boolean>;
-}
+  IMediaStateNotifier,
+  IMediaToggle {}
