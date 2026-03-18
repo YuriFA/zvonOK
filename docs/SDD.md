@@ -1,6 +1,6 @@
 # Software Design Document: WebRTC Chat
 
-> **Version:** 1.8
+> **Version:** 1.9
 >
 > **Date:** 2025-02-07 / Updated: 2026-03-18
 >
@@ -515,16 +515,27 @@ getProfile(@Request() req) {
 
 ### 6.3 WebRTC Security
 
-**STUN Servers:**
+**ICE Servers (Configurable via TASK-072):**
+
+The server builds an ICE server list from environment variables and sends it to the client inside the `sfu:transport-created` socket event payload. The client passes the received `iceServers` array to mediasoup-client's `device.createSendTransport()` / `device.createRecvTransport()`.
+
+- Google public STUN servers are always included as a baseline.
+- TURN servers (coturn) are appended when `TURN_URL` + `TURN_USER` + `TURN_PASSWORD` env vars are set.
+- TURN credentials are never hard-coded in the client; they are fetched at runtime from the server.
+
 ```typescript
-{
-  urls: "stun:stun.l.google.com:19302"
-}
+// Server: mediasoup.config.ts → getIceServers()
+[
+  { urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] },
+  // appended when TURN env vars are present:
+  { urls: ['turn:host:3478', 'turns:host:5349'], username: '…', credential: '…' },
+]
 ```
 
 **TURN (Production):**
 - coturn server for relay candidates
 - Required for connections behind symmetric NAT
+- Configured via `TURN_URL`, `TURNS_URL`, `TURN_USER`, `TURN_PASSWORD` env vars
 
 **Encryption:**
 - SRTP (Secure Real-time Transport Protocol) for media
@@ -728,6 +739,14 @@ Run `make help` for the full list.
 | `JWT_ACCESS_EXPIRES_IN_MINUTES` | No | 15 | Access token lifetime in minutes |
 | `JWT_REFRESH_EXPIRES_IN_DAYS` | No | 7 | Refresh token lifetime in days |
 | `CLIENT_URL` | No | http://localhost:5173 | Allowed CORS origin for REST API and WebSocket |
+| `MEDIASOUP_LISTEN_IP` | No | 127.0.0.1 | IP for mediasoup WebRtcTransport to listen on |
+| `MEDIASOUP_ANNOUNCED_IP` | No | — | Public IP announced to clients for media connectivity |
+| `RTC_MIN_PORT` | No | 40000 | Lower bound of mediasoup worker RTC port range |
+| `RTC_MAX_PORT` | No | 40099 | Upper bound of mediasoup worker RTC port range |
+| `TURN_URL` | No | — | TURN server URL (e.g. `turn:host:3478`). Sent to clients as ICE server |
+| `TURNS_URL` | No | — | TURN-over-TLS URL (e.g. `turns:host:5349`). Appended to TURN_URL |
+| `TURN_USER` | No | — | TURN credential username sent to clients |
+| `TURN_PASSWORD` | No | — | TURN credential password sent to clients |
 
 **Client** (`apps/client/.env.local`):
 
@@ -865,3 +884,4 @@ sequenceDiagram
 | 1.6 | 2026-03-14 | — | Removed P2P signalling documentation; project uses SFU-only architecture. Updated diagrams, events, and component overview to reflect mediasoup implementation. |
 | 1.7 | 2026-03-18 | — | Added Caddy reverse proxy deployment (Sec 9.2). Docker Compose full-stack setup, client Dockerfile, env-driven CORS, production environment template. |
 | 1.8 | 2026-03-18 | — | Added coturn TURN/STUN server to Docker Compose stack (Sec 9.2). TURN env vars in Sec 9.5. |
+| 1.9 | 2026-03-18 | — | TASK-072: Configurable ICE servers. Server reads TURN env vars and sends iceServers to client via sfu:transport-created payload. Removed hard-coded STUN from client. |

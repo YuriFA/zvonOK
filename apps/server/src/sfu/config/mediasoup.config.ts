@@ -4,6 +4,47 @@ import type {
   WebRtcTransportOptions,
 } from 'mediasoup/types';
 
+/**
+ * ICE server entry sent to clients for RTCPeerConnection configuration.
+ * Matches the browser RTCIceServer interface.
+ */
+export interface IceServerConfig {
+  urls: string[];
+  username?: string;
+  credential?: string;
+}
+
+/**
+ * Build ICE servers list from environment variables.
+ * Always includes Google public STUN as a baseline.
+ * Appends TURN server when TURN_URL + TURN_USER + TURN_PASSWORD are set.
+ */
+export function getIceServers(): IceServerConfig[] {
+  const servers: IceServerConfig[] = [
+    {
+      urls: [
+        'stun:stun1.l.google.com:19302',
+        'stun:stun2.l.google.com:19302',
+      ],
+    },
+  ];
+
+  const turnUrl = process.env.TURN_URL;
+  const turnsUrl = process.env.TURNS_URL;
+  const turnUser = process.env.TURN_USER;
+  const turnPassword = process.env.TURN_PASSWORD;
+
+  if (turnUrl && turnUser && turnPassword) {
+    servers.push({
+      urls: [turnUrl, ...(turnsUrl ? [turnsUrl] : [])],
+      username: turnUser,
+      credential: turnPassword,
+    });
+  }
+
+  return servers;
+}
+
 export const config = {
   worker: {
     logLevel: 'warn',

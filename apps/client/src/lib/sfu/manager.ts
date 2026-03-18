@@ -358,7 +358,14 @@ export class SfuManager implements ISfuManager {
       iceParameters: payload.iceParameters,
       iceCandidates: payload.iceCandidates,
       dtlsParameters: payload.dtlsParameters,
+      iceServers: payload.iceServers,
     };
+
+    // TODO(TASK-072): remove debug log after verifying ICE servers flow
+    console.log('[SFU] Transport created:', payload.direction, {
+      iceServers: payload.iceServers,
+      transportId: payload.transportId,
+    });
 
     if (payload.direction === 'send') {
       this.sendTransport = this.device.createSendTransport(transportOptions);

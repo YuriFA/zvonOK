@@ -29,6 +29,7 @@ export interface SfuTransportCreatedPayload {
   iceParameters: IceParameters;
   iceCandidates: IceCandidate[];
   dtlsParameters: DtlsParameters;
+  iceServers?: RTCIceServer[];
 }
 
 // Transport connect payload sent to server

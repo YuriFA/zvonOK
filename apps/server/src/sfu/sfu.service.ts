@@ -12,7 +12,7 @@ import type {
   SfuExistingPeerPayload,
 } from './interfaces/sfu.interface';
 import type { Consumer, Producer, WebRtcTransport } from 'mediasoup/types';
-import { config } from './config/mediasoup.config';
+import { config, getIceServers } from './config/mediasoup.config';
 
 @Injectable()
 export class SfuService implements OnModuleDestroy {
@@ -75,6 +75,7 @@ export class SfuService implements OnModuleDestroy {
       iceParameters: transport.iceParameters,
       iceCandidates: transport.iceCandidates,
       dtlsParameters: transport.dtlsParameters,
+      iceServers: getIceServers(),
     });
   }
 

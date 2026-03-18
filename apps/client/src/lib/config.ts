@@ -1,10 +1,8 @@
-export const servers = {
-  iceServers: [
-    {
-      urls: ["stun:stun1.l.google.com:19302", "stun:stun2.l.google.com:19302"],
-    },
-  ],
-};
+/**
+ * ICE servers are no longer hard-coded here.
+ * They are fetched from the server via the `sfu:transport-created` socket event.
+ * See TASK-072 for details.
+ */
 
 export const constraints = {
   video: {

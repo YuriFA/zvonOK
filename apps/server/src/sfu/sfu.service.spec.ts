@@ -101,6 +101,14 @@ describe('SfuService', () => {
       iceParameters: transport.iceParameters,
       iceCandidates: transport.iceCandidates,
       dtlsParameters: transport.dtlsParameters,
+      iceServers: [
+        {
+          urls: [
+            'stun:stun1.l.google.com:19302',
+            'stun:stun2.l.google.com:19302',
+          ],
+        },
+      ],
     });
   });
 

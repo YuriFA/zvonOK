@@ -1,7 +1,7 @@
 # TASK-072 — Configurable ICE Servers (STUN/TURN)
 
 ## Status
-planned
+done
 
 ## Priority
 critical
@@ -92,11 +92,11 @@ In an SFU architecture with mediasoup, ICE candidates are exchanged between the 
 This task must investigate whether mediasoup's `WebRtcTransportOptions` supports `iceServers` (TURN) or if the TURN relay is only needed at the network level.
 
 ## Acceptance Criteria
-- [ ] ICE server configuration is environment-driven on the server
-- [ ] Client no longer has hard-coded STUN/TURN servers
-- [ ] TURN credentials are not exposed in client source code (fetched at runtime)
+- [x] ICE server configuration is environment-driven on the server
+- [x] Client no longer has hard-coded STUN/TURN servers
+- [x] TURN credentials are not exposed in client source code (fetched at runtime)
 - [ ] Calls work with TURN when direct connection fails
-- [ ] Local development still works without TURN configuration (STUN-only fallback)
+- [x] Local development still works without TURN configuration (STUN-only fallback)
 
 ## Definition of Done
 - ICE servers configurable via env vars

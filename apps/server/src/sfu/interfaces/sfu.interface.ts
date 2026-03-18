@@ -10,6 +10,7 @@ import type {
   IceParameters,
   IceCandidate,
 } from 'mediasoup/types';
+import type { IceServerConfig } from '../config/mediasoup.config';
 
 export interface Peer {
   id: string;
@@ -47,6 +48,7 @@ export interface SfuTransportCreatedPayload {
   iceParameters: IceParameters;
   iceCandidates: IceCandidate[];
   dtlsParameters: DtlsParameters;
+  iceServers?: IceServerConfig[];
 }
 
 export interface SfuTransportConnectPayload {
