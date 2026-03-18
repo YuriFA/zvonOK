@@ -1,6 +1,6 @@
 # Software Design Document: WebRTC Chat
 
-> **Version:** 1.9
+> **Version:** 2.0
 >
 > **Date:** 2025-02-07 / Updated: 2026-03-18
 >
@@ -464,6 +464,13 @@ Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800
 - `Card` — Container component
 - `Label` — Form label with accessibility
 
+**Build Optimization:**
+- Route-based code splitting via `React.lazy()` — room page (mediasoup-client, socket.io-client) loaded on demand
+- Vendor chunk splitting: `vendor-react` (React + Router), `vendor-data` (TanStack Query, react-hook-form, zod), `vendor-sfu` (mediasoup-client, socket.io-client)
+- Initial load: ~172 KB gzipped (app + vendor-react + vendor-data + CSS); room lazy chunks: ~73 KB gzipped
+- Bundle analysis: `ANALYZE=true pnpm -C apps/client build` generates `dist/bundle-stats.html`
+- Caddy serves compressed (zstd/gzip) responses with immutable cache headers for hashed assets
+
 ---
 
 ## 6. Security
@@ -885,3 +892,4 @@ sequenceDiagram
 | 1.7 | 2026-03-18 | — | Added Caddy reverse proxy deployment (Sec 9.2). Docker Compose full-stack setup, client Dockerfile, env-driven CORS, production environment template. |
 | 1.8 | 2026-03-18 | — | Added coturn TURN/STUN server to Docker Compose stack (Sec 9.2). TURN env vars in Sec 9.5. |
 | 1.9 | 2026-03-18 | — | TASK-072: Configurable ICE servers. Server reads TURN env vars and sends iceServers to client via sfu:transport-created payload. Removed hard-coded STUN from client. |
+| 2.0 | 2026-03-18 | — | TASK-074: Client build optimization. Route-based code splitting for room page, vendor chunk splitting, Caddy compression and cache headers. |
