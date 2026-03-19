@@ -29,13 +29,6 @@
 # HTTP-only: serve the CA certificate for LAN devices to download.
 # Browsers can fetch http://<ip>/ca.crt without trusting TLS first.
 http://{$SITE_ADDRESS:localhost} {
-	handle /ca.crt {
-		root * /srv/certs
-		header Content-Type "application/x-x509-ca-cert"
-		header Content-Disposition "attachment; filename=\"caddy-root-ca.crt\""
-		file_server
-	}
-
 	# Everything else → redirect to HTTPS as usual
 	handle {
 		redir https://{host}{uri} permanent
@@ -43,7 +36,10 @@ http://{$SITE_ADDRESS:localhost} {
 }
 
 {$SITE_ADDRESS:localhost} {
-	tls internal
+	# For real domains: Caddy auto-obtains Let's Encrypt certs.
+	# For localhost/IP: uncomment the next line for self-signed TLS.
+	# tls internal
+
 	# Serve client static files (built by Vite)
 	root * /srv/client
 

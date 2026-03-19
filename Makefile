@@ -14,8 +14,7 @@
         logs logs-server logs-caddy logs-postgres \
         migrate status ps clean clean-all \
         rebuild-server rebuild-client \
-        prod-pull prod-up prod-deploy prod-down prod-logs prod-status \
-        lan lan-down lan-logs lan-status lan-cert
+        prod-pull prod-up prod-deploy prod-down prod-logs prod-status
 
 # Default env file
 ENV_FILE ?= .env
@@ -110,55 +109,6 @@ prod-logs: ## Follow production logs
 
 prod-status: ## Show production service status
 	$(PROD_DC) ps -a
-
-##@ LAN Demo (WiFi/local network)
-LAN_DC := docker compose --env-file .env.lan
-
-lan: ## Build and start all services for LAN demo (edit .env.lan first!)
-	@echo "=== LAN Demo ==="
-	@echo "Using .env.lan — make sure your LAN IP is set correctly."
-	@echo ""
-	@grep -o 'SITE_ADDRESS=.*' .env.lan
-	@echo ""
-	@mkdir -p certs
-	$(LAN_DC) up -d --build
-	@echo ""
-	@echo "Exporting Caddy root CA certificate..."
-	@sleep 2
-	docker compose --env-file .env.lan cp caddy:/data/caddy/pki/authorities/local/root.crt certs/ca.crt
-	@echo "CA certificate saved to certs/ca.crt"
-	@echo ""
-	@LAN_IP=$$(grep -o 'SITE_ADDRESS=.*' .env.lan | cut -d= -f2); \
-	echo "=== LAN Demo Ready ==="; \
-	echo ""; \
-	echo "To use from other devices (phones, laptops):"; \
-	echo ""; \
-	echo "1. Open http://$$LAN_IP/ca.crt in browser → download the CA certificate"; \
-	echo ""; \
-	echo "2. Install it:"; \
-	echo "   iPhone: Settings → General → VPN & Device Management → Install profile"; \
-	echo "           then: Settings → General → About → Certificate Trust Settings → Enable"; \
-	echo "   macOS:  Double-click .crt → Add to Keychain → Always Trust"; \
-	echo "   Android: Settings → Security → Install certificate"; \
-	echo ""; \
-	echo "3. Open https://$$LAN_IP"
-
-lan-cert: ## Export Caddy root CA certificate for LAN devices
-	@mkdir -p certs
-	docker compose --env-file .env.lan cp caddy:/data/caddy/pki/authorities/local/root.crt certs/ca.crt
-	@echo ""
-	@echo "CA certificate exported to certs/ca.crt"
-	@LAN_IP=$$(grep -o 'SITE_ADDRESS=.*' .env.lan | cut -d= -f2); \
-	echo "Download it on other devices: http://$$LAN_IP/ca.crt"
-
-lan-down: ## Stop LAN demo services
-	$(LAN_DC) down
-
-lan-logs: ## Follow LAN demo logs
-	$(LAN_DC) logs -f
-
-lan-status: ## Show LAN demo service status
-	$(LAN_DC) ps -a
 
 ##@ Cleanup
 clean: ## Stop services and remove containers/networks
