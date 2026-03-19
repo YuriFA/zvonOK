@@ -1,40 +1,27 @@
-# docker-compose.yml — Full stack deployment
+# docker-compose.prod.yml — Production deployment (pulls pre-built images from GHCR)
+#
+# This file is used on the VPS. Images are built and pushed by GitHub Actions.
 #
 # Usage:
-#   make setup    # create .env from template
-#   make deploy   # build and start everything
+#   docker compose -f docker-compose.prod.yml pull
+#   docker compose -f docker-compose.prod.yml up -d
 #
-# Or manually:
-#   cp .env.production.example .env
-#   docker compose up -d --build
-#
-# Services:
-#   - caddy:    Reverse proxy with automatic HTTPS, serves client static files
-#   - server:   NestJS backend (API + WebSocket/SFU)
-#   - client:   Build-only container, produces static files for Caddy
-#   - postgres: PostgreSQL 16 database
-#   - coturn:   TURN/STUN relay server for NAT traversal
+# Required:
+#   - .env file with production values (see .env.production.example)
+#   - GHCR_REPO env var set to the GitHub repository (e.g., user/webrtc-chat)
+#   - Logged in to ghcr.io: echo $TOKEN | docker login ghcr.io -u USER --password-stdin
 
 services:
   # --- Client build (init container pattern) ---
   client:
-    build:
-      context: .
-      dockerfile: apps/client/Dockerfile
-      args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
-        VITE_SOCKET_URL: ${VITE_SOCKET_URL:-}
+    image: ghcr.io/${GHCR_REPO}/client:latest
     volumes:
       - client_dist:/srv/client
-    # This container exits after copying files; restart is not needed
     restart: "no"
 
   # --- Database migrations (runs once before server starts) ---
   migrate:
-    build:
-      context: .
-      dockerfile: apps/server/Dockerfile
-      target: migrator
+    image: ghcr.io/${GHCR_REPO}/migrator:latest
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
     depends_on:
@@ -44,10 +31,7 @@ services:
 
   # --- NestJS backend ---
   server:
-    build:
-      context: .
-      dockerfile: apps/server/Dockerfile
-      target: production
+    image: ghcr.io/${GHCR_REPO}/server:latest
     container_name: zvonok-server
     environment:
       PORT: ${PORT:-3000}
@@ -63,6 +47,11 @@ services:
       MEDIASOUP_ANNOUNCED_IP: ${MEDIASOUP_ANNOUNCED_IP:-127.0.0.1}
       RTC_MIN_PORT: ${RTC_MIN_PORT:-40000}
       RTC_MAX_PORT: ${RTC_MAX_PORT:-40099}
+      # TURN credentials (sent to clients as ICE servers)
+      TURN_URL: ${TURN_URL:-}
+      TURNS_URL: ${TURNS_URL:-}
+      TURN_USER: ${TURN_USER:-}
+      TURN_PASSWORD: ${TURN_PASSWORD:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -71,7 +60,6 @@ services:
       coturn:
         condition: service_started
     restart: unless-stopped
-    # Server is not exposed directly; Caddy proxies to it
     expose:
       - "3000"
     # RTC media ports must be published directly (Caddy cannot proxy UDP/RTP)
@@ -95,7 +83,6 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
-    # DB is not exposed to host by default; only internal
     expose:
       - "5432"
 
@@ -114,7 +101,6 @@ services:
       - client_dist:/srv/client:ro
       - caddy_data:/data
       - caddy_config:/config
-      - ./certs:/srv/certs:ro
     depends_on:
       client:
         condition: service_completed_successfully
@@ -123,8 +109,6 @@ services:
     restart: unless-stopped
 
   # --- coturn TURN/STUN server ---
-  # Relays media for clients behind symmetric NAT / restrictive firewalls.
-  # Static config lives in turnserver.conf; dynamic values are passed via CLI.
   coturn:
     image: coturn/coturn:alpine
     container_name: zvonok-coturn

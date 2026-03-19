@@ -733,6 +733,91 @@ Run `make help` for the full list.
 
 ---
 
+### 9.6 CI/CD Pipeline
+
+**Platform:** GitHub Actions + GitHub Container Registry (GHCR)
+
+**Architecture:**
+```
+Push to main / PR
+    |
+    v
++----------------------------------+
+|  CI Workflow (ci.yml)            |
+|  Trigger: push/PR to main       |
+|                                  |
+|  Jobs (parallel):                |
+|  1. Lint & Typecheck (ESLint +   |
+|     tsc --noEmit)                |
+|  2. Server Tests (Jest)          |
+|  3. Client Tests (Vitest)        |
+|  4. Docker Build Check           |
++----------------+-----------------+
+                 |
+                 | all green + push to main
+                 v
++----------------------------------+
+|  Deploy Workflow (deploy.yml)    |
+|  Trigger: push to main          |
+|                                  |
+|  Jobs:                           |
+|  1. Build & push images to GHCR  |
+|  2. SSH deploy to VPS            |
++----------------------------------+
+```
+
+**CI Workflow (`.github/workflows/ci.yml`):**
+- Runs on every push and PR to `main`
+- 4 parallel jobs: lint+typecheck, server tests, client tests, Docker build check
+- Uses `pnpm/action-setup` + Node 22 + pnpm cache
+- Docker builds use BuildKit GHA cache for layer reuse
+
+**Deploy Workflow (`.github/workflows/deploy.yml`):**
+- Runs on push to `main` only
+- Builds 3 images: `server` (production target), `client`, `migrator`
+- Tags: `latest` + git SHA
+- Pushes to `ghcr.io/<repo>/server`, `ghcr.io/<repo>/client`, `ghcr.io/<repo>/migrator`
+- Deploys via SSH: copies compose files, pulls images, runs `docker compose up -d`
+- Health check: polls server for 60s after deploy
+
+**Production Compose (`docker-compose.prod.yml`):**
+- Uses `image:` directives pointing to GHCR instead of `build:`
+- Identical service topology to `docker-compose.yml` (Caddy, server, client, postgres, coturn)
+- Requires `GHCR_REPO` env var (e.g., `owner/webrtc-chat`)
+
+**GitHub Secrets Required:**
+
+| Secret | Description |
+|--------|-------------|
+| `VPS_HOST` | VPS IP address or domain |
+| `VPS_USER` | SSH user (e.g., `deploy`) |
+| `VPS_SSH_KEY` | Private SSH key for VPS access |
+| `GHCR_TOKEN` | GitHub PAT with `packages:read` scope (for VPS docker login) |
+
+**Makefile Targets:**
+
+| Target | Description |
+|--------|-------------|
+| `make prod-pull` | Pull latest images from GHCR |
+| `make prod-up` | Start production services (pre-pulled images) |
+| `make prod-deploy` | Pull + restart (used by CI/CD) |
+| `make prod-down` | Stop production services |
+| `make prod-logs` | Follow production logs |
+| `make prod-status` | Show production service status |
+
+**VPS Setup:**
+- Script: `scripts/setup-vps.sh` (run as root on fresh Ubuntu)
+- Installs Docker, creates deploy user, configures UFW firewall, creates project directory
+
+**Key Files:**
+- `.github/workflows/ci.yml` — CI pipeline
+- `.github/workflows/deploy.yml` — Deploy pipeline
+- `docker-compose.prod.yml` — Production compose (GHCR images)
+- `scripts/setup-vps.sh` — VPS provisioning script
+- `.env.production.example` — Environment variable template (includes `GHCR_REPO`)
+
+---
+
 ### 9.5 Environment Variables
 
 **Server** (`apps/server/.env.development`):
@@ -893,3 +978,4 @@ sequenceDiagram
 | 1.8 | 2026-03-18 | — | Added coturn TURN/STUN server to Docker Compose stack (Sec 9.2). TURN env vars in Sec 9.5. |
 | 1.9 | 2026-03-18 | — | TASK-072: Configurable ICE servers. Server reads TURN env vars and sends iceServers to client via sfu:transport-created payload. Removed hard-coded STUN from client. |
 | 2.0 | 2026-03-18 | — | TASK-074: Client build optimization. Route-based code splitting for room page, vendor chunk splitting, Caddy compression and cache headers. |
+| 2.1 | 2026-03-18 | — | Stage 12: CI/CD pipeline. GitHub Actions CI (lint, typecheck, tests, Docker build check), deploy workflow (GHCR + SSH), docker-compose.prod.yml, VPS setup script. |

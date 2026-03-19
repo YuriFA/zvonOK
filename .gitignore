@@ -29,3 +29,8 @@ test-results/
 playwright/.cache/
 
 .env
+.env.lan
+.env.production
+
+# Exported CA certificates for LAN demo
+certs/

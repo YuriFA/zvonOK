@@ -22,10 +22,7 @@ export interface IceServerConfig {
 export function getIceServers(): IceServerConfig[] {
   const servers: IceServerConfig[] = [
     {
-      urls: [
-        'stun:stun1.l.google.com:19302',
-        'stun:stun2.l.google.com:19302',
-      ],
+      urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'],
     },
   ];
 
