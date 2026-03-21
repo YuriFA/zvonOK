@@ -42,9 +42,7 @@ export function RemoteVideo({
         autoPlay
         playsInline
         className="h-full w-full object-cover"
-      >
-        <track kind="captions" />
-      </video>
+      />
 
       {/* Username overlay */}
       {username && (
