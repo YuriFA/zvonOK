@@ -96,7 +96,7 @@ describe('useMediaDevices', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    it('requests permissions on first load', async () => {
+    it('does not call getUserMedia (permissions are handled by MediaStreamProvider)', async () => {
       mockEnumerateDevices.mockResolvedValue([]);
 
       renderHook(() => useMediaDevices());
@@ -105,10 +105,10 @@ describe('useMediaDevices', () => {
         await new Promise((resolve) => setTimeout(resolve, 0));
       });
 
-      expect(mockGetUserMedia).toHaveBeenCalledWith({ video: true, audio: true });
+      expect(mockGetUserMedia).not.toHaveBeenCalled();
     });
 
-    it('does not request permissions again after granted', async () => {
+    it('does not request permissions again after rerender', async () => {
       mockEnumerateDevices.mockResolvedValue([]);
 
       const { rerender } = renderHook(() => useMediaDevices());

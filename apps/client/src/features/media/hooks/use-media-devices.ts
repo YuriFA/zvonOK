@@ -72,29 +72,32 @@ export function useMediaDevices(): UseMediaDevicesReturn {
   const [isLoading, setIsLoading] = useState(true);
   const isPermissionGranted = useRef(false);
 
-  // Listen for device changes
+  // Enumerate devices whenever they change.
+  // iOS WebKit (Chrome and Safari) does NOT support concurrent getUserMedia
+  // calls — a second call while the first is pending will fail immediately
+  // with NotAllowedError. To avoid racing with the MediaStreamProvider's
+  // acquisition, we enumerate without calling getUserMedia. Device labels
+  // will be blank until the user grants permission through the normal
+  // acquisition flow; once that happens the `devicechange` event fires
+  // and we re-enumerate with full labels.
   useEffect(() => {
     const handleDeviceChange = async () => {
       setIsLoading(true);
 
       try {
-        // Request permissions if not already granted
-        if (!isPermissionGranted.current) {
-          // Stop all tracks immediately — we only need the permission prompt
-          const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-          stream.getTracks().forEach((t) => t.stop());
-          isPermissionGranted.current = true;
-        }
-
         const rawDevices = await navigator.mediaDevices.enumerateDevices();
         const mappedDevices = rawDevices.map(mapMediaDeviceInfo);
         setDevices(mappedDevices);
+
+        // If we got labels, permission has been granted
+        if (rawDevices.some((d) => d.label)) {
+          isPermissionGranted.current = true;
+        }
       } catch {
         console.warn('Failed to enumerate devices');
       } finally {
         setIsLoading(false);
       }
-
     };
 
     handleDeviceChange();
@@ -102,7 +105,7 @@ export function useMediaDevices(): UseMediaDevicesReturn {
     return () => {
       navigator.mediaDevices.removeEventListener('devicechange', handleDeviceChange);
     };
-  }, [isPermissionGranted]);
+  }, []);
 
   // Persist selected devices
   useEffect(() => {

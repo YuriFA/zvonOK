@@ -88,6 +88,9 @@ http://{$SITE_ADDRESS:localhost} {
 		X-Content-Type-Options nosniff
 		X-Frame-Options DENY
 		Referrer-Policy strict-origin-when-cross-origin
+		# Allow camera, microphone, and display-capture for WebRTC.
+		# Required for iOS Safari/Chrome to prompt for permissions.
+		Permissions-Policy "camera=(self), microphone=(self), display-capture=(self)"
 		-Server
 	}
 

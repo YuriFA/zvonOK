@@ -198,9 +198,17 @@ export class SfuManager implements ISfuManager {
   private async doProduceTrack(track: MediaStreamTrack): Promise<Producer | null> {
     if (!this.sendTransport) return null;
 
+    const codec =
+      track.kind === 'video'
+        ? this.device?.rtpCapabilities.codecs?.find(
+            (c) => c.mimeType.toLowerCase() === 'video/h264'
+          )
+        : undefined;
+
     try {
       const producer = await this.sendTransport.produce({
         track,
+        codec,
         codecOptions:
           track.kind === 'video'
             ? { videoGoogleStartBitrate: 1000 }
@@ -548,10 +556,14 @@ export class SfuManager implements ISfuManager {
       this.consumers.set(consumer.id, consumer);
       console.log('[SFU] Consumer ready:', payload.kind, consumer.id);
 
-      // Resume the consumer
+      // Resume the consumer on both server and client side.
+      // mediasoup-client creates consumers in paused state;
+      // iOS Safari will not render any media until the consumer
+      // is explicitly resumed on the client.
       this.connection
         .getSocket()
         ?.emit('sfu:resume-consumer', { consumerId: consumer.id });
+      consumer.resume();
 
       // Find the peer userId for this consumer
       let userId = '';

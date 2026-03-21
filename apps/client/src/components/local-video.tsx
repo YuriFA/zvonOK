@@ -21,8 +21,17 @@ export function LocalVideo({
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    if (videoRef.current && stream) {
-      videoRef.current.srcObject = stream;
+    const video = videoRef.current;
+    if (!video || !stream) return;
+
+    video.srcObject = stream;
+
+    // iOS WebKit may not honor autoPlay; explicit play() ensures
+    // the local preview starts. The element is muted so this should
+    // always succeed without a user gesture.
+    const playPromise = video.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(() => {});
     }
   }, [stream]);
 

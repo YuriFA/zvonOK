@@ -64,6 +64,11 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
         deviceSelector.setSelectedAudioDeviceId(options.deviceId.audio);
       }
 
+      // Stop any previous (possibly failed) acquisition so the next attempt
+      // starts fresh. Without this, iOS WebKit may keep the internal state as
+      // 'error' and refuse to call getUserMedia again.
+      acquisition.stopStream();
+
       setIsLoading(true);
       setError(null);
 
@@ -94,21 +99,38 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
     setError(null);
   }, [acquisition]);
 
+  // Keep refs so the mount-only effect below can call the latest `start` and
+  // `acquisition.stopStream` without listing them as deps (they are stable
+  // singleton-backed callbacks but the linter cannot verify that).
+  const startRef = useRef(start);
+  startRef.current = start;
+
+  const stopStreamRef = useRef(acquisition.stopStream);
+  stopStreamRef.current = acquisition.stopStream;
+
   // Seed device selector with saved device IDs on mount, then start stream.
-  // Deps intentionally empty: `acquisition`, `start`, and `loadSelectedDevices`
-  // are stable (singleton manager + useCallback + pure import) so this only
-  // needs to run once on mount.
+  //
+  // iOS WebKit (Safari and Chrome on iOS) requires getUserMedia to be called
+  // as a direct result of a user gesture (tap/click). A useEffect has no
+  // gesture context, so the call is rejected with NotAllowedError without
+  // even showing a permission prompt. On these platforms we skip the
+  // auto-start and let the user tap the "Allow Camera & Microphone" button
+  // rendered by DeviceSelector when an error or no stream is present.
   useEffect(() => {
     if (!mountedRef.current) return;
 
-    const saved = loadSelectedDevices();
+    const isIOSWebKit =
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-    start({ deviceId: { video: saved.videoDeviceId, audio: saved.audioDeviceId } });
+    if (!isIOSWebKit) {
+      const saved = loadSelectedDevices();
+      startRef.current({ deviceId: { video: saved.videoDeviceId, audio: saved.audioDeviceId } });
+    }
 
     return () => {
-      acquisition.stopStream();
+      stopStreamRef.current();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

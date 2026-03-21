@@ -29,6 +29,7 @@ const testContext = vi.hoisted(() => {
     track: mockConsumerTrack,
     on: vi.fn(),
     close: vi.fn(),
+    resume: vi.fn(),
   };
 
   const mockSendTransport = {
@@ -105,6 +106,7 @@ const testContext = vi.hoisted(() => {
     mockProducer.replaceTrack.mockClear();
     mockConsumer.on.mockClear();
     mockConsumer.close.mockClear();
+    mockConsumer.resume.mockClear();
     mockSendTransport.on.mockClear();
     mockSendTransport.produce.mockClear();
     mockSendTransport.close.mockClear();
@@ -149,8 +151,8 @@ vi.mock('mediasoup-client', () => ({
     load = testContext.mockDeviceLoad;
     createSendTransport = testContext.mockCreateSendTransport;
     createRecvTransport = testContext.mockCreateRecvTransport;
-    rtpCapabilities = { codecs: ['vp8'] };
-    recvRtpCapabilities = { codecs: ['vp8'] };
+    rtpCapabilities = { codecs: [{ mimeType: 'video/VP8', clockRate: 90000 }] };
+    recvRtpCapabilities = { codecs: [{ mimeType: 'video/VP8', clockRate: 90000 }] };
 
     constructor() {
       testContext.latestDevice.current = this;
@@ -241,7 +243,7 @@ describe('SfuManager', () => {
     );
     expect(testContext.mockSocket.emit).toHaveBeenCalledWith('sfu:consume', {
       producerId: 'producer-remote',
-      rtpCapabilities: { codecs: ['vp8'] },
+      rtpCapabilities: { codecs: [{ mimeType: 'video/VP8', clockRate: 90000 }] },
     });
 
     await testContext.emitSocketEvent('sfu:consumer-created', {
@@ -282,11 +284,89 @@ describe('SfuManager', () => {
 
     await manager.produce(originalTrack);
     const replaced = await manager.replaceTrack('video', nextTrack);
-
     expect(testContext.mockSendTransport.produce).toHaveBeenCalledWith(
       expect.objectContaining({ track: originalTrack })
     );
     expect(replaced).toBe(true);
     expect(testContext.mockProducer.replaceTrack).toHaveBeenCalledWith({ track: nextTrack });
+  });
+
+  it('selects H.264 codec when available for video tracks', async () => {
+    manager.connect();
+
+    testContext.mockSocket.connected = true;
+    await testContext.emitSocketEvent('connect');
+    await testContext.emitSocketEvent('sfu:joined', {
+      routerRtpCapabilities: { codecs: [] },
+    });
+    await testContext.emitSocketEvent('sfu:transport-created', {
+      ...transportPayload,
+      direction: 'send',
+      transportId: 'send-transport',
+    });
+
+    const videoTrack = { kind: 'video' } as MediaStreamTrack;
+
+    await manager.produce(videoTrack);
+    expect(testContext.mockSendTransport.produce).toHaveBeenCalledWith(
+      expect.objectContaining({ track: videoTrack, codec: undefined })
+    );
+  });
+
+  it('selects H.264 codec when device has H.264 capability', async () => {
+    manager.connect();
+
+    testContext.mockSocket.connected = true;
+    await testContext.emitSocketEvent('connect');
+    await testContext.emitSocketEvent('sfu:joined', {
+      routerRtpCapabilities: { codecs: [] },
+    });
+
+    // After joined, the Device is instantiated; override its rtpCapabilities
+    testContext.latestDevice.current!.rtpCapabilities = {
+      codecs: [
+        { mimeType: 'video/h264', clockRate: 90000 },
+      ],
+    };
+    await testContext.emitSocketEvent('sfu:transport-created', {
+      ...transportPayload,
+      direction: 'send',
+      transportId: 'send-transport',
+    });
+    const videoTrack = { kind: 'video' } as MediaStreamTrack;
+    await manager.produce(videoTrack);
+    expect(testContext.mockSendTransport.produce).toHaveBeenCalledWith(
+      expect.objectContaining({
+        track: videoTrack,
+        codec: expect.objectContaining({ mimeType: 'video/h264' }),
+      })
+    );
+  });
+
+  it('does not specify codec when H.264 is not available', async () => {
+    manager.connect();
+
+    testContext.mockSocket.connected = true;
+    await testContext.emitSocketEvent('connect');
+    await testContext.emitSocketEvent('sfu:joined', {
+      routerRtpCapabilities: { codecs: [] },
+    });
+
+    // Override device capabilities with only VP8
+    testContext.latestDevice.current!.rtpCapabilities = {
+      codecs: [
+        { mimeType: 'video/VP8', clockRate: 90000 },
+      ],
+    };
+    await testContext.emitSocketEvent('sfu:transport-created', {
+      ...transportPayload,
+      direction: 'send',
+      transportId: 'send-transport',
+    });
+    const videoTrack = { kind: 'video' } as MediaStreamTrack;
+    await manager.produce(videoTrack);
+    expect(testContext.mockSendTransport.produce).toHaveBeenCalledWith(
+      expect.objectContaining({ track: videoTrack, codec: undefined })
+    );
   });
 });

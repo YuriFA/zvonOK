@@ -4,6 +4,7 @@ import type { SfuState } from '@/lib/sfu/types';
 
 class MockMediaStream {
   private tracks: MediaStreamTrack[];
+  private listeners = new Map<string, Set<EventListener>>();
 
   constructor(tracks: MediaStreamTrack[] = []) {
     this.tracks = [...tracks];
@@ -11,6 +12,10 @@ class MockMediaStream {
 
   addTrack(track: MediaStreamTrack): void {
     this.tracks.push(track);
+  }
+
+  removeTrack(track: MediaStreamTrack): void {
+    this.tracks = this.tracks.filter((t) => t !== track);
   }
 
   getTracks(): MediaStreamTrack[] {
@@ -24,9 +29,38 @@ class MockMediaStream {
   getAudioTracks(): MediaStreamTrack[] {
     return this.tracks.filter((track) => track.kind === 'audio');
   }
+
+  addEventListener(type: string, listener: EventListener): void {
+    if (!this.listeners.has(type)) {
+      this.listeners.set(type, new Set());
+    }
+    this.listeners.get(type)!.add(listener);
+  }
+
+  removeEventListener(type: string, listener: EventListener): void {
+    this.listeners.get(type)?.delete(listener);
+  }
+
+  dispatchEvent(event: Event): boolean {
+    this.listeners.get(event.type)?.forEach((listener) => {
+      listener(event);
+    });
+    return true;
+  }
 }
 
 vi.stubGlobal('MediaStream', MockMediaStream);
+
+// jsdom does not provide MediaStreamTrackEvent; stub it so the Safari
+// workaround in use-mediasoup.ts can construct and dispatch events.
+class MockMediaStreamTrackEvent extends Event {
+  readonly track: MediaStreamTrack;
+  constructor(type: string, init: { track: MediaStreamTrack }) {
+    super(type);
+    this.track = init.track;
+  }
+}
+vi.stubGlobal('MediaStreamTrackEvent', MockMediaStreamTrackEvent);
 
 const testContext = vi.hoisted(() => ({
   baseState: {

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useMediaControls } from '../hooks/use-media-controls';
 import { DeviceSettingsPanel } from './device-settings-panel';
 import { Button } from '@/components/ui/button';
@@ -13,9 +13,10 @@ interface DeviceSelectorProps {
 }
 
 export function DeviceSelector({ className }: DeviceSelectorProps) {
-  const { stream, error, isLoading } = useMediaStreamContext();
+  const { stream, error, isLoading, start } = useMediaStreamContext();
   const mediaToggle = useMediaToggle();
   const mediaControls = useMediaControls();
+  const [retrying, setRetrying] = useState(false);
 
   const handleToggleVideo = useCallback(async () => {
     const nextEnabled = !mediaControls.isVideoEnabled;
@@ -35,6 +36,19 @@ export function DeviceSelector({ className }: DeviceSelectorProps) {
     }
   }, [mediaToggle, mediaControls]);
 
+  // Retry media acquisition from a direct user gesture.
+  // On iOS WebKit, getUserMedia requires a recent user interaction (tap).
+  // If the initial auto-start failed (e.g. no gesture context on page load),
+  // this gives the user a button to tap that triggers a fresh request.
+  const handleRetry = useCallback(async () => {
+    setRetrying(true);
+    try {
+      await start();
+    } finally {
+      setRetrying(false);
+    }
+  }, [start]);
+
   return (
     <div className={cn('space-y-4', className)}>
       <div className="relative aspect-video overflow-hidden rounded-lg bg-muted">
@@ -43,9 +57,34 @@ export function DeviceSelector({ className }: DeviceSelectorProps) {
             <p className="text-sm text-muted-foreground">Loading camera...</p>
           </div>
         )}
-        {error && (
-          <div className="flex h-full items-center justify-center">
-            <p className="text-sm text-destructive">{error}</p>
+        {error && !stream && (
+          <div className="flex h-full flex-col items-center justify-center gap-3 px-4">
+            <p className="text-center text-sm text-destructive">{error}</p>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={handleRetry}
+              disabled={retrying}
+            >
+              {retrying ? 'Requesting...' : 'Allow Camera & Microphone'}
+            </Button>
+          </div>
+        )}
+        {!isLoading && !error && !stream && (
+          <div className="flex h-full flex-col items-center justify-center gap-3 px-4">
+            <p className="text-center text-sm text-muted-foreground">
+              Tap the button below to enable your camera and microphone.
+            </p>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={handleRetry}
+              disabled={retrying}
+            >
+              {retrying ? 'Requesting...' : 'Allow Camera & Microphone'}
+            </Button>
           </div>
         )}
         {!isLoading && !error && stream && (

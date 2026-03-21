@@ -105,12 +105,25 @@ export function useMediasoup({
     const unsubscribeTrack = sfuManager.onTrack((track, kind, userId) => {
       setRemotePeers((prev) =>
         updateRemotePeer(prev, userId, (current) => {
-          const stream = new MediaStream(
-            current.stream.getTracks().filter(
-              (existingTrack) => existingTrack.kind !== kind
-            )
-          );
+          // Mutate the existing MediaStream instead of creating a new one.
+          // iOS WebKit resets playback when srcObject changes to a new
+          // MediaStream instance, causing remote video/audio to freeze.
+          const stream = current.stream;
+          const removedTracks = stream.getTracks().filter((t) => t.kind === kind);
+          removedTracks.forEach((t) => {
+            stream.removeTrack(t);
+            // Safari/WebKit does NOT fire removetrack events for
+            // programmatic removeTrack() calls. Dispatch manually so
+            // RemoteVideo's sync listeners pick up the change.
+            stream.dispatchEvent(
+              new MediaStreamTrackEvent('removetrack', { track: t })
+            );
+          });
           stream.addTrack(track);
+          // Same Safari workaround for addtrack.
+          stream.dispatchEvent(
+            new MediaStreamTrackEvent('addtrack', { track })
+          );
 
           return {
             ...current,
@@ -155,15 +168,15 @@ export function useMediasoup({
             return prev;
           }
 
-          const stream = new MediaStream(
-            current.stream
-              .getTracks()
-              .filter((existingTrack) => existingTrack.id !== track.id)
+          // Mutate existing stream to avoid iOS playback reset
+          current.stream.removeTrack(track);
+          // Safari workaround: manual event dispatch
+          current.stream.dispatchEvent(
+            new MediaStreamTrackEvent('removetrack', { track })
           );
 
           next.set(userId, {
             ...current,
-            stream,
             isVideoEnabled:
               kind === 'video' ? false : current.isVideoEnabled,
             isAudioEnabled:
