@@ -16,19 +16,6 @@
 #   - coturn:   TURN/STUN relay server for NAT traversal
 
 services:
-  # --- Client build (init container pattern) ---
-  client:
-    build:
-      context: .
-      dockerfile: apps/client/Dockerfile
-      args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
-        VITE_SOCKET_URL: ${VITE_SOCKET_URL:-}
-    volumes:
-      - client_dist:/srv/client
-    # This container exits after copying files; restart is not needed
-    restart: "no"
-
   # --- Database migrations (runs once before server starts) ---
   migrate:
     build:
@@ -109,9 +96,14 @@ services:
     expose:
       - "5432"
 
-  # --- Caddy reverse proxy ---
+  # --- Caddy reverse proxy (includes built client assets) ---
   caddy:
-    image: caddy:2-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.caddy
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
+        VITE_SOCKET_URL: ${VITE_SOCKET_URL:-}
     container_name: zvonok-caddy
     logging:
       driver: json-file
@@ -126,13 +118,10 @@ services:
       SITE_ADDRESS: ${SITE_ADDRESS:-localhost}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - client_dist:/srv/client:ro
       - caddy_data:/data
       - caddy_config:/config
       - ./certs:/srv/certs:ro
     depends_on:
-      client:
-        condition: service_completed_successfully
       server:
         condition: service_started
     restart: unless-stopped
@@ -163,4 +152,3 @@ volumes:
   postgres_data:
   caddy_data:
   caddy_config:
-  client_dist:
