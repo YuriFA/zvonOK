@@ -63,9 +63,8 @@ restart: down up ## Restart all services
 rebuild-server: check-env ## Rebuild and restart only the server
 	$(DC) up -d --build --no-deps server
 
-rebuild-client: check-env ## Rebuild client and restart Caddy to pick up new assets
-	$(DC) up -d --build --no-deps client
-	$(DC) restart caddy
+rebuild-client: check-env ## Rebuild Caddy (includes client assets) and restart it
+	$(DC) up -d --build --no-deps caddy
 
 ##@ Database
 migrate: check-env ## Run database migrations only
