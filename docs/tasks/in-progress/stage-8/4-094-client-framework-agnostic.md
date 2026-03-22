@@ -1,4 +1,4 @@
-# TASK-001: Client Framework-Agnostic Architecture
+# TASK-094: Client Framework-Agnostic Architecture
 
 > **Status:** Planned
 > **Priority:** Medium

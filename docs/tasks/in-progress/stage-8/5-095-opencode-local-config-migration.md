@@ -1,4 +1,4 @@
-# TASK-002: Migrate Claude Local Config to OpenCode
+# TASK-095: Migrate Claude Local Config to OpenCode
 
 > **Status:** Completed
 > **Priority:** Medium
