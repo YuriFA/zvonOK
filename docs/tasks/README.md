@@ -29,6 +29,14 @@ Planned stages not yet started.
 - Folders use semantic names (kebab-case): `chat`, `screen-share`, `network-quality`
 - When moving to `in-progress/` or `done/`, rename to `stage-N` where N = last stage number + 1
 
+**Renaming steps:**
+1. Find max stage number in `done/` (or `in-progress/` if not empty)
+2. New stage number = max + 1
+3. Rename folder to `stage-N`
+
+**Example:**
+- `backlog/room-ux/` → `in-progress/stage-8/` (last was `done/stage-7/`)
+
 ---
 
 ## Task Format
