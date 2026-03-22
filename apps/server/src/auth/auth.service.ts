@@ -140,11 +140,13 @@ export class AuthService {
     const accessToken = this.tokenHelper.generateAccessToken({
       id: user.id,
       email: user.email,
+      role: dbUser.role,
       tokenVersion: dbUser.tokenVersion ?? 0,
     });
     const refreshToken = this.tokenHelper.generateRefreshToken({
       id: user.id,
       email: user.email,
+      role: dbUser.role,
       tokenVersion: dbUser.tokenVersion ?? 0,
     });
 
@@ -159,12 +161,18 @@ export class AuthService {
   }
 
   private async issueTokens(
-    user: { id: string; email: string; tokenVersion?: number },
+    user: {
+      id: string;
+      email: string;
+      role?: import('src/generated/prisma/enums').Role;
+      tokenVersion?: number;
+    },
     tokenVersion = 0,
   ) {
     const payload = {
       id: user.id,
       email: user.email,
+      role: user.role,
       tokenVersion,
     };
 

@@ -25,6 +25,7 @@ model User {
   failedLoginAttempts Int      @default(0)
   lockedUntil         DateTime?
   tokenVersion        Int      @default(0)
+  role                Role     @default(USER)
   rooms               Room[]   @relation("RoomHost")
 }
 
@@ -45,6 +46,12 @@ model Room {
   @@index([ownerId])
   @@index([status])
   @@index([isPublic])
+}
+
+enum Role {
+  USER
+  HOST
+  ADMIN
 }
 
 enum RoomStatus {

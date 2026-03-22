@@ -4,10 +4,12 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { UserService } from 'src/user/user.service';
+import type { Role } from 'src/generated/prisma/enums';
 
 interface JwtPayload {
   id: string;
   email: string;
+  role: Role;
   tokenVersion?: number;
 }
 
@@ -36,6 +38,6 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     // Access tokens are short-lived; tokenVersion validation happens in
     // refresh token strategy where it matters most. This avoids a DB query
     // on every authenticated request while maintaining security.
-    return { id: payload.id, email: payload.email };
+    return { id: payload.id, email: payload.email, role: payload.role };
   }
 }

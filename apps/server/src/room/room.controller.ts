@@ -12,12 +12,14 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { SkipAuthGuard } from '../auth/skip-auth.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { User } from '../user/decorators/user.decorator';
 import { JwtPayloadDto } from '../auth/dto/jwt-payload.dto';
 import { RoomService } from './room.service';
 import { SfuService } from '../sfu/sfu.service';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
+import { Role } from '../generated/prisma/enums';
 
 @ApiTags('rooms')
 @Controller('rooms')
@@ -29,6 +31,7 @@ export class RoomController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @Roles(Role.HOST, Role.ADMIN)
   @ApiOperation({ summary: 'Create a new room' })
   async createRoom(@User() user: JwtPayloadDto, @Body() dto: CreateRoomDto) {
     return this.roomService.createRoom(user.id, dto);

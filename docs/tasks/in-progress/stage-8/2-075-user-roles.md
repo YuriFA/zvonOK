@@ -1,6 +1,6 @@
 # TASK-075 — User Roles for Room Creation
 
-> **Status:** planned
+> **Status:** done
 > **Priority:** medium
 > **Created:** 2026-03-22
 

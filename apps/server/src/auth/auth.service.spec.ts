@@ -11,6 +11,7 @@ import { TokenHelper } from './helpers/token.helper';
 import { PasswordHelper } from './helpers/password.helper';
 import { RefreshTokenHelper } from './helpers/refresh-token.helper';
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { Role } from 'src/generated/prisma/enums';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -29,6 +30,7 @@ describe('AuthService', () => {
     failedLoginAttempts: 0,
     lockedUntil: null,
     tokenVersion: 0,
+    role: Role.USER,
   };
 
   beforeEach(async () => {
@@ -180,7 +182,7 @@ describe('AuthService', () => {
   });
 
   it('logout clears refresh token hash', async () => {
-    await service.logout({ id: baseUser.id, email: baseUser.email });
+    await service.logout({ id: baseUser.id, email: baseUser.email, role: Role.USER });
 
     expect(userService.updateRefreshTokenHash).toHaveBeenCalledWith(
       baseUser.id,
@@ -194,10 +196,11 @@ describe('AuthService', () => {
       .spyOn(RefreshTokenHelper, 'hash')
       .mockReturnValueOnce('hashed-refresh');
 
-    const result = await service.refreshToken({
-      id: baseUser.id,
-      email: baseUser.email,
-    });
+      const result = await service.refreshToken({
+        id: baseUser.id,
+        email: baseUser.email,
+        role: Role.USER,
+      });
 
     expect(result).toEqual({
       accessToken: 'access-token',
@@ -383,6 +386,7 @@ describe('AuthService', () => {
         service.refreshToken({
           id: 'nonexistent-user',
           email: 'nonexistent@example.com',
+          role: Role.USER,
         }),
       ).rejects.toThrow('Invalid user');
     });
@@ -400,6 +404,7 @@ describe('AuthService', () => {
       const result = await service.refreshToken({
         id: baseUser.id,
         email: baseUser.email,
+        role: Role.USER,
       });
 
       expect(result).toEqual({

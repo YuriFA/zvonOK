@@ -5,10 +5,12 @@ import { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { UserService } from 'src/user/user.service';
 import { RefreshTokenHelper } from '../helpers/refresh-token.helper';
+import type { Role } from 'src/generated/prisma/enums';
 
 interface JwtPayload {
   id: string;
   email: string;
+  role?: Role;
   jti?: string;
   tokenVersion?: number;
 }
@@ -92,6 +94,6 @@ export class JwtRefreshTokenStrategy extends PassportStrategy(
       });
     }
 
-    return { id: user.id, email: user.email, tokenVersion: user.tokenVersion };
+    return { id: user.id, email: user.email, role: user.role, tokenVersion: user.tokenVersion };
   }
 }

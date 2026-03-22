@@ -7,6 +7,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtRefreshTokenStrategy } from './jwt-refresh-token.strategy';
 import { UserService } from 'src/user/user.service';
 import { RefreshTokenHelper } from '../helpers/refresh-token.helper';
+import { Role } from 'src/generated/prisma/enums';
 import type { Request } from 'express';
 
 describe('JwtRefreshTokenStrategy', () => {
@@ -20,6 +21,7 @@ describe('JwtRefreshTokenStrategy', () => {
     tokenVersion: 0,
     failedLoginAttempts: 0,
     lockedUntil: null,
+    role: Role.USER,
   };
 
   beforeEach(() => {
@@ -65,6 +67,7 @@ describe('JwtRefreshTokenStrategy', () => {
       expect(result).toEqual({
         id: 'user-1',
         email: 'user@example.com',
+        role: Role.USER,
         tokenVersion: 0,
       });
     });
@@ -159,6 +162,7 @@ describe('JwtRefreshTokenStrategy', () => {
       expect(result).toEqual({
         id: 'user-1',
         email: 'user@example.com',
+        role: Role.USER,
         tokenVersion: 0,
       });
     });
@@ -188,6 +192,7 @@ describe('JwtRefreshTokenStrategy', () => {
       expect(result).toEqual({
         id: 'user-1',
         email: 'user@example.com',
+        role: Role.USER,
         tokenVersion: 0,
       });
     });
@@ -218,6 +223,7 @@ describe('JwtRefreshTokenStrategy', () => {
       expect(result).toEqual({
         id: 'user-1',
         email: 'user@example.com',
+        role: Role.USER,
         tokenVersion: 0,
       });
     });
@@ -317,6 +323,7 @@ describe('JwtRefreshTokenStrategy', () => {
       expect(result).toEqual({
         id: 'user-1',
         email: 'user@example.com',
+        role: Role.USER,
         tokenVersion: 3,
       });
     });
@@ -345,6 +352,7 @@ describe('JwtRefreshTokenStrategy', () => {
       expect(result).toEqual({
         id: 'user-1',
         email: 'user@example.com',
+        role: Role.USER,
         tokenVersion: 5,
       });
     });

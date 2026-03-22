@@ -60,4 +60,8 @@ export class UserService {
       data: { refreshTokenHash: hash },
     });
   }
+
+  async countUsers(where: Prisma.UserWhereInput): Promise<number> {
+    return this.prisma.user.count({ where });
+  }
 }

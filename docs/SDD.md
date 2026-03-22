@@ -159,6 +159,7 @@ model User {
   failedLoginAttempts Int       @default(0)
   lockedUntil         DateTime?
   tokenVersion        Int       @default(0)
+  role                Role      @default(USER)
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
@@ -184,6 +185,12 @@ model Room {
   @@index([isPublic])
 }
 
+enum Role {
+  USER
+  HOST
+  ADMIN
+}
+
 enum RoomStatus {
   active
   ended
@@ -203,7 +210,7 @@ enum RoomStatus {
 
 | Table | Columns | Indexes |
 |-------|---------|---------|
-| `User` | id, email, username, passwordHash, refreshTokenHash, failedLoginAttempts, lockedUntil, tokenVersion, createdAt, updatedAt | email (unique), username (unique) |
+| `User` | id, email, username, passwordHash, refreshTokenHash, failedLoginAttempts, lockedUntil, tokenVersion, role, createdAt, updatedAt | email (unique), username (unique) |
 | `Room` | id, slug, name, ownerId, isPublic, maxParticipants, status, createdAt, updatedAt, endedAt, lastActivityAt | slug (unique), ownerId (FK to User, indexed), status (indexed), isPublic (indexed) |
 | `Message` | id, content, userId, roomId, createdAt | userId (FK to User), roomId (FK to Room) — *To be added in Stage 9* |
 
@@ -229,13 +236,14 @@ enum RoomStatus {
 | GET | `/api/users/me` | Protected | Get current user profile |
 | GET | `/api/users/:id` | Public | Get user by ID |
 | PATCH | `/api/users/me` | Protected | Update current user |
+| PATCH | `/api/users/:id/role` | ADMIN only | Update user role |
 
 #### Room Endpoints
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | GET | `/api/rooms` | Protected | List user's rooms |
-| POST | `/api/rooms` | Protected | Create new room |
+| POST | `/api/rooms` | HOST or ADMIN | Create new room |
 | GET | `/api/rooms/:slug` | Public | Get room by slug |
 | PATCH | `/api/rooms/:id` | Protected | Update room (owner only) |
 | DELETE | `/api/rooms/:id` | Protected | End room (owner only) |
