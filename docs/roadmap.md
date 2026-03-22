@@ -2,257 +2,165 @@
 
 Implementation stages for the WebRTC Chat application.
 
-## Stage 0 — Theory
+---
 
-**Status:** Completed
-**Goal:** Understand WebRTC fundamentals before implementation
+## Done (v0.1.0-alpha)
 
-Tasks:
-- [task-1](./tasks/stage-0/TASK-001-webrtc-basics.md) — WebRTC Basics (signalling, STUN, TURN, ICE)
-- [task-2](./tasks/stage-0/TASK-002-p2p-vs-sfu.md) — P2P vs SFU Architecture
+### Stage 0 — Theory
+
+**Status:** Completed  
+**Goal:** Understand WebRTC fundamentals before implementation  
+**Result:** WebRTC basics (signalling, STUN, TURN, ICE) and P2P vs SFU architecture understood
 
 ---
 
-## Stage 0.5 — Frontend Auth
+### Stage 0.5 — Frontend Auth
 
-**Status:** Completed
-**Goal:** Basic frontend with authentication system
-
-Tasks:
-- [task-1](./tasks/stage-0.5/TASK-001-project-setup.md) — React + Vite + Tailwind CSS v4 setup
-- [task-2](./tasks/stage-0.5/TASK-002-ui-components.md) — Radix UI components
-- [task-3](./tasks/stage-0.5/TASK-003-routing.md) — React Router v7 with file-routing
-- [task-4](./tasks/stage-0.5/TASK-004-forms-validation.md) — React Hook Form + Zod
-- [task-5](./tasks/stage-0.5/TASK-005-auth-api-client.md) — Auth API client with token refresh
-- [task-6](./tasks/stage-0.5/TASK-006-login-page.md) — Login page
-- [task-7](./tasks/stage-0.5/TASK-007-register-page.md) — Register page
-- [task-8](./tasks/stage-0.5/TASK-008-auth-context.md) — AuthContext state management
-- [task-9](./tasks/stage-0.5/TASK-009-lobby-page.md) — Main home page
-
-**Result:** Fully working authentication on frontend
+**Status:** Completed  
+**Goal:** Basic frontend with authentication system  
+**Result:** Fully working authentication on frontend (login, register, auth context)
 
 ---
 
-## Stage 1 — Backend
+### Stage 1 — Backend
 
-**Status:** Completed
-**Goal:** Server setup with authentication and room API
-
-Tasks:
-- [task-1](./tasks/stage-1/TASK-001-postgresql-prisma.md) — PostgreSQL + Prisma setup
-- [task-2](./tasks/stage-1/TASK-002-registration.md) — User registration endpoint
-- [task-3](./tasks/stage-1/TASK-003-login-jwt.md) — JWT authentication with refresh tokens
-- [task-4](./tasks/stage-1/TASK-004-room-model.md) — Room data model
-- [task-5](./tasks/stage-1/TASK-005-rooms-api.md) — CRUD API for rooms
-
-**Result:** Backend with Auth + Rooms
+**Status:** Completed  
+**Goal:** Server setup with authentication and room API  
+**Result:** Backend with Auth + Rooms (NestJS, Prisma, JWT)
 
 ---
 
-## Stage 1.5 — Client Rooms
+### Stage 1.5 — Client Rooms
 
-**Status:** Completed
-**Goal:** Client-side room management UI
-
-Tasks:
-- [task-1](./tasks/stage-1.5/TASK-001-client-rooms.md) — Room types, API, create dialog, home page, room page
-- [task-2](./tasks/stage-1.5/TASK-002-room-lobby.md) — Room pre-join state with device selector and share link
-
+**Status:** Completed  
+**Goal:** Client-side room management UI  
 **Result:** Users can create and join rooms via UI
 
 ---
 
-## Stage 2 — Signalling Server
+### Stage 2 — Signalling Server
 
-**Status:** Completed
-**Goal:** WebSocket server for SFU signalling
-
-Tasks:
-- [task-1](./tasks/stage-2/TASK-001-socketio-server.md) — Socket.io server setup in NestJS
-- [task-2](./tasks/stage-2/TASK-002-join-leave.md) — Room join/leave functionality
-- [task-3](./tasks/stage-2/TASK-003-webrtc-signalling.md) — Signalling events (planned for P2P, superseded by SFU)
-
+**Status:** Completed  
+**Goal:** WebSocket server for SFU signalling  
 **Result:** Signalling server ready (SFU uses `/sfu` namespace)
 
 ---
 
-## Stage 2.5 — Socket.io Client
+### Stage 2.5 — Socket.io Client
 
-**Status:** Completed
-**Goal:** Frontend WebSocket connection management
-
-Tasks:
-- [task-1](./tasks/stage-2.5/TASK-001-socketio-client.md) — Socket.io client setup, connection handling, room join/leave
-
+**Status:** Completed  
+**Goal:** Frontend WebSocket connection management  
 **Result:** Client can connect to signalling server
 
 ---
 
-## Stage 3 — Media Stream Access
+### Stage 3 — Media Stream Access
 
-**Status:** Completed
-**Goal:** Camera/microphone access and local media management
-
-Tasks:
-- [task-1](./tasks/stage-3/TASK-001-media-stream.md) — Camera/microphone access
-- [task-2](./tasks/stage-3/TASK-002-rtc-peer-connection.md) — RTCPeerConnection setup (planned for P2P, superseded by SFU)
-- [task-3](./tasks/stage-3/TASK-003-offer-answer.md) — Offer/Answer exchange (planned for P2P, superseded by SFU)
-- [task-4](./tasks/stage-3/TASK-004-mute-unmute.md) — Media controls (mute/unmute)
-- [task-5](./tasks/stage-3/TASK-005-local-video-integration.md) — LocalVideo component integration
-
+**Status:** Completed  
+**Goal:** Camera/microphone access and local media management  
 **Result:** Local media stream management working
 
 ---
 
-## Stage 4 — Device Management
+### Stage 4 — Device Management
 
-**Status:** Completed
-**Goal:** Switch between cameras, microphones, speakers
-
-Tasks:
-- [task-1](./tasks/stage-4/TASK-001-device-enumeration.md) — enumerateDevices API ✅
-- [task-2](./tasks/stage-4/TASK-002-device-switching.md) — Switch camera/mic/speaker ✅
-- [task-3](./tasks/stage-4/TASK-003-device-permissions.md) — Handle device permissions ✅
-- [task-4](./tasks/stage-4/TASK-004-device-selector-ui.md) — Device selector dropdown/settings panel ✅
-- [task-5](./tasks/stage-4/TASK-005-active-device-display.md) — Display currently active devices ✅
-- [task-6](./tasks/stage-4/TASK-006-no-barrel-files.md) — Remove barrel files (index.ts) ✅
-
+**Status:** Completed  
+**Goal:** Switch between cameras, microphones, speakers  
 **Result:** User can select input/output devices
 
 ---
 
-## Stage 5 — SFU (Group Calls)
+### Stage 5 — SFU (Group Calls)
 
-**Status:** Completed
-**Goal:** Scalable group calls (3-10+ participants) via mediasoup
-
-Tasks:
-- [task-1](./tasks/stage-5/TASK-001-mediasoup-worker.md) — mediasoup Worker setup
-- [task-2](./tasks/stage-5/TASK-002-mediasoup-router.md) — Router per room
-- [task-3](./tasks/stage-5/TASK-003-mediasoup-transport.md) — Transport creation
-- [task-4](./tasks/stage-5/TASK-004-mediasoup-producer.md) — Producer for incoming tracks
-- [task-5](./tasks/stage-5/TASK-005-mediasoup-consumer.md) — Consumer for outgoing tracks
-- [task-6](./tasks/stage-5/TASK-006-sfu-signalling.md) — SFU signalling protocol
-- [task-7](./tasks/stage-5/TASK-007-sfu-client.md) — Client-side SFU integration
-- [task-8](./tasks/stage-5/TASK-008-sfu-participants.md) — Participants list UI
-- [task-9](./tasks/stage-5/TASK-009-sfu-quality-indicator.md) — Connection quality indicator
-
+**Status:** Completed  
+**Goal:** Scalable group calls (3-10+ participants) via mediasoup  
 **Result:** Group video calls working
 
 ---
 
-## Stage 6 — Call UX
+### Stage 6 — Call UX
 
-**Status:** Completed
-**Goal:** Canonical room entry flow and adaptive in-call experience
-
-Tasks:
-- [task-1](./tasks/stage-6/TASK-001-video-grid-layout.md) — CSS Grid adaptive layout
-- [task-2](./tasks/stage-6/TASK-003-pre-join-lobby.md) — Canonical pre-join state on room link
-- [task-3](./tasks/stage-6/TASK-008-device-state-persistence.md) — Persist pre-join device state into call join
-- [task-4](./tasks/stage-6/TASK-004-peer-without-media.md) — Presence for participants without media
-- [task-5](./tasks/stage-6/TASK-005-camera-toggle.md) — Physical camera release on toggle
-- [task-6](./tasks/stage-6/TASK-006-media-error-indicators.md) — Media error states in call controls
-- [task-7](./tasks/stage-6/TASK-002-speaker-detection.md) — Active speaker detection
-- [task-8](./tasks/stage-6/TASK-007-call-ended-state.md) — Ended call state on room link
-- [task-9](./tasks/stage-6/TASK-009-permission-denied-modal.md) — Permission denied warning & re-request modal
-
-**Result:** Room link supports pre-join, active call, and ended states; participant and media UX work predictably in group calls
+**Status:** Completed  
+**Goal:** Canonical room entry flow and adaptive in-call experience  
+**Result:** Room link supports pre-join, active call, and ended states; participant and media UX work predictably
 
 ---
 
-## Stage 7 — Deployment
+See [tasks/done/README.md](./tasks/done/README.md) for milestone details.
 
-**Status:** In Progress
-**Goal:** Production-ready deployment with HTTPS, TURN, and media connectivity outside localhost
+---
 
-Tasks (execution order):
-- [task-1](./tasks/stage-7/TASK-001-https-caddy.md) — Caddy reverse proxy with auto HTTPS ✅
-- [task-5](./tasks/stage-7/TASK-005-mediasoup-network.md) — mediasoup production network config (listenIps, announcedIp, RTC ports)
-- [task-6](./tasks/stage-7/TASK-006-turn-coturn.md) — coturn TURN server in Docker Compose
-- [task-7](./tasks/stage-7/TASK-007-ice-servers.md) — Configurable ICE servers (STUN/TURN credentials to client)
-- [task-8](./tasks/stage-7/TASK-008-deploy-checklist.md) — Production deployment checklist (VPS guide)
-- [task-9](./tasks/stage-7/TASK-009-client-build-optimization.md) — Client build optimization (code splitting, bundle size)
+## In Progress
 
+### Stage 7 — Deployment
+
+**Status:** In Progress  
+**Goal:** Production-ready deployment with HTTPS, TURN, and media connectivity outside localhost  
 **Result:** Application available via HTTPS on a VPS, media works through NAT with TURN fallback
 
 ---
 
-## Stage 8 — Screen Share
+## Backlog
 
-**Status:** Planned
-**Goal:** Desktop/application window sharing
+### Stage 8 — Screen Share
 
-Tasks:
-- [task-1](./tasks/stage-8/TASK-001-screen-share.md) — getDisplayMedia + replaceTrack
-- [task-2](./tasks/stage-8/TASK-002-screen-share-ui.md) — Screen share button, status indicator, error handling
-
+**Status:** Planned  
+**Goal:** Desktop/application window sharing  
 **Result:** Screen sharing capability
 
 ---
 
-## Stage 9 — Chat
+### Stage 9 — Chat
 
-**Status:** Planned
-**Goal:** Real-time text chat with history
-
-Tasks:
-- [task-1](./tasks/stage-9/TASK-001-chat-model.md) — Message data model
-- [task-2](./tasks/stage-9/TASK-002-chat-api.md) — Chat API endpoints
-- [task-3](./tasks/stage-9/TASK-003-chat-websocket.md) — Real-time chat via WebSocket
-- [task-4](./tasks/stage-9/TASK-004-chat-ui.md) — Chat container layout
-- [task-5](./tasks/stage-9/TASK-005-message-list.md) — Message list component
-- [task-6](./tasks/stage-9/TASK-006-message-input.md) — Message input component
-- [task-7](./tasks/stage-9/TASK-007-chat-integration.md) — Chat integration in room page
-
+**Status:** Planned  
+**Goal:** Real-time text chat with history  
 **Result:** Working chat with history
 
 ---
 
-## Stage 10 — Quality
+### Stage 10 — Quality
 
-**Status:** Planned
-**Goal:** Network monitoring and adaptation
-
-Tasks:
-- [task-1](./tasks/stage-10/TASK-001-network-info.md) — Display connection quality metrics
-- [task-2](./tasks/stage-10/TASK-002-bandwidth-adaptation.md) — Adaptive video quality
-- [task-3](./tasks/stage-10/TASK-003-reconnection.md) — Automatic reconnection handling
-
+**Status:** Planned  
+**Goal:** Network monitoring and adaptation  
 **Result:** Stable connection with quality indicators
 
 ---
 
-## Stage 11 — Future Enhancements
+### Stage 11 — Future Enhancements
 
-**Status:** Planned
-**Goal:** UX improvements and additional features
+**Status:** Planned  
+**Goal:** UX improvements and additional features  
+**Result:** Enhanced user experience (e2e tests, error boundaries, dark mode, accessibility, etc.)
 
-Tasks:
-- [task-1](./tasks/stage-11/TASK-001-e2e-testing.md) — Playwright end-to-end tests
-- [task-2](./tasks/stage-11/TASK-002-error-boundaries.md) — Error boundaries and fallback UI
-- [task-3](./tasks/stage-11/TASK-003-loading-states.md) — Improved loading states
-- [task-4](./tasks/stage-11/TASK-004-notifications.md) — Toast notifications
-- [task-5](./tasks/stage-11/TASK-005-dark-mode.md) — Dark theme support
-- [task-6](./tasks/stage-11/TASK-006-responsiveness.md) — Mobile adaptation
-- [task-7](./tasks/stage-11/TASK-007-keyboard-shortcuts.md) — Hotkey support
-- [task-8](./tasks/stage-11/TASK-008-accessibility.md) — ARIA labels and a11y
+---
 
-**Result:** Enhanced user experience
+### Stage 12 — CI/CD
+
+**Status:** Planned  
+**Goal:** Automated CI/CD pipeline  
+**Result:** GitHub Actions with automated tests and deployment
+
+---
+
+### Stage 13 — Simplify Room Creation
+
+**Status:** Planned  
+**Goal:** Improve room creation UX  
+**Result:** Simplified room creation flow
 
 ---
 
 ## Timeline
 
-| Stage | Status | Time Estimate |
-|-------|--------|---------------|
+| Stage | Status | Estimate |
+|-------|--------|----------|
 | Stage 0 | Completed | 1-2 days |
 | Stage 0.5 | Completed | 2-3 days |
 | Stage 1 | Completed | 3-5 days |
 | Stage 1.5 | Completed | 1-2 days |
 | Stage 2 | Completed | 2-3 days |
 | Stage 2.5 | Completed | 1 day |
-| Stage 3 | Completed | 3-4 days (media only) |
+| Stage 3 | Completed | 3-4 days |
 | Stage 4 | Completed | 1-2 days |
 | Stage 5 | Completed | 5-7 days |
 | Stage 6 | Completed | 3-5 days |
@@ -261,22 +169,22 @@ Tasks:
 | Stage 9 | Planned | 2-3 days |
 | Stage 10 | Planned | 2-3 days |
 | Stage 11 | Planned | TBD |
+| Stage 12 | Planned | 1-2 days |
+| Stage 13 | Planned | 1 day |
 
-**Total:** 3-6 weeks for full implementation
-
-**MVP Path:** Stages 0-6 + basic deploy = 2-3 weeks
+**MVP Path:** Stages 0-6 = 2-3 weeks (completed)
 
 ---
 
 ## Architecture Note
 
-> The project uses an **SFU-only architecture** (mediasoup) for all video calls. P2P signalling was planned but superseded by SFU implementation. The Gateway module for P2P signalling is documented but not implemented.
+> The project uses an **SFU-only architecture** (mediasoup) for all video calls.
 
 ---
 
 ## Next Steps
 
-1. **Stage 7** (Deployment) — mediasoup network config -> coturn -> ICE servers -> deploy checklist -> build optimization
-2. Follow task dependencies, not raw filename order
-3. Update task status as work progresses
-4. Refer to [SDD](./SDD.md) for architecture and design decisions
+1. **Stage 7** — mediasoup network config → coturn → ICE servers → deploy checklist
+2. See [tasks/in-progress/](./tasks/in-progress/) for active work
+3. See [tasks/backlog/](./tasks/backlog/) for planned work
+4. Refer to [SDD](./SDD.md) for architecture decisions

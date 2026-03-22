@@ -4,58 +4,50 @@
 
 ---
 
-## 📖 Documentation
+## Directory Structure
 
-- **[Software Design Document (SDD)](../SDD.md)** — Complete system architecture and design
-- **[Roadmap](../roadmap.md)** — Implementation stages and task status
-- **[Module Documentation](../modules/)** — API contracts for each module
-- **[Agent Guide](../agent-guide.md)** — Guidelines for AI agents
+```
+tasks/
+├── done/           # Completed stages (v0.1.0-alpha)
+├── in-progress/    # Active work
+└── backlog/        # Planned stages
+```
+
+### done/
+
+Completed stages for the MVP release. See [done/README.md](./done/README.md) for the v0.1.0-alpha milestone summary.
+
+### in-progress/
+
+Active implementation work.
+
+### backlog/
+
+Planned stages not yet started.
+
+**Naming convention:**
+- Folders use semantic names (kebab-case): `chat`, `screen-share`, `network-quality`
+- When moving to `in-progress/` or `done/`, rename to `stage-N` where N = last stage number + 1
 
 ---
 
-## 📚 Task Structure
-
-This directory contains:
-
-1. **Task Files** (`TASK-XXX-*.md`) — Structured task specifications
-   - Status, scope, acceptance criteria
-   - Used for tracking implementation progress
-
-## 🎯 Quick Start
-
-### Current Stage
-
-See [Roadmap](../roadmap.md) for the current implementation stage and active tasks.
-
-### Finding Tasks
-
-All tasks are listed in the [Roadmap](../roadmap.md), organized by stage:
-
-- **Stage 0** — WebRTC Theory
-- **Stage 0.5** — Frontend Auth ✅
-- **Stage 1** — Backend ✅
-- **Stage 2** — Signalling Server ✅
-- **Stage 2.5** — Socket.io Client ✅
-- **Stage 3** — Media Stream Access ✅ (P2P tasks superseded by SFU)
-- **Stage 4-11** — Planned
-
-### Task Format
+## Task Format
 
 Each task file includes:
-- Обзор (Overview)
-- Статус (Status)
-- Цель (Goal)
-- Материалы (Resources)
-- Пошаговая инструкция (Step-by-step)
-- Критерии выполнения (Acceptance criteria)
+- Overview
+- Status
+- Goal
+- Resources
+- Step-by-step instructions
+- Acceptance criteria
 
 ---
 
-## 🚀 For Developers
+## For Developers
 
 **Before starting a new task:**
 1. Read the [SDD](../SDD.md) to understand the architecture
-2. Check the [Roadmap](../roadmap.md) for dependencies
+2. Check the [Roadmap](../roadmap.md) for high-level status
 3. Follow the task file step-by-step
 4. Update task status when complete
 
