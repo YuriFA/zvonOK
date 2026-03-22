@@ -1,4 +1,4 @@
-# TASK-002 — Screen Share UI
+# TASK-080 — Screen Share UI
 
 ## Status
 pending
@@ -72,7 +72,7 @@ interface ScreenShareButtonProps {
 ## Related Files
 - `apps/client/src/components/MediaControls.tsx` - Add screen share button
 - `apps/client/src/lib/webrtc/manager.ts` - Use WebRTCManager screen share methods
-- TASK-001-screen-share.md - Core screen share implementation
+- 1-027-screen-share.md - Core screen share implementation
 
 ## Next Task
-TASK-001 — Device Enumeration (Stage 5)
+TASK-027 — Screen Share

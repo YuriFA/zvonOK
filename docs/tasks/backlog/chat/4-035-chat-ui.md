@@ -55,4 +55,4 @@ Create React UI component for chat with message list, input, and auto-scroll fun
 - `apps/client/src/hooks/use-chat.ts`
 
 ## Next Task
-TASK-036 — mediasoup Worker Setup
+TASK-081 — Message List Component

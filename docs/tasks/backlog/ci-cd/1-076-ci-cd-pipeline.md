@@ -1,4 +1,4 @@
-# TASK-001: CI/CD Pipeline (GitHub Actions + GHCR + VPS Deploy)
+# TASK-076: CI/CD Pipeline (GitHub Actions + GHCR + VPS Deploy)
 
 > **Stage:** 12 — CI/CD & Deployment Automation
 >

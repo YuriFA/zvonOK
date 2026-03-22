@@ -1,4 +1,4 @@
-# TASK-006 — Media Error Indicators on Controls
+# TASK-086 — Media Error Indicators on Controls
 
 ## Status
 completed
@@ -174,8 +174,8 @@ pnpm -C apps/client dlx shadcn@latest add tooltip
 - `apps/client/src/lib/media/acquisition.ts` (error types: NotAllowedError, NotFoundError)
 
 ## Related Tasks
-- TASK-004 — Peer Without Media
-- TASK-005 — Camera Toggle
+- TASK-064 — Peer Without Media
+- TASK-065 — Camera Toggle
 
 ## Next Task
-TASK-007 — Call Ended State
+TASK-067 — Call Ended State

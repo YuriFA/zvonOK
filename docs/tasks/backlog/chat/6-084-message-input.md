@@ -1,4 +1,4 @@
-# TASK-006 — Message Input Component
+# TASK-084 — Message Input Component
 
 ## Status
 pending
@@ -19,8 +19,8 @@ Create message input component for sending chat messages with validation and emo
 - Loading state while sending
 
 ## Out of Scope
-- Message list display (TASK-005)
-- WebSocket real-time sending (TASK-003)
+- Message list display (TASK-081)
+- WebSocket real-time sending (TASK-091)
 - File attachments (future)
 - Reactions/emojis picker (future)
 
@@ -78,7 +78,7 @@ interface MessageInputProps {
 
 ## Related Files
 - `apps/client/src/features/chat/components/MessageInput.tsx` - New component
-- TASK-003-chat-websocket.md - Message sending via WebSocket
+- 3-091-chat-websocket.md - Message sending via WebSocket
 
 ## Next Task
-TASK-007 — Chat Integration in Room Page
+TASK-087 — Chat Integration in Room Page

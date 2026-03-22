@@ -1,4 +1,4 @@
-# TASK-006 — Remove Barrel Files
+# TASK-085 — Remove Barrel Files
 
 ## Status
 completed

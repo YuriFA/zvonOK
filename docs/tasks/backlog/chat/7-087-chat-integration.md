@@ -1,4 +1,4 @@
-# TASK-007 — Chat Integration in Room Page
+# TASK-087 — Chat Integration in Room Page
 
 ## Status
 pending
@@ -18,9 +18,9 @@ Integrate chat components into the room page with WebSocket real-time messaging.
 - Unread message indicator
 
 ## Out of Scope
-- Message list component (TASK-005)
-- Message input component (TASK-006)
-- WebSocket server implementation (TASK-003)
+- Message list component (TASK-081)
+- Message input component (TASK-084)
+- WebSocket server implementation (TASK-091)
 
 ## Technical Design
 
@@ -92,4 +92,4 @@ interface ChatState {
 - `apps/client/src/features/chat/` - Chat components
 
 ## Next Task
-TASK-001 — Mediasoup Worker Setup (Stage 7)
+TASK-078 — Mediasoup Worker Setup (Stage 5)

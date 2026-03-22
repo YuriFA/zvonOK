@@ -1,4 +1,4 @@
-# TASK-005 — Active Device Display
+# TASK-083 — Active Device Display
 
 ## Status
 completed
@@ -72,4 +72,4 @@ Speaker: Built-in Speakers
 - `apps/client/src/features/media/components/active-device-display.tsx` - New component
 
 ## Next Task
-TASK-003 — Device Permissions (Stage 5)
+Stage 5 — SFU (Group Calls)

@@ -1,4 +1,4 @@
-# TASK-005 — Message List Component
+# TASK-081 — Message List Component
 
 ## Status
 pending
@@ -18,9 +18,9 @@ Create message list component for displaying chat messages with auto-scroll and 
 - Read receipts (optional, future)
 
 ## Out of Scope
-- Message input (TASK-006)
-- WebSocket real-time updates (TASK-003)
-- Message persistence API (TASK-002)
+- Message input (TASK-084)
+- WebSocket real-time updates (TASK-091)
+- Message persistence API (TASK-033)
 
 ## Technical Design
 
@@ -83,7 +83,7 @@ interface MessageListProps {
 ## Related Files
 - `apps/client/src/features/chat/components/MessageList.tsx` - New component
 - `apps/client/src/features/chat/components/MessageBubble.tsx` - Message item
-- TASK-002-chat-api.md - Message data source
+- 2-033-chat-api.md - Message data source
 
 ## Next Task
-TASK-006 — Message Input Component
+TASK-084 — Message Input Component

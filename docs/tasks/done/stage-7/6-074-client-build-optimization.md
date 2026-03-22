@@ -9,7 +9,7 @@ medium
 ## Description
 Optimize the React client production build for deployment. The basic build pipeline already works (multi-stage Dockerfile, Vite build, Caddy serving). This task focuses on build size optimization and code splitting to ensure fast load times over the network.
 
-Note: This replaces the original TASK-061 (TASK-004-client-build.md). The Dockerfile, env vars, and Caddy serving were already implemented in TASK-044 (TASK-001-https-caddy.md). What remains is build optimization.
+Note: This replaces the original TASK-061 (4-061-client-build.md). The Dockerfile, env vars, and Caddy serving were already implemented in TASK-044 (1-044-https-caddy.md). What remains is build optimization.
 
 ## Scope
 - Audit current production build size (`pnpm -C apps/client build` + analyze output)

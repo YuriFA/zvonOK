@@ -72,7 +72,7 @@ interface DeviceSelectorProps {
 ## Related Files
 - `apps/client/src/features/media/components/device-selector.tsx` - New component
 - `apps/client/src/features/media/components/device-settings-panel.tsx` - Settings container
-- TASK-001-device-enumeration.md - Device enumeration logic
+- 1-028-device-enumeration.md - Device enumeration logic
 
 ## Next Task
-TASK-005 — Active Device Display
+TASK-083 — Active Device Display

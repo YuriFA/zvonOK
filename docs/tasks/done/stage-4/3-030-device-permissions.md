@@ -123,4 +123,4 @@ function MediaSetup() {
 - `apps/client/src/routes/room.tsx`
 
 ## Next Task
-TASK-031 — Device Selector UI
+TASK-004 — Device Selector UI

@@ -1,4 +1,4 @@
-# TASK-001 — Socket.io Server Setup
+# TASK-077 — Socket.io Server Setup
 
 ## Status
 completed
@@ -58,4 +58,4 @@ pnpm add @nestjs/websockets @nestjs/platform-socket.io
 - `apps/server/src/app.module.ts` - App module registration
 
 ## Next Task
-TASK-002 — Join/Leave Room Functionality
+TASK-020 — Join/Leave Room Functionality

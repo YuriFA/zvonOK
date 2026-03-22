@@ -75,4 +75,4 @@ interface RoomState {
 - `apps/server/src/sfu/interfaces/sfu.interface.ts` - Type definitions
 
 ## Next Task
-TASK-003 — WebRTC Signalling (superseded by SFU implementation)
+TASK-022 — WebRTC Signalling (superseded by SFU implementation)

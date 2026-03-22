@@ -68,4 +68,4 @@ interface RTCEventPayload {
 - `apps/server/src/webrtc/interfaces/` - Event type definitions
 
 ## Next Task
-TASK-023 — Socket.io Client Setup
+TASK-089 — Socket.io Client Setup

@@ -54,4 +54,4 @@ class SendMessageDto {
 - `apps/server/src/chat/chat.service.ts`
 
 ## Next Task
-TASK-033 — Real-time Chat via WebSocket
+TASK-091 — Real-time Chat via WebSocket
