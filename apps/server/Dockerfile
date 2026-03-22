@@ -45,17 +45,20 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 # Copy server package.json
 COPY apps/server/package.json ./apps/server/
 
-# Install all dependencies (prisma CLI is a devDep)
+# Install all dependencies (prisma CLI is a devDep, bcrypt/pg needed for seed)
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
-# Copy Prisma schema, config, and migrations
+# Copy Prisma schema, config, migrations, and seed
 COPY apps/server/prisma ./apps/server/prisma
 COPY apps/server/prisma.config.ts ./apps/server/prisma.config.ts
 COPY apps/server/tsconfig.json ./apps/server/tsconfig.json
 
 WORKDIR /app/apps/server
 
-CMD ["npx", "prisma", "migrate", "deploy"]
+COPY apps/server/prisma/entrypoint.sh ./prisma/entrypoint.sh
+RUN chmod +x ./prisma/entrypoint.sh
+
+CMD ["./prisma/entrypoint.sh"]
 
 # Stage 3: Production image
 FROM node:22-alpine AS production
