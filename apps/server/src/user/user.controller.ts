@@ -8,7 +8,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
-import { Request } from 'express';
+import type { Request } from 'express';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserService } from './user.service';
 import { UpdateRoleDto } from './dto/update-role.dto';

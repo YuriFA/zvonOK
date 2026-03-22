@@ -11,6 +11,7 @@ import { PasswordHelper } from './helpers/password.helper';
 import { TokenHelper } from './helpers/token.helper';
 import { JwtPayloadDto } from './dto/jwt-payload.dto';
 import { RefreshTokenHelper } from './helpers/refresh-token.helper';
+import { Role } from 'src/generated/prisma/enums';
 
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCKOUT_DURATION_MINUTES = 15;
@@ -164,7 +165,7 @@ export class AuthService {
     user: {
       id: string;
       email: string;
-      role?: import('src/generated/prisma/enums').Role;
+      role: Role;
       tokenVersion?: number;
     },
     tokenVersion = 0,
