@@ -1,0 +1,14 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "zvonok",
+      "Group": "Servers",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "zvonok",
+      "Username": "zvonok_admin",
+      "SSLMode": "prefer",
+      "PassFile": "/pgpass"
+    }
+  }
+}
