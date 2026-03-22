@@ -8,10 +8,9 @@ Guidelines for AI agents working on the WebRTC Chat codebase.
 
 ### 1. Task-Based Development
 - **Do not implement features without a task file**
-- Each feature should have a corresponding task in `/docs/tasks/TASK-XXX-<slug>.md`
-- Update task status when starting and finishing work
-- Mark tasks as `in_progress` when starting, `completed` when done
-- After completing a task, update the roadmap and SDD if necessary, and commit changes with a message referencing the task ID (e.g., `TASK-123: Implement user registration endpoint`)
+- Each feature should have a corresponding task following `/docs/tasks/README.md`
+- Update task status using the workflow defined in `/docs/tasks/README.md`
+- After completing a task, update the roadmap and SDD if necessary, and use a Conventional Commit message
 
 ### 2. Architecture Adherence
 - **Follow architecture in [SDD](./SDD.md)**
@@ -83,7 +82,7 @@ apps/client/src/
 - Respect the "No Barrel Files" rule when writing imports in tests
 
 ### 9. Git Conventions
-- Commit messages should reference task IDs: `TASK-XXX: description`
+- Commit messages should use Conventional Commits (for example: `feat: add user registration endpoint`)
 - Make atomic commits (one logical change per commit)
 - Do not mix refactoring with new features
 - Update documentation when changing architecture
@@ -142,7 +141,8 @@ if (error.response?.status === 401) {
 - `apps/server/prisma/schema.prisma` — Database schema
 - `apps/server/src/auth/auth.service.ts` — Auth business logic
 - `apps/client/src/contexts/AuthContext.tsx` — Client auth state
-- `CLAUDE.md` — Project-specific coding guidelines
+- `AGENTS.md` — Project-specific coding guidelines
+- `opencode.json` — Project-specific OpenCode configuration
 
 ### Common Commands
 ```bash
@@ -189,5 +189,5 @@ pnpm -C apps/server bd:dev          # Start PostgreSQL via Docker
 
 ---
 
-**Last Updated:** 2026-02-08
+**Last Updated:** 2026-03-22
 **Current Version:** Based on SDD v1.4
