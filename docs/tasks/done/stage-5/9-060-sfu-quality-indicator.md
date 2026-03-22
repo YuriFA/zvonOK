@@ -1,10 +1,10 @@
 # TASK-060 — SFU Connection Quality Indicator
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** medium
+> **Created:** 2026-02-08
 
-## Priority
-medium
+---
 
 ## Description
 Display connection quality metrics for each participant in SFU group calls. Shows bitrate, packet loss, and connection quality score.

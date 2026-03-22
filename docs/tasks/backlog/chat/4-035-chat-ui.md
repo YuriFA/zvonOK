@@ -1,10 +1,10 @@
 # TASK-035 — Chat UI Component
 
-## Status
-planned
+> **Status:** planned
+> **Priority:** medium
+> **Created:** 2026-02-08
 
-## Priority
-medium
+---
 
 ## Description
 Create React UI component for chat with message list, input, and auto-scroll functionality.

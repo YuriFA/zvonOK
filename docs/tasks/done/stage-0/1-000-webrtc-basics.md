@@ -1,10 +1,10 @@
 # TASK-000 — WebRTC Basics
 
-## Status
-planned
+> **Status:** planned
+> **Priority:** high
+> **Created:** 2026-02-08
 
-## Priority
-high
+---
 
 ## Description
 Understand fundamental WebRTC concepts before implementation: signalling, STUN/TURN servers, ICE candidates, SDP, and the peer connection establishment process.

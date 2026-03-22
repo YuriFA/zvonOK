@@ -1,10 +1,10 @@
 # TASK-083 — Active Device Display
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** low
+> **Created:** 2026-02-09
 
-## Priority
-low
+---
 
 ## Description
 Display the currently active devices (camera, microphone, speaker) in the UI with visual indicators.

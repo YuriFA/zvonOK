@@ -1,10 +1,10 @@
 # TASK-002 — mediasoup Router per Room
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** high
+> **Created:** 2026-02-08
 
-## Priority
-high
+---
 
 ## Description
 Create mediasoup Router for each room to manage media routing in SFU architecture.

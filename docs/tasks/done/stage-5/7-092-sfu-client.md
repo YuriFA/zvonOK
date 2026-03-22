@@ -1,10 +1,10 @@
 # TASK-092 — SFU Client Integration
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** high
+> **Created:** 2026-02-08
 
-## Priority
-high
+---
 
 ## Description
 Integrate mediasoup-client on the frontend for SFU functionality in group calls.

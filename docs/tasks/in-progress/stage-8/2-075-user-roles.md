@@ -1,10 +1,10 @@
 # TASK-075 — User Roles for Room Creation
 
-## Status
-planned
+> **Status:** planned
+> **Priority:** medium
+> **Created:** 2026-03-22
 
-## Priority
-medium
+---
 
 ## Description
 Add role-based access control (RBAC) for room creation. Only users with HOST or ADMIN role can create rooms.

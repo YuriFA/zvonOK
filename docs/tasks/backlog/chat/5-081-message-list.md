@@ -1,10 +1,10 @@
 # TASK-081 — Message List Component
 
-## Status
-pending
+> **Status:** pending
+> **Priority:** high
+> **Created:** 2026-02-09
 
-## Priority
-high
+---
 
 ## Description
 Create message list component for displaying chat messages with auto-scroll and message grouping.

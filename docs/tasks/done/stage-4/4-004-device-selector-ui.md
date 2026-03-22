@@ -1,10 +1,10 @@
 # TASK-004 — Device Selector UI
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** medium
+> **Created:** 2026-02-09
 
-## Priority
-medium
+---
 
 ## Description
 Create device selector dropdown/settings panel component for switching between cameras, microphones, and speakers.

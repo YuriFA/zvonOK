@@ -1,10 +1,10 @@
 # TASK-062 — Room Pre-Join State
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** high
+> **Created:** 2026-02-08
 
-## Priority
-high
+---
 
 ## Description
 Add a pre-join state to the room page that the room creator enters after creating a room. The pre-join state allows users to set up their devices (camera, microphone), preview their video, and share the room link before joining the actual call.

@@ -1,10 +1,10 @@
 # TASK-018 — Rooms CRUD API
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** high
+> **Created:** 2026-02-08
 
-## Priority
-high
+---
 
 ## Description
 Implement REST API for managing rooms: create, list, view, update, and soft-delete rooms. Owner-only permissions for modifications.

@@ -10,6 +10,7 @@ Guidelines for AI agents working on the WebRTC Chat codebase.
 - **Do not implement features without a task file**
 - Each feature should have a corresponding task following `/docs/tasks/README.md`
 - Update task status using the workflow defined in `/docs/tasks/README.md`
+- Current stage is always `/docs/tasks/in-progress/stage-N/` where N is the active stage number
 - After completing a task, update the roadmap and SDD if necessary, and use a Conventional Commit message
 
 ### 2. Architecture Adherence

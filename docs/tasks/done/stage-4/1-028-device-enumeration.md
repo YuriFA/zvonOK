@@ -1,10 +1,10 @@
 # TASK-028 — Device Enumeration
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** medium
+> **Created:** 2026-02-08
 
-## Priority
-medium
+---
 
 ## Description
 Implement media device enumeration to list available cameras, microphones, and speakers using enumerateDevices API.

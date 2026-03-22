@@ -1,10 +1,10 @@
 # TASK-001 — P2P vs SFU Architecture
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** high
+> **Created:** 2026-02-08
 
-## Priority
-high
+---
 
 ## Description
 Understand different architectures for video calls: Mesh (P2P), SFU, and MCU. Learn why P2P doesn't scale for groups and when to use SFU.

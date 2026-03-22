@@ -1,10 +1,10 @@
 # TASK-078 — mediasoup Worker Setup
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** high
+> **Created:** 2026-02-08
 
-## Priority
-high
+---
 
 ## Description
 Initialize mediasoup Worker for SFU (Selective Forwarding Unit) functionality in group calls.

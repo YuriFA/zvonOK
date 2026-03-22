@@ -2,7 +2,6 @@
 
 > **Status:** Planned
 > **Priority:** Medium
-> **Estimate:** 5-7 days
 > **Created:** 2026-03-22
 
 ---
@@ -58,8 +57,6 @@ adapters/
 
 ## Phase 1: Auth State Store
 
-**Estimate:** 1-2 days
-
 | Step | File | Description |
 |------|------|-------------|
 | 1.1 | `lib/auth/interfaces.ts` | Define `IAuthState`, `IAuthActions`, `IAuthStateStore` |
@@ -94,8 +91,6 @@ interface IAuthActions {
 
 ## Phase 2: Repository Pattern for Room
 
-**Estimate:** 1-2 days
-
 | Step | File | Description |
 |------|------|-------------|
 | 2.1 | `lib/room/interfaces.ts` | Define `IRoomRepository`, `IRoomMutations` |
@@ -118,8 +113,6 @@ interface IRoomRepository {
 ---
 
 ## Phase 3: SFU State Machine
-
-**Estimate:** 2-3 days
 
 | Step | File | Description |
 |------|------|-------------|
@@ -157,8 +150,6 @@ type SfuEvent =
 ---
 
 ## Phase 4: Documentation
-
-**Estimate:** 0.5 days
 
 | Step | File | Description |
 |------|------|-------------|

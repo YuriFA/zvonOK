@@ -1,10 +1,10 @@
 # TASK-093 — Migrate Shadcn UI from Radix to Base UI
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** medium
+> **Created:** 2026-03-22
 
-## Priority
-medium
+---
 
 ## Description
 Migrate shadcn/ui components from Radix UI primitives to Base UI primitives. This is an infrastructure upgrade that improves performance and aligns with the latest shadcn recommendations.

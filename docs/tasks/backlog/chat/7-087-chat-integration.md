@@ -1,10 +1,10 @@
 # TASK-087 — Chat Integration in Room Page
 
-## Status
-pending
+> **Status:** pending
+> **Priority:** high
+> **Created:** 2026-02-09
 
-## Priority
-high
+---
 
 ## Description
 Integrate chat components into the room page with WebSocket real-time messaging.

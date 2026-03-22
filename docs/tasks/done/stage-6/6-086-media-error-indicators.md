@@ -1,10 +1,10 @@
 # TASK-086 — Media Error Indicators on Controls
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** medium
+> **Created:** 2026-03-13
 
-## Priority
-medium
+---
 
 ## Description
 When camera or microphone is not found or has an error, should be shown as warning/error icons with tooltips directly on the camera and microphone toggle buttons in the MediaControls component.

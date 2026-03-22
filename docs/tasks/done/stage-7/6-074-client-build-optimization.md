@@ -1,10 +1,10 @@
 # TASK-074 — Client Build Optimization
 
-## Status
-done
+> **Status:** done
+> **Priority:** medium
+> **Created:** 2026-03-18
 
-## Priority
-medium
+---
 
 ## Description
 Optimize the React client production build for deployment. The basic build pipeline already works (multi-stage Dockerfile, Vite build, Caddy serving). This task focuses on build size optimization and code splitting to ensure fast load times over the network.

@@ -1,10 +1,10 @@
 # TASK-073 — Production Deployment Checklist
 
-## Status
-done
+> **Status:** done
+> **Priority:** high
+> **Created:** 2026-03-18
 
-## Priority
-high
+---
 
 ## Description
 Create a comprehensive deployment guide for running the full application stack on a VPS with Docker Compose. The previous TASK-046 was written before Docker Compose infrastructure existed. This task replaces it with an up-to-date checklist covering the actual deployment process: VPS setup, domain/DNS, firewall, Docker Compose, and verification.

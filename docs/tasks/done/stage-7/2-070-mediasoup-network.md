@@ -1,10 +1,10 @@
 # TASK-070 — mediasoup Production Network Configuration
 
-## Status
-done
+> **Status:** done
+> **Priority:** critical
+> **Created:** 2026-03-18
 
-## Priority
-critical
+---
 
 ## Description
 Configure mediasoup WebRTC transports for production deployment. Currently `listenIps` is hard-coded to `127.0.0.1`, which means media traffic (audio/video) only works on localhost. This must be changed to listen on all interfaces with an environment-driven `announcedIp` set to the server's public IP. Additionally, the RTC port range (UDP/TCP) must be exposed in Docker Compose for media to reach the mediasoup worker.

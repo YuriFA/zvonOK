@@ -1,10 +1,10 @@
 # TASK-071 — coturn TURN Server in Docker Compose
 
-## Status
-done
+> **Status:** done
+> **Priority:** critical
+> **Created:** 2026-03-18
 
-## Priority
-critical
+---
 
 ## Description
 Add a coturn TURN/STUN server as a service in Docker Compose for relaying media when direct connections fail. Without TURN, users behind symmetric NAT or restrictive firewalls (~10-15%) cannot establish media connections. The TURN server must be integrated into the existing Docker Compose stack with TLS support and static credentials.

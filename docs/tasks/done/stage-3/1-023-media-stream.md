@@ -1,10 +1,10 @@
 # TASK-023 — Media Stream Access
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** high
+> **Created:** 2026-02-08
 
-## Priority
-high
+---
 
 ## Description
 Implement access to camera and microphone using MediaDevices API. Create a media manager to handle local stream and device permissions.

@@ -1,10 +1,10 @@
 # TASK-080 — Screen Share UI
 
-## Status
-pending
+> **Status:** pending
+> **Priority:** medium
+> **Created:** 2026-02-09
 
-## Priority
-medium
+---
 
 ## Description
 Implement user interface for screen sharing functionality including button, status indicator, and error handling.

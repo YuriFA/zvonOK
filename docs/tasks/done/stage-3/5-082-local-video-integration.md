@@ -1,10 +1,10 @@
 # TASK-082 — LocalVideo Integration
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** medium
+> **Created:** 2026-03-03
 
-## Priority
-medium
+---
 
 ## Description
 Integrate LocalVideo component into Room Pre-Join (DeviceSelector) and Room Page for consistent video display across the application.

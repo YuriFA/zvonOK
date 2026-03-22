@@ -1,10 +1,10 @@
 # TASK-033 — Chat API Endpoints
 
-## Status
-planned
+> **Status:** planned
+> **Priority:** medium
+> **Created:** 2026-02-08
 
-## Priority
-medium
+---
 
 ## Description
 Create REST API endpoints for chat functionality to send messages and retrieve chat history.

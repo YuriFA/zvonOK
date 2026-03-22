@@ -1,10 +1,10 @@
 # TASK-022 — WebRTC Signalling
 
-## Status
-superseded
+> **Status:** superseded
+> **Priority:** high
+> **Created:** 2026-02-08
 
-## Priority
-high
+---
 
 ## Description
 ~~Implement WebRTC signalling events to exchange offers, answers, and ICE candidates between peers for establishing P2P connections.~~

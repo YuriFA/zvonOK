@@ -1,10 +1,10 @@
 # TASK-029 — Device Switching
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** medium
+> **Created:** 2026-02-08
 
-## Priority
-medium
+---
 
 ## Description
 Implement switching between cameras, microphones, and speakers without disrupting WebRTC connections.

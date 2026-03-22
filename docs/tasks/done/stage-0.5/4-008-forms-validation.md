@@ -1,10 +1,10 @@
 # TASK-008 — Forms + Validation (React Hook Form + Zod)
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** high
+> **Created:** 2026-02-08
 
-## Priority
-high
+---
 
 ## Description
 Set up form handling with React Hook Form and Zod validation for type-safe form validation and error handling.

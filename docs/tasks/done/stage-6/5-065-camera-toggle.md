@@ -1,10 +1,10 @@
 # TASK-065 — Proper Camera Toggle Implementation
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** high
+> **Created:** 2026-03-13
 
-## Priority
-high
+---
 
 ## Description
 Local media toggles still behave inconsistently across the pre-join state and the active room. On macOS this leaves the system camera or microphone indicator active even though the UI says the device is off. The media manager must be refactored so camera and microphone toggles always release hardware when disabled, preserve device preferences for re-acquisition, and keep UI/SFU state synchronized.

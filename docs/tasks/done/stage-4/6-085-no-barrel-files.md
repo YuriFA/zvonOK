@@ -1,10 +1,10 @@
 # TASK-085 — Remove Barrel Files
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** medium
+> **Created:** 2026-03-12
 
-## Priority
-medium
+---
 
 ## Description
 Remove barrel files (index.ts) from the client app to improve code maintainability and import clarity.

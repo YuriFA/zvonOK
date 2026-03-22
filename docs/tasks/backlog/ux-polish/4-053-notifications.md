@@ -1,10 +1,10 @@
 # TASK-053 — Toast Notifications
 
-## Status
-planned
+> **Status:** planned
+> **Priority:** medium
+> **Created:** 2026-02-08
 
-## Priority
-medium
+---
 
 ## Description
 

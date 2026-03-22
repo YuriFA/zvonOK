@@ -1,10 +1,10 @@
 # TASK-063 — Pre-Join State Before Call Connection
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** high
+> **Created:** 2026-03-13
 
-## Priority
-high
+---
 
 ## Description
 Make `/room/:slug` the canonical room link with a pre-join state before entering a call. The actual Socket.io/WebRTC/SFU connection must start only after the user clicks the join button.

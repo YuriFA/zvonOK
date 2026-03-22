@@ -1,10 +1,10 @@
 # TASK-090 — Media Controls (Mute/Unmute)
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** high
+> **Created:** 2026-02-08
 
-## Priority
-high
+---
 
 ## Description
 Implement media track controls for enabling/disabling camera and microphone without disrupting WebRTC connection.

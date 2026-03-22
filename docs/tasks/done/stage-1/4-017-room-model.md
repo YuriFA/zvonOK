@@ -1,10 +1,10 @@
 # TASK-017 — Room Data Model
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** high
+> **Created:** 2026-02-08
 
-## Priority
-high
+---
 
 ## Description
 Create Room model in Prisma schema for managing video call rooms with owner, public visibility, slug for invites, and lifecycle management.

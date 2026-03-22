@@ -1,10 +1,10 @@
 # TASK-007 — React Router v7 with File Routing
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** high
+> **Created:** 2026-02-08
 
-## Priority
-high
+---
 
 ## Description
 Set up React Router v7 with file-system routing for SPA navigation. Create pages for home, login, register, and room views.

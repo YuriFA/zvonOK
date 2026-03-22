@@ -1,10 +1,10 @@
 # TASK-067 — Call Ended State
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** high
+> **Created:** 2026-03-13
 
-## Priority
-high
+---
 
 ## Description
 Show a dedicated ended state on the canonical room link when the call has already been finished. Opening `/room/:slug` for a finished room should not attempt to reconnect the user back into the call.

@@ -1,10 +1,10 @@
 # TASK-006 — UI Components (Radix UI)
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** high
+> **Created:** 2026-02-08
 
-## Priority
-high
+---
 
 ## Description
 Create reusable UI components based on Radix UI primitives with Tailwind CSS styling for consistent design system.

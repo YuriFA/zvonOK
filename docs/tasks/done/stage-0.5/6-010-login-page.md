@@ -1,10 +1,10 @@
 # TASK-010 — Login Page
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** high
+> **Created:** 2026-02-08
 
-## Priority
-high
+---
 
 ## Description
 Implement login page with form validation, API integration, and error handling for user authentication.

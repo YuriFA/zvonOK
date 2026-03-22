@@ -1,10 +1,10 @@
 # TASK-012 — Auth Context (State Management)
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** high
+> **Created:** 2026-02-08
 
-## Priority
-high
+---
 
 ## Description
 Create authentication context for managing user state across the application with login, logout, and token refresh functionality.

@@ -1,10 +1,10 @@
 # TASK-047 — Network Quality Metrics Display
 
-## Status
-planned
+> **Status:** planned
+> **Priority:** low
+> **Created:** 2026-02-08
 
-## Priority
-low
+---
 
 ## Description
 Monitor and display WebRTC connection quality metrics: bitrate, packet loss, jitter, and RTT.

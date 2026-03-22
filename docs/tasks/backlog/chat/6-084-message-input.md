@@ -1,10 +1,10 @@
 # TASK-084 — Message Input Component
 
-## Status
-pending
+> **Status:** pending
+> **Priority:** high
+> **Created:** 2026-02-09
 
-## Priority
-high
+---
 
 ## Description
 Create message input component for sending chat messages with validation and emoji support.

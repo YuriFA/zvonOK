@@ -1,10 +1,10 @@
 # TASK-042 — Adaptive Video Grid Layout
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** medium
+> **Created:** 2026-02-08
 
-## Priority
-medium
+---
 
 ## Description
 Implement CSS Grid-based adaptive video layout that adjusts based on participant count.

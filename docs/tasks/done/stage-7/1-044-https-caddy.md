@@ -1,10 +1,10 @@
 # TASK-044 — Caddy Reverse Proxy with HTTPS
 
-## Status
-done
+> **Status:** done
+> **Priority:** high
+> **Created:** 2026-02-08
 
-## Priority
-high
+---
 
 ## Description
 Set up Caddy as a reverse proxy with automatic HTTPS for production deployment.

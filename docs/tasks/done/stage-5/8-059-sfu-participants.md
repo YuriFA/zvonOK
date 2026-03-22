@@ -1,10 +1,10 @@
 # TASK-059 — SFU Participants List UI
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** high
+> **Created:** 2026-02-08
 
-## Priority
-high
+---
 
 ## Description
 Create a participants list component for SFU group calls. Shows all participants in the room with their connection status, mute state, and controls.

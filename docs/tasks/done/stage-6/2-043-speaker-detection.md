@@ -1,10 +1,10 @@
 # TASK-043 — Active Speaker Detection
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** medium
+> **Created:** 2026-02-08
 
-## Priority
-medium
+---
 
 ## Description
 

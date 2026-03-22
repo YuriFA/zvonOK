@@ -1,10 +1,10 @@
 # TASK-027 — Screen Share
 
-## Status
-planned
+> **Status:** planned
+> **Priority:** medium
+> **Created:** 2026-02-08
 
-## Priority
-medium
+---
 
 ## Description
 Implement screen sharing using getDisplayMedia API with track replacement in WebRTC peer connection.

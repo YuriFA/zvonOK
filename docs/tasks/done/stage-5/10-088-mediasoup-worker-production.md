@@ -1,10 +1,10 @@
 # TASK-088 — Production Worker Binary
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** medium
+> **Created:** 2026-03-13
 
-## Priority
-medium
+---
 
 ## Description
 Configure mediasoup worker binary for production deployment. Mediasoup automatically downloads prebuilt binary from GitHub Releases during `pnpm install`, falling back to C++ compilation (requires Python + C++ compiler). With `ignore-scripts=true` in `.npmrc`, the binary won't build and server will crash with `ENOENT`.

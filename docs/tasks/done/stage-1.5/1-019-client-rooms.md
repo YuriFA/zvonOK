@@ -1,10 +1,10 @@
 # TASK-019 — Client-Side Room Functionality
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** high
+> **Created:** 2026-02-08
 
-## Priority
-high
+---
 
 ## Description
 Implement client-side room functionality for the WebRTC chat application. Users can create rooms and join rooms via UI using a room code (shared privately via link or directly).

@@ -1,10 +1,10 @@
 # TASK-014 — PostgreSQL + Prisma Setup
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** high
+> **Created:** 2026-02-08
 
-## Priority
-high
+---
 
 ## Description
 Connect PostgreSQL to NestJS project through Prisma ORM. Create database for storing users, rooms, and messages.

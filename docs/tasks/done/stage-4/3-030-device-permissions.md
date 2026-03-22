@@ -1,10 +1,10 @@
 # TASK-030 — Device Permissions Handling
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** medium
+> **Created:** 2026-02-08
 
-## Priority
-medium
+---
 
 ## Description
 Handle media device permissions with graceful degradation when cameras or microphones are unavailable.

@@ -1,10 +1,10 @@
 # TASK-020 — Room Join/Leave Functionality
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** high
+> **Created:** 2026-02-08
 
-## Priority
-high
+---
 
 ## Description
 Implement room management for WebSocket connections. The SFU module manages peer state via `sfu:join` and `sfu:peer-left` events.

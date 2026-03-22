@@ -1,10 +1,10 @@
 # TASK-069 — Permission Denied Warning & Re-Request Modal
 
-## Status
-done
+> **Status:** done
+> **Priority:** medium
+> **Created:** 2026-03-18
 
-## Priority
-medium
+---
 
 ## Description
 When the user has denied browser access to camera and/or microphone, entering the call should display a persistent warning icon in the top-right corner of the room view. When the user clicks a toggle button for a denied device, instead of silently failing, a modal dialog should appear explaining the issue and offering buttons to re-request access to the specific device or to both devices at once.

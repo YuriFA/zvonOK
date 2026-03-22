@@ -1,10 +1,10 @@
 # TASK-050 — End-to-End Testing
 
-## Status
-planned
+> **Status:** planned
+> **Priority:** medium
+> **Created:** 2026-02-08
 
-## Priority
-medium
+---
 
 ## Description
 

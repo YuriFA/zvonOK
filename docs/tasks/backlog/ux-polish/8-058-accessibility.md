@@ -1,10 +1,10 @@
 # TASK-058 — Accessibility (ARIA)
 
-## Status
-planned
+> **Status:** planned
+> **Priority:** medium
+> **Created:** 2026-02-08
 
-## Priority
-medium
+---
 
 ## Description
 

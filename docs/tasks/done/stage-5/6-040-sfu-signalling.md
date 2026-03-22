@@ -1,10 +1,10 @@
 # TASK-040 — SFU Signalling Protocol
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** high
+> **Created:** 2026-02-08
 
-## Priority
-high
+---
 
 ## Description
 Define and implement WebSocket signalling protocol for SFU communication between client and server.

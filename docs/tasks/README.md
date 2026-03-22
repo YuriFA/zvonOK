@@ -51,12 +51,79 @@ Task files:
 ## Task Format
 
 Each task file includes:
-- Overview
-- Status
-- Goal
-- Resources
+- Header with status, priority, and creation date
+- Description or goal
+- Scope and technical design
 - Step-by-step instructions
 - Acceptance criteria
+
+### Header Format
+
+```markdown
+# TASK-XXX — Title
+
+> **Status:** planned | in-progress | completed
+> **Priority:** low | medium | high
+> **Created:** YYYY-MM-DD
+
+---
+
+## Description
+...
+```
+
+**Status values:**
+- `planned` — not started
+- `in-progress` — actively working
+- `completed` — finished
+
+**Priority values:**
+- `low` — nice to have
+- `medium` — should have
+- `high` — must have
+
+---
+
+## Task Template
+
+```markdown
+# TASK-XXX — Task Title
+
+> **Status:** planned
+> **Priority:** medium
+> **Created:** YYYY-MM-DD
+
+---
+
+## Description
+
+Brief description of what this task accomplishes.
+
+## Scope
+
+- Item 1
+- Item 2
+- Item 3
+
+## Technical Design
+
+### Section 1
+Details about implementation...
+
+### Section 2
+API changes, data models, etc...
+
+## Acceptance Criteria
+
+- [ ] Criterion 1
+- [ ] Criterion 2
+- [ ] Criterion 3
+
+## Related Files
+
+- `path/to/file1.ts`
+- `path/to/file2.ts`
+```
 
 ---
 

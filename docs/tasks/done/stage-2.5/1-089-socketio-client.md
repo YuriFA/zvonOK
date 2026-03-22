@@ -1,10 +1,10 @@
 # TASK-089 — Socket.io Client Setup
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** high
+> **Created:** 2026-02-08
 
-## Priority
-high
+---
 
 ## Description
 Install and configure Socket.io client on the frontend. Create a WebSocket manager for connection handling and event subscriptions.

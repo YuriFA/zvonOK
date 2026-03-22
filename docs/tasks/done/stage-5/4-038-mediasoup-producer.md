@@ -1,10 +1,10 @@
 # TASK-038 — mediasoup Producer
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** high
+> **Created:** 2026-02-08
 
-## Priority
-high
+---
 
 ## Description
 Create mediasoup Producer for receiving incoming media tracks from clients.

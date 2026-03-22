@@ -1,10 +1,10 @@
 # TASK-054 — Dark Theme Support
 
-## Status
-planned
+> **Status:** planned
+> **Priority:** low
+> **Created:** 2026-02-08
 
-## Priority
-low
+---
 
 ## Description
 

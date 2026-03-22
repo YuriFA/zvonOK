@@ -1,10 +1,10 @@
 # TASK-064 — Fix Missing Participant Without Media
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** high
+> **Created:** 2026-03-13
 
-## Priority
-high
+---
 
 ## Description
 When a second user joins a call and denies media permissions (camera or microphone), they don't appear at all for the first user. The participant should be visible in both the video grid (as a tile without media) and the participants list, even if they have no active media tracks.

@@ -2,7 +2,6 @@
 
 > **Status:** Completed
 > **Priority:** Medium
-> **Estimate:** 0.5 day
 > **Created:** 2026-03-22
 
 ---

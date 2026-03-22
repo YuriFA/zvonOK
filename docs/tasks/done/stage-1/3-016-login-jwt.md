@@ -1,10 +1,10 @@
 # TASK-016 — JWT Login with Refresh Tokens
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** high
+> **Created:** 2026-02-08
 
-## Priority
-high
+---
 
 ## Description
 Implement JWT authentication with access and refresh tokens. Access tokens stored in HTTP-only cookies. Refresh token rotation on each use.

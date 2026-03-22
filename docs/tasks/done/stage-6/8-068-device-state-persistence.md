@@ -1,10 +1,10 @@
 # TASK-068 — Persist Device State From Pre-Join to Call Join
 
-## Status
-done
+> **Status:** done
+> **Priority:** high
+> **Created:** 2026-03-13
 
-## Priority
-high
+---
 
 ## Description
 Persist the user's media setup from the pre-join state into the active call so joining a room does not reset selected camera/microphone devices or the intended mic/camera enabled state.

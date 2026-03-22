@@ -1,10 +1,10 @@
 # TASK-031 — Chat Data Model
 
-## Status
-planned
+> **Status:** planned
+> **Priority:** medium
+> **Created:** 2026-02-08
 
-## Priority
-medium
+---
 
 ## Description
 Create Message model in Prisma schema for storing chat history with user and room relationships.

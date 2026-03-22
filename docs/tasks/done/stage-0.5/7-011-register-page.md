@@ -1,10 +1,10 @@
 # TASK-011 — Register Page
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** high
+> **Created:** 2026-02-08
 
-## Priority
-high
+---
 
 ## Description
 Implement registration page with form validation, password confirmation, and API integration for new user accounts.

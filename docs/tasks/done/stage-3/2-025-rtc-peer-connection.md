@@ -1,12 +1,10 @@
 # TASK-025 — RTCPeerConnection Setup
 
-> **Note:** This task was planned for P2P architecture but The project uses SFU-only (mediasoup) for all video calls. See Stage 5 for SFU implementation.
+> **Status:** superseded
+> **Priority:** high
+> **Created:** 2026-02-08
 
-## Status
-superseded
-
-## Priority
-high
+---
 
 ## Description
 Create WebRTC manager to handle RTCPeerConnection for P2P video calls. Manage multiple peer connections and track ICE candidates.

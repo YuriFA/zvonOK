@@ -1,10 +1,10 @@
 # TASK-005 — Project Setup (React + Vite + Tailwind CSS v4)
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** high
+> **Created:** 2026-02-08
 
-## Priority
-high
+---
 
 ## Description
 Create a modern React application with Vite, TypeScript, and Tailwind CSS v4 for the WebRTC video chat client.

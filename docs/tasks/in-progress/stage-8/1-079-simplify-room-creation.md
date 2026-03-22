@@ -1,10 +1,10 @@
 # TASK-079 — Simplify Room Creation
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** medium
+> **Created:** 2026-03-22
 
-## Priority
-medium
+---
 
 ## Description
 Remove form fields from room creation flow. Clicking "Create room" button should immediately create a room with default values and navigate user to the room page.

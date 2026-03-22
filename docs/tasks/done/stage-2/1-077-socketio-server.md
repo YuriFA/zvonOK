@@ -1,10 +1,10 @@
 # TASK-077 — Socket.io Server Setup
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** high
+> **Created:** 2026-02-08
 
-## Priority
-high
+---
 
 ## Description
 Configure Socket.io in NestJS for WebSocket signalling. The SFU module uses Socket.io for mediasoup signalling via the `/sfu` namespace.

@@ -1,10 +1,10 @@
 # TASK-072 — Configurable ICE Servers (STUN/TURN)
 
-## Status
-done
+> **Status:** done
+> **Priority:** critical
+> **Created:** 2026-03-18
 
-## Priority
-critical
+---
 
 ## Description
 Currently the client has hard-coded Google public STUN servers in `apps/client/src/lib/config.ts`. For production with a coturn TURN server, the client needs to know the TURN server address and credentials. Instead of hard-coding them, implement a server-side API endpoint that returns ICE server configuration. This allows the server to control TURN credentials and makes configuration environment-driven.

@@ -1,12 +1,10 @@
 # TASK-026 — Offer/Answer Exchange Implementation
 
-> **Note:** This task was planned for P2P but Superseded by SFU implementation in Stage 5.
+> **Status:** superseded
+> **Priority:** high
+> **Created:** 2026-02-08
 
-## Status
-superseded
-
-## Priority
-high
+---
 
 ## Description
 Implement P2P connection establishment through SDP offer/answer exchange between two participants.

@@ -1,10 +1,10 @@
 # TASK-037 — mediasoup Transport
 
-## Status
-completed
+> **Status:** completed
+> **Priority:** high
+> **Created:** 2026-02-08
 
-## Priority
-high
+---
 
 ## Description
 Create mediasoup Transport for sending and receiving media between client and SFU.
