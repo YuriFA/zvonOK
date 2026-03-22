@@ -1,6 +1,5 @@
-import { Link } from 'react-router';
-import { Button } from '@/components/ui/button';
 import type { Room } from '../types/room.types';
+import { LinkButton } from '@/components/ui/link-button';
 
 interface CallEndedViewProps {
   room: Room;
@@ -17,9 +16,9 @@ export function CallEndedView({ room }: CallEndedViewProps) {
         </p>
       </div>
 
-      <Button asChild size="lg">
-        <Link to="/">Back to Home</Link>
-      </Button>
+      <LinkButton to="/" size="lg">
+        Back to Home
+      </LinkButton>
     </div>
   );
 }

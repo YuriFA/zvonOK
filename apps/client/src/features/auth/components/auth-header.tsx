@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { Button } from '@/components/ui/button';
+import { LinkButton } from '@/components/ui/link-button';
 import { useAuth } from '../contexts/auth.context';
 import { ProfileDropdown } from './profile-dropdown';
 
@@ -16,12 +16,12 @@ export function AuthHeader() {
         <ProfileDropdown />
       ) : (
         <div className="flex gap-2">
-          <Button variant="ghost" asChild>
-            <Link to="/login">Login</Link>
-          </Button>
-          <Button asChild>
-            <Link to="/register">Register</Link>
-          </Button>
+          <LinkButton to="/login" variant="ghost">
+            Login
+          </LinkButton>
+          <LinkButton to="/register">
+            Register
+          </LinkButton>
         </div>
       )}
     </header>

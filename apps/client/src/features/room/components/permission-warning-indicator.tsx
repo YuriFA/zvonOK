@@ -29,15 +29,17 @@ export function PermissionWarningIndicator({
 
   return (
     <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onClick}
-          aria-label={tooltipText}
-        >
-          <AlertTriangle className="size-4 text-amber-500" />
-        </Button>
+      <TooltipTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClick}
+            aria-label={tooltipText}
+          />
+        }
+      >
+        <AlertTriangle className="size-4 text-amber-500" />
       </TooltipTrigger>
       <TooltipContent>{tooltipText}</TooltipContent>
     </Tooltip>

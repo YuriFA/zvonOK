@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { LinkButton } from '@/components/ui/link-button';
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router";
 import { AuthHeader } from "@/features/auth/components/auth-header";
 import { useAuth } from "@/features/auth/contexts/auth.context";
-import { Link } from "react-router";
 import { useCreateRoom } from "@/features/room/hooks/use-create-room";
 import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export const Home = () => {
   const navigate = useNavigate();
@@ -65,14 +65,14 @@ export const Home = () => {
               </div>
             ) : (
               <div className="text-center space-y-2">
-                <Button type="button" className="w-full" asChild>
-                  <Link to="/login">Login to Join Room</Link>
-                </Button>
+                <LinkButton to="/login" className="w-full">
+                  Login to Join Room
+                </LinkButton>
                 <p className="text-sm text-muted-foreground">
                   or{" "}
-                  <Link to="/register" className="text-primary underline-offset-4 hover:underline">
+                  <LinkButton to="/register" className="text-primary underline-offset-4 hover:underline">
                     create an account
-                  </Link>
+                  </LinkButton>
                 </p>
               </div>
             )}

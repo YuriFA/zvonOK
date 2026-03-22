@@ -61,45 +61,49 @@ export function MediaControls({
   return (
     <div className={cn('flex gap-2', className)}>
       <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            type="button"
-            variant={videoError && !videoIsWarning ? 'destructive' : variant}
-            size={size}
-            onClick={onToggleVideo}
-            disabled={disabled}
-            aria-label={videoTooltipText}
-          >
-            {videoError ? (
-              <AlertTriangle className={cn('size-4', videoIsWarning && 'text-yellow-500')} />
-            ) : isVideoEnabled ? (
-              <Video className="size-4" />
-            ) : (
-              <VideoOff className="size-4" />
-            )}
-          </Button>
+        <TooltipTrigger
+          render={
+            <Button
+              type="button"
+              variant={videoError && !videoIsWarning ? 'destructive' : variant}
+              size={size}
+              onClick={onToggleVideo}
+              disabled={disabled}
+              aria-label={videoTooltipText}
+            />
+          }
+        >
+          {videoError ? (
+            <AlertTriangle className={cn('size-4', videoIsWarning && 'text-yellow-500')} />
+          ) : isVideoEnabled ? (
+            <Video className="size-4" />
+          ) : (
+            <VideoOff className="size-4" />
+          )}
         </TooltipTrigger>
         <TooltipContent>{videoTooltipText}</TooltipContent>
       </Tooltip>
 
       <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            type="button"
-            variant={audioError && !audioIsWarning ? 'destructive' : variant}
-            size={size}
-            onClick={onToggleAudio}
-            disabled={disabled}
-            aria-label={audioTooltipText}
-          >
-            {audioError ? (
-              <AlertTriangle className={cn('size-4', audioIsWarning && 'text-yellow-500')} />
-            ) : isAudioEnabled ? (
-              <Mic className="size-4" />
-            ) : (
-              <MicOff className="size-4" />
-            )}
-          </Button>
+        <TooltipTrigger
+          render={
+            <Button
+              type="button"
+              variant={audioError && !audioIsWarning ? 'destructive' : variant}
+              size={size}
+              onClick={onToggleAudio}
+              disabled={disabled}
+              aria-label={audioTooltipText}
+            />
+          }
+        >
+          {audioError ? (
+            <AlertTriangle className={cn('size-4', audioIsWarning && 'text-yellow-500')} />
+          ) : isAudioEnabled ? (
+            <Mic className="size-4" />
+          ) : (
+            <MicOff className="size-4" />
+          )}
         </TooltipTrigger>
         <TooltipContent>{audioTooltipText}</TooltipContent>
       </Tooltip>

@@ -1,7 +1,5 @@
 import { useParams } from 'react-router';
-import { Button } from '@/components/ui/button';
 import { useRoom } from '@/features/room/hooks/use-room';
-import { Link } from 'react-router';
 import { PrejoinView } from '@/features/room/components/prejoin-view';
 import { useState, useEffect, useCallback } from 'react';
 import { RoomView } from '@/features/room/components/room-view';
@@ -11,6 +9,7 @@ import { MediaManagerProvider } from '@/features/media/contexts/media-manager.co
 import { SfuManagerProvider } from '@/features/sfu/contexts/sfu-manager.context';
 import { sfuManager } from '@/lib/sfu/manager';
 import { mediaManager } from '@/lib/media/manager';
+import { LinkButton } from '@/components/ui/link-button';
 
 type RoomViewState = 'prejoin' | 'active' | 'ended';
 
@@ -54,9 +53,9 @@ export const RoomPage = () => {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4">
         <p className="text-destructive">{error?.message || 'Room not found'}</p>
-        <Button asChild>
-          <Link to="/">Back to Home</Link>
-        </Button>
+        <LinkButton to="/">
+          Back to Home
+        </LinkButton>
       </div>
     );
   }
