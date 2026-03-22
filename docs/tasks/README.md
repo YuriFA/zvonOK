@@ -25,9 +25,18 @@ Active implementation work.
 
 Planned stages not yet started.
 
-**Naming convention:**
-- Folders use semantic names (kebab-case): `chat`, `screen-share`, `network-quality`
+**Naming conventions:**
+
+Folders:
+- Use semantic names (kebab-case): `chat`, `screen-share`, `network-quality`
 - When moving to `in-progress/` or `done/`, rename to `stage-N` where N = last stage number + 1
+
+Task files:
+- Format: `{index}-{id}-{name}.md`
+- `index` — sequential number within the folder (1, 2, 3...)
+- `id` — task number with leading zeros (001, 002, 075...)
+- `name` — short description in kebab-case
+- Example: `1-075-user-roles.md`
 
 **Renaming steps:**
 1. Find max stage number in `done/` (or `in-progress/` if not empty)
