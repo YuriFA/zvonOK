@@ -9,6 +9,20 @@ C4 диаграммы для WebRTC Chat. Формат — [Mermaid C4](https://
 | **L3 — Backend Components** | NestJS-модули: Auth, User, Room, SFU, Prisma | [c4-l3-backend.md](./c4-l3-backend.md) |
 | **L3 — Frontend Components** | React-фичи, lib/api, lib/sfu, lib/media, routing | [c4-l3-frontend.md](./c4-l3-frontend.md) |
 
+## Domain & High-Level Diagrams
+
+| Diagram | Scope | File |
+|---------|-------|------|
+| **Domain Model** | ER-диаграмма сущностей (User, Room) | [domain-model.md](./domain-model.md) |
+| **High-Level Architecture** | Клиенты ↔ Сервер ↔ БД, протоколы | [high-level.md](./high-level.md) |
+
+## Sequence Diagrams
+
+| Diagram | Scope | File |
+|---------|-------|------|
+| **SFU Media Flow** | Handshake: join → transport → produce → consume | [sequence-sfu.md](./sequence-sfu.md) |
+| **Authentication Flow** | Login → token rotation → refresh | [sequence-auth.md](./sequence-auth.md) |
+
 ## Как читать диаграммы
 
 - **L1** — самый верхний уровень: пользователи и внешние сервисы. Отвечает на вопрос «что за система и кто с ней работает».
@@ -26,7 +40,5 @@ C4 диаграммы для WebRTC Chat. Формат — [Mermaid C4](https://
 
 | Диаграмма | Польза |
 |-----------|--------|
-| **Sequence: SFU Join Flow** | Пошаговый handshake: sfu:join → transport → produce → consume. Уже частично есть в SDD Appendix A |
-| **Sequence: Auth Flow** | Login → token rotation → refresh → logout. Уже есть в SDD Appendix A |
 | **Deployment Diagram** | Карта портов, сетей Docker Compose, TURN relay range — полезно для DevOps |
 | **L3 — CI/CD Pipeline** | GitHub Actions jobs и их зависимости |

@@ -13,6 +13,7 @@
 | Document | Purpose | Location |
 |----------|---------|----------|
 | **Module Documentation** | Detailed module specifications | [modules/](./modules/) |
+| **Architecture Diagrams** | C4 diagrams, domain model, sequence diagrams | [architecture/](./architecture/) |
 | **Roadmap** | Implementation stages and task list | [roadmap.md](./roadmap.md) |
 | **Agent Guide** | Guidelines for AI agents | [agent-guide.md](./agent-guide.md) |
 | **Tasks** | Individual task specifications | [tasks/](./tasks/) |
@@ -64,19 +65,6 @@ The WebRTC Chat application provides:
 | REQ-007 | Security baseline: bcrypt hashing, env-based JWT secrets, timing-safe refresh validation. | Completed |
 | REQ-008 | Performance targets and monitoring for media and UI. | Planned |
 
-### 1.5 Traceability
-
-| Requirement | Spec References | Tasks |
-|-------------|-----------------|-------|
-| REQ-001 | [modules/auth.md](./modules/auth.md), SDD 4.1 | stage-1/TASK-002, TASK-003 |
-| REQ-002 | [modules/user.md](./modules/user.md), SDD 4.1 | stage-1/TASK-001, TASK-003 |
-| REQ-003 | SDD 3.1, SDD 4.1 | stage-1/TASK-004, TASK-005 |
-| REQ-004 | [modules/gateway.md](./modules/gateway.md), SDD 4.2 | stage-1.5/TASK-001, stage-2/TASK-001, TASK-002 |
-| REQ-005 | [modules/sfu.md](./modules/sfu.md), SDD 4.2 | stage-5/TASK-001 to TASK-009 |
-| REQ-006 | [modules/client.md](./modules/client.md), SDD 4.3 | stage-0.5/TASK-001 to TASK-009, stage-2/TASK-003, stage-3/TASK-001 to TASK-005, stage-6/TASK-003, stage-6/TASK-008 |
-| REQ-007 | SDD 6 | stage-1/TASK-002, TASK-003 |
-| REQ-008 | SDD 7 | stage-7/TASK-003, stage-10/TASK-001 |
-
 ---
 
 ### 1.6 Product Goals and MVP Scope
@@ -105,78 +93,26 @@ The WebRTC Chat application provides:
 
 ### 2.1 Domain Model
 
-```mermaid
-erDiagram
-    User ||--o{ Room : owns
+> See full diagram: [architecture/domain-model.md](./architecture/domain-model.md)
 
-    User {
-        string id PK
-        string email UK
-        string username UK
-        string passwordHash
-        string refreshTokenHash
-        int failedLoginAttempts
-        datetime lockedUntil
-        int tokenVersion
-        datetime createdAt
-        datetime updatedAt
-    }
-
-    Room {
-        string id PK
-        string slug UK
-        string name
-        string ownerId FK
-        boolean isPublic
-        int maxParticipants
-        enum status
-        datetime createdAt
-        datetime updatedAt
-        datetime endedAt
-        datetime lastActivityAt
-    }
-
-    %% Message model to be added in Stage 9 (Chat)
-    %% Message {
-    %%     string id PK
-    %%     string content
-    %%     string userId FK
-    %%     string roomId FK
-    %%     datetime createdAt
-    %% }
-```
+| Entity | Key Fields | Notes |
+|--------|-----------|-------|
+| **User** | id (PK), email (UK), username (UK), passwordHash, refreshTokenHash, tokenVersion | Owns rooms |
+| **Room** | id (PK), slug (UK), ownerId (FK→User), status (active\|ended), maxParticipants | Soft-deleted via `status=ended` |
+| **Message** | id, content, userId (FK), roomId (FK) | *Planned — Stage 9* |
 
 ### 2.2 High-Level Architecture
 
-```mermaid
-flowchart TB
-    subgraph Clients["Browser Clients"]
-        C1[Client 1]
-        C2[Client 2]
-        C3[Client 3]
-    end
+> See full diagram: [architecture/high-level.md](./architecture/high-level.md)
 
-    subgraph Server["NestJS Server"]
-        API[REST API]
-        WS[WebSocket Gateway]
-        SFU[mediasoup SFU]
-    end
-
-    subgraph Database["PostgreSQL + Prisma"]
-        DB[(Database)]
-    end
-
-    C1 <-->|HTTP/WebSocket| Server
-    C2 <-->|HTTP/WebSocket| Server
-    C3 <-->|HTTP/WebSocket| Server
-
-    API <-->|Prisma ORM| DB
-    WS <-->|Prisma ORM| DB
-
-    C1 <-->|via SFU| SFU
-    C2 <-->|via SFU| SFU
-    C3 <-->|via SFU| SFU
 ```
+Browser Clients  ──HTTP/WS──►  NestJS Server (REST API + WS Gateway + mediasoup SFU)
+                                       │ Prisma ORM
+                                       ▼
+                               PostgreSQL Database
+```
+
+Clients exchange media directly with the SFU (RTP/SRTP); all signalling goes over WebSocket.
 
 ### 2.3 Component Overview
 
@@ -894,73 +830,21 @@ Push to main / PR
 - Tests must pass in CI before merge; run with `pnpm test` (server) and `pnpm test:e2e` (client)
 - Mock Prisma via `jest.mock` or a test database — never use production DB
 
-**See:** [stage-11/TASK-001-e2e-testing.md](./tasks/stage-11/TASK-001-e2e-testing.md)
-
 ---
 
 ## Appendix A: Sequence Diagrams
 
 ### SFU Media Flow (mediasoup)
 
-```mermaid
-sequenceDiagram
-    participant A as Alice
-    participant S as SFU Server
-    participant B as Bob
+> See full diagram: [architecture/sequence-sfu.md](./architecture/sequence-sfu.md)
 
-    A->>S: sfu:join { roomId, userId }
-    B->>S: sfu:join { roomId, userId }
-    S-->>A: sfu:joined { routerRtpCapabilities }
-    S-->>B: sfu:joined { routerRtpCapabilities }
-
-    Note over A: Create send/recv transports
-    A->>S: sfu:create-send-transport
-    S-->>A: sfu:transport-created { iceParams, dtlsParams }
-    A->>S: sfu:connect-transport { dtlsParams }
-    S-->>A: sfu:transport-connected
-
-    A->>S: sfu:produce { kind: video, rtpParams }
-    S-->>A: sfu:producer-created { producerId }
-    S->>B: sfu:new-producer { producerId, userId, kind }
-
-    Note over B: Create consumer for Alice's track
-    B->>S: sfu:consume { producerId, rtpCapabilities }
-    S-->>B: sfu:consumer-created { consumerId, rtpParams }
-    B->>S: sfu:resume-consumer { consumerId }
-    S-->>B: sfu:consumer-resumed
-
-    Note over A,B: Media flows through SFU<br/>Alice → SFU → Bob
-```
+High-level steps: `sfu:join` → `sfu:joined` → create transports → `sfu:produce` → `sfu:new-producer` → `sfu:consume` → `sfu:resume-consumer` → RTP/SRTP media flows.
 
 ### Authentication Flow
 
-```mermaid
-sequenceDiagram
-    participant C as Client
-    participant S as Server
-    participant D as Database
+> See full diagram: [architecture/sequence-auth.md](./architecture/sequence-auth.md)
 
-    C->>S: POST /api/auth/login {email, password}
-    S->>D: Find user by email
-    D-->>S: User record
-    S->>S: Verify password (bcrypt)
-    S->>S: Generate access token (15min)
-    S->>S: Generate refresh token (7days)
-    S->>D: Save refresh token hash
-    S-->>C: Set-Cookie: access_token, refresh_token
-    S-->>C: {user: {id, email, username}}
-
-    Note over C: Access token expired
-
-    C->>S: POST /api/auth/refresh
-    S->>D: Get refresh token hash
-    D-->>S: Token hash
-    S->>S: Verify token (SHA256 compare)
-    S->>S: Generate new access token
-    S->>S: Generate new refresh token (rotation)
-    S->>D: Update refresh token hash
-    S-->>C: Set-Cookie: new tokens
-```
+High-level steps: `POST /api/auth/login` → bcrypt verify → generate access + refresh tokens → set HTTP-only cookies → on expiry: `POST /api/auth/refresh` → rotate refresh token → new cookies.
 
 ---
 
