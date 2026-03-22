@@ -94,6 +94,11 @@ export class JwtRefreshTokenStrategy extends PassportStrategy(
       });
     }
 
-    return { id: user.id, email: user.email, role: user.role, tokenVersion: user.tokenVersion };
+    return {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      tokenVersion: user.tokenVersion,
+    };
   }
 }

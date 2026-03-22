@@ -36,7 +36,9 @@ describe('UserController', () => {
   };
 
   const makeReq = (userId: string, role: Role = Role.ADMIN) =>
-    ({ user: { id: userId, email: 'admin@example.com', role } }) as unknown as Request;
+    ({
+      user: { id: userId, email: 'admin@example.com', role },
+    }) as unknown as Request;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({

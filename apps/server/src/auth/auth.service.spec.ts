@@ -182,7 +182,11 @@ describe('AuthService', () => {
   });
 
   it('logout clears refresh token hash', async () => {
-    await service.logout({ id: baseUser.id, email: baseUser.email, role: Role.USER });
+    await service.logout({
+      id: baseUser.id,
+      email: baseUser.email,
+      role: Role.USER,
+    });
 
     expect(userService.updateRefreshTokenHash).toHaveBeenCalledWith(
       baseUser.id,
@@ -196,11 +200,11 @@ describe('AuthService', () => {
       .spyOn(RefreshTokenHelper, 'hash')
       .mockReturnValueOnce('hashed-refresh');
 
-      const result = await service.refreshToken({
-        id: baseUser.id,
-        email: baseUser.email,
-        role: Role.USER,
-      });
+    const result = await service.refreshToken({
+      id: baseUser.id,
+      email: baseUser.email,
+      role: Role.USER,
+    });
 
     expect(result).toEqual({
       accessToken: 'access-token',
