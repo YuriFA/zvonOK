@@ -34,5 +34,8 @@
       ],
       "enabled": true
     }
-  }
+  },
+  "plugin": [
+    "@mohak34/opencode-notifier@latest"
+  ]
 }
