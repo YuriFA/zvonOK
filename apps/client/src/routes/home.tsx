@@ -70,8 +70,8 @@ export const Home = () => {
                 </LinkButton>
                 <p className="text-sm text-muted-foreground">
                   or{" "}
-                  <LinkButton to="/register" className="text-primary underline-offset-4 hover:underline">
-                    create an account
+                  <LinkButton to="/register" className="underline-offset-4 hover:underline">
+                    Create an account
                   </LinkButton>
                 </p>
               </div>
