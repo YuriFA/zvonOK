@@ -5,16 +5,27 @@ import { useNavigate } from "react-router";
 import { AuthHeader } from "@/features/auth/components/auth-header";
 import { useAuth } from "@/features/auth/contexts/auth.context";
 import { Link } from "react-router";
-import { CreateRoomDialog } from "@/features/room/components/create-room-dialog";
+import { useCreateRoom } from "@/features/room/hooks/use-create-room";
+import { Plus } from "lucide-react";
 
 export const Home = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const [roomCode, setRoomCode] = useState("");
 
+  const createRoom = useCreateRoom({
+    onSuccess: (room) => {
+      navigate(`/room/${room.slug}`);
+    },
+  });
+
   const handleJoinRoom = () => {
     if (!roomCode.trim()) return;
     navigate(`/room/${roomCode}`);
+  };
+
+  const handleCreateRoom = () => {
+    createRoom.mutate({});
   };
 
   return (
@@ -43,7 +54,14 @@ export const Home = () => {
                 <Button type="button" className="flex-1" onClick={handleJoinRoom}>
                   Join Room
                 </Button>
-                <CreateRoomDialog />
+                <Button
+                  type="button"
+                  onClick={handleCreateRoom}
+                  disabled={createRoom.isPending}
+                >
+                  <Plus className="size-4" />
+                  {createRoom.isPending ? "Creating..." : "Create Room"}
+                </Button>
               </div>
             ) : (
               <div className="text-center space-y-2">

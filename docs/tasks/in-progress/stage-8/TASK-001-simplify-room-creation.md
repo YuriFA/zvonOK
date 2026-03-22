@@ -1,7 +1,7 @@
 # TASK-001 — Simplify Room Creation
 
 ## Status
-planned
+completed
 
 ## Priority
 medium
