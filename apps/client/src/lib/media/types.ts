@@ -35,23 +35,3 @@ export interface MediaDeviceInfo {
   kind: 'videoinput' | 'audioinput';
   label: string;
 }
-
-/** Default video constraints */
-export const DEFAULT_VIDEO_CONSTRAINTS: MediaTrackConstraints = {
-  width: { ideal: 1280 },
-  height: { ideal: 720 },
-  facingMode: 'user',
-};
-
-/** Default audio constraints */
-export const DEFAULT_AUDIO_CONSTRAINTS: MediaTrackConstraints = {
-  echoCancellation: true,
-  noiseSuppression: true,
-  autoGainControl: true,
-};
-
-/** Default combined constraints */
-export const DEFAULT_CONSTRAINTS: UserMediaConstraints = {
-  video: DEFAULT_VIDEO_CONSTRAINTS,
-  audio: DEFAULT_AUDIO_CONSTRAINTS,
-};

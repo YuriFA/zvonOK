@@ -5,7 +5,7 @@
 
 import type { IMediaStateStore } from './interfaces';
 import type { UserMediaConstraints } from './types';
-import { DEFAULT_CONSTRAINTS } from './types';
+import { DEFAULT_CONSTRAINTS } from '@/lib/config/media';
 
 /**
  * Strategy for handling acquisition errors with fallback behavior.

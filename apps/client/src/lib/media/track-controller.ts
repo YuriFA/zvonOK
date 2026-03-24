@@ -14,10 +14,7 @@
 import type { IMediaStateStore } from './interfaces';
 import type { TrackFallbackStrategy } from './track-fallback';
 import type { DeviceSwitcher } from './device-switcher';
-import {
-  DEFAULT_VIDEO_CONSTRAINTS,
-  DEFAULT_AUDIO_CONSTRAINTS,
-} from './types';
+import { DEFAULT_AUDIO_CONSTRAINTS, DEFAULT_VIDEO_CONSTRAINTS } from '../config/media';
 
 /**
  * Controller for individual media track lifecycle.
@@ -369,10 +366,10 @@ export class MediaTrackController {
   private buildVideoConstraints(deviceId: string | null): MediaTrackConstraints {
     return deviceId
       ? {
-          deviceId: { exact: deviceId },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        }
+        deviceId: { exact: deviceId },
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+      }
       : { ...DEFAULT_VIDEO_CONSTRAINTS };
   }
 

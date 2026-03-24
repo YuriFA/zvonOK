@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '../contexts/auth.context';
 import { loginSchema, type LoginInput } from '../validation/login.schema';
 import { ApiError, ValidationError } from '@/lib/api/api.errors';
+import { ROUTES } from '@/lib/config/routes';
 
 export function LoginForm() {
   const navigate = useNavigate();
@@ -16,7 +17,7 @@ export function LoginForm() {
   const [error, setError] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const redirectTo = searchParams.get('redirect') || '/';
+  const redirectTo = searchParams.get('redirect') || ROUTES.HOME;
 
   const {
     register,
@@ -88,7 +89,7 @@ export function LoginForm() {
 
       <p className="text-center text-sm text-muted-foreground">
         Don't have an account?{' '}
-        <Link to="/register" className="text-primary underline-offset-4 hover:underline">
+        <Link to={ROUTES.REGISTER} className="text-primary underline-offset-4 hover:underline">
           Register
         </Link>
       </p>

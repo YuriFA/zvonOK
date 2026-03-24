@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { STORAGE_KEYS } from '@/lib/constants/storage-keys';
 
 export type DeviceType = 'videoinput' | 'audioinput' | 'audiooutput';
 
@@ -26,8 +27,6 @@ export interface UseMediaDevicesReturn {
   isLoading: boolean;
 }
 
-const STORAGE_KEY = 'webrtc-selected-devices';
-
 /**
  * Read saved device selections from localStorage.
  * Used internally by `useMediaDevices` for initial state, and exported for
@@ -35,7 +34,7 @@ const STORAGE_KEY = 'webrtc-selected-devices';
  */
 export function loadSelectedDevices(): SelectedDevices {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = localStorage.getItem(STORAGE_KEYS.SELECTED_DEVICES);
     if (stored) {
       return JSON.parse(stored);
     }
@@ -51,7 +50,7 @@ export function loadSelectedDevices(): SelectedDevices {
 
 function saveSelectedDevices(devices: SelectedDevices): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(devices));
+    localStorage.setItem(STORAGE_KEYS.SELECTED_DEVICES, JSON.stringify(devices));
   } catch {
     // Ignore storage errors
   }

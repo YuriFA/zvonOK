@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '../contexts/auth.context';
 import { registerSchema, type RegisterInput } from '../validation/register.schema';
 import { ApiError, ValidationError } from '@/lib/api/api.errors';
+import { ROUTES } from '@/lib/config/routes';
 
 export function RegisterForm() {
   const navigate = useNavigate();
@@ -29,7 +30,7 @@ export function RegisterForm() {
 
     try {
       await registerUser(data.username, data.email, data.password);
-      navigate('/');
+      navigate(ROUTES.HOME);
     } catch (err) {
       if (err instanceof ValidationError) {
         setError(err.message);
@@ -116,7 +117,7 @@ export function RegisterForm() {
 
       <p className="text-center text-sm text-muted-foreground">
         Already have an account?{' '}
-        <Link to="/login" className="text-primary underline-offset-4 hover:underline">
+        <Link to={ROUTES.LOGIN} className="text-primary underline-offset-4 hover:underline">
           Login
         </Link>
       </p>
