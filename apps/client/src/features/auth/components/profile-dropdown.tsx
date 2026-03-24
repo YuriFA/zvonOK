@@ -1,4 +1,5 @@
 import { User, LogOut } from 'lucide-react';
+import { toast } from 'sonner';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +15,7 @@ export function ProfileDropdown() {
 
   const handleLogout = async () => {
     await logout();
+    toast.success('Logged out successfully');
   };
 
   return (

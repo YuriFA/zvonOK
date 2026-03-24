@@ -10,6 +10,7 @@ import { RegisterPage } from "./routes/register.tsx";
 import { AuthProvider } from "./features/auth/contexts/auth.context.tsx";
 import { queryClient } from "./lib/react-query/query-client";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/sonner";
 
 import "./index.css";
 
@@ -54,6 +55,7 @@ createRoot(document.getElementById("root")!).render(
       <AuthProvider>
         <TooltipProvider>
           <RouterProvider router={router} />
+          <Toaster />
         </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>

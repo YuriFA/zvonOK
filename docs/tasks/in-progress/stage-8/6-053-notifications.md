@@ -1,6 +1,6 @@
 # TASK-053 — Toast Notifications
 
-> **Status:** planned
+> **Status:** completed
 > **Priority:** medium
 > **Created:** 2026-02-08
 
@@ -24,17 +24,23 @@ Implement toast notification system for user feedback (success, error, info).
 - Info (blue)
 - Warning (yellow)
 
+### Integration Points
+Show toast notifications after user actions that trigger API calls:
+- Form submissions (login, register, settings)
+- Button actions (create room, leave room, mute/unmute)
+- API response success/error feedback
+
 ## Acceptance Criteria
-- Toast notifications working
-- Appropriate usage
-- Accessible
+- [x] Toast notifications working
+- [x] Appropriate usage after API calls
+- [x] Accessible
 
 ## Definition of Done
 - Toast system integrated
-- User feedback clear
+- User feedback clear after actions
 
 ## Related Files
-- `apps/client/src/components/toast.tsx`
+- `apps/client/src/components/ui/sonner.tsx`
 
 ## Next Task
 TASK-054 — Dark Mode

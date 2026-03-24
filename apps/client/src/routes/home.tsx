@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router";
+import { toast } from "sonner";
 import { AuthHeader } from "@/features/auth/components/auth-header";
 import { useAuth } from "@/features/auth/contexts/auth.context";
 import { useCreateRoom } from "@/features/room/hooks/use-create-room";
@@ -17,7 +18,11 @@ export const Home = () => {
 
   const createRoom = useCreateRoom({
     onSuccess: (room) => {
+      toast.success('Room created!');
       navigate(getRoomRoute(room.slug));
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to create room');
     },
   });
 

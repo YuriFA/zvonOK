@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate, useSearchParams } from 'react-router';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -33,14 +34,18 @@ export function LoginForm() {
 
     try {
       await login(data.email, data.password);
+      toast.success('Welcome back!');
       navigate(redirectTo);
     } catch (err) {
       if (err instanceof ValidationError) {
         setError(err.message);
+        toast.error(err.message);
       } else if (err instanceof ApiError) {
         setError('Invalid email or password');
+        toast.error('Invalid email or password');
       } else {
         setError('An error occurred. Please try again.');
+        toast.error('An error occurred. Please try again.');
       }
     } finally {
       setIsSubmitting(false);
