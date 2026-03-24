@@ -9,6 +9,7 @@ export interface UseRoomSfuOptions {
   roomOwnerId: string;
   localStream: MediaStream | null;
   onKicked: () => void;
+  displayName: string;
 }
 
 export interface UseRoomSfuResult {
@@ -26,6 +27,7 @@ export function useRoomSfu({
   roomOwnerId,
   localStream,
   onKicked,
+  displayName,
 }: UseRoomSfuOptions): UseRoomSfuResult {
   const trackController = useMediaTrackController();
   const mediaControls = useMediaControls();
@@ -44,6 +46,7 @@ export function useRoomSfu({
     roomId,
     roomOwnerId,
     localStream,
+    displayName,
   });
 
   useEffect(() => {

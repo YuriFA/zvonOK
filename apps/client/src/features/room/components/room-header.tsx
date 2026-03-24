@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { CopyLink } from '@/components/ui/copy-link';
 import { DeviceSettingsPanel } from '@/features/media/components/device-settings-panel';
 import { PermissionWarningIndicator } from '@/features/room/components/permission-warning-indicator';
 import type { Room } from '@/features/room/types/room.types';
@@ -10,6 +11,7 @@ import { Link } from 'react-router';
 interface RoomHeaderPrejoinProps {
   variant: 'prejoin';
   room: Room;
+  roomUrl: string;
 }
 
 interface RoomHeaderActiveProps {
@@ -35,6 +37,10 @@ export function RoomHeader(props: RoomHeaderProps) {
         <Logo className="size-8" />
         <span className="text-lg font-semibold">{APP_NAME}</span>
       </Link>
+
+      {props.variant === 'prejoin' && (
+        <CopyLink url={props.roomUrl} variant="compact" />
+      )}
 
       {props.variant === 'active' && (
         <div className="flex items-center gap-2">

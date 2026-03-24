@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
+import { getInitials } from '@/lib/utils/display-name';
 
 export interface RemoteVideoProps {
   stream: MediaStream | null;
@@ -79,7 +80,7 @@ export function RemoteVideo({
       {!isVideoEnabled && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/50">
           <div className="flex size-16 items-center justify-center rounded-full bg-gray-700 text-xl text-white">
-            {username?.charAt(0).toUpperCase() ?? '?'}
+            {getInitials(username ?? '')}
           </div>
         </div>
       )}

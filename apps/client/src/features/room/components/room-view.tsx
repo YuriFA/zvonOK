@@ -12,16 +12,17 @@ import { useAuth } from "@/features/auth/contexts/auth.context";
 
 interface Props {
   room: Room;
+  displayName: string;
 }
 
-export const RoomView = ({ room }: Props) => {
+export const RoomView = ({ room, displayName }: Props) => {
   const navigate = useNavigate();
   const endRoom = useEndRoom({
     onSuccess: () => navigate('/'),
   });
   const { user } = useAuth();
   const isOwner = user?.id === room.ownerId;
-  const session = useRoomSession({ room, userId: user?.id, username: user?.username });
+  const session = useRoomSession({ room, userId: user?.id, displayName });
   const permissionState = usePermissionState();
   const [permissionModalOpen, setPermissionModalOpen] = useState(false);
 
@@ -71,7 +72,7 @@ export const RoomView = ({ room }: Props) => {
         session={session}
         room={room}
         currentUserId={user?.id}
-        currentUsername={user?.username}
+        currentUsername={displayName}
         permissionState={permissionState}
         permissionModalOpen={permissionModalOpen}
         onPermissionModalOpenChange={setPermissionModalOpen}

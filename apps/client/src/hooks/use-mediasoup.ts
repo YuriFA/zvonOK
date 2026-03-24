@@ -13,6 +13,7 @@ export interface UseMediasoupOptions {
   roomOwnerId?: string;
   localStream: MediaStream | null;
   enabled?: boolean;
+  displayName?: string;
 }
 
 export interface RemotePeerMedia {
@@ -60,6 +61,7 @@ export function useMediasoup({
   roomOwnerId,
   localStream,
   enabled = true,
+  displayName,
 }: UseMediasoupOptions): UseMediasoupResult {
   const { user } = useAuth();
   const sfuManager = useSfuManager();
@@ -69,14 +71,12 @@ export function useMediasoup({
 
   const joinedRef = useRef(false);
   const producedKindsRef = useRef<Set<'audio' | 'video'>>(new Set());
-  const guestIdentityRef = useRef({
-    userId: `guest-${Math.random().toString(36).slice(2, 10)}`,
-    username: 'Guest',
-  });
+  const guestUserIdRef = useRef(`guest-${Math.random().toString(36).slice(2, 10)}`);
 
-  const identity = user
-    ? { userId: user.id, username: user.username }
-    : guestIdentityRef.current;
+  const identity = {
+    userId: user?.id ?? guestUserIdRef.current,
+    username: displayName ?? 'Guest',
+  };
 
   useEffect(() => {
     if (!roomId || !enabled) {

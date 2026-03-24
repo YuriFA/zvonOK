@@ -10,14 +10,25 @@ import { SfuManagerProvider } from '@/features/sfu/contexts/sfu-manager.context'
 import { sfuManager } from '@/lib/sfu/manager';
 import { mediaManager } from '@/lib/media/manager';
 import { LinkButton } from '@/components/ui/link-button';
+import { useAuth } from '@/features/auth/contexts/auth.context';
+import { loadGuestDisplayName, saveGuestDisplayName } from '@/lib/utils/display-name';
 
 type RoomViewState = 'prejoin' | 'active' | 'ended';
 
 export const RoomPage = () => {
   const { slug } = useParams<{ slug: string }>();
   const [viewState, setViewState] = useState<RoomViewState>('prejoin');
+  const { user } = useAuth();
 
   const { data: room, isLoading, error } = useRoom(slug || '');
+
+  const [displayName, setDisplayName] = useState(() => user?.username ?? loadGuestDisplayName());
+
+  useEffect(() => {
+    if (!user) {
+      setDisplayName(loadGuestDisplayName());
+    }
+  }, [user]);
 
   // Guard: if the room is ended on load (or after refetch), transition immediately
   useEffect(() => {
@@ -38,6 +49,9 @@ export const RoomPage = () => {
   }, [viewState, handleRoomEnded]);
 
   const handleJoin = () => {
+    if (!user) {
+      saveGuestDisplayName(displayName);
+    }
     setViewState('active');
   };
 
@@ -72,9 +86,15 @@ export const RoomPage = () => {
       <SfuManagerProvider manager={sfuManager}>
         <MediaStreamProvider>
           {viewState === 'prejoin' ? (
-            <PrejoinView room={room} roomUrl={roomUrl} onJoin={handleJoin} />
+            <PrejoinView
+              room={room}
+              roomUrl={roomUrl}
+              displayName={displayName}
+              onDisplayNameChange={setDisplayName}
+              onJoin={handleJoin}
+            />
           ) : (
-            <RoomView room={room} />
+            <RoomView room={room} displayName={displayName} />
           )}
         </MediaStreamProvider>
       </SfuManagerProvider>

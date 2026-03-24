@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { AlertTriangle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { CopyLink } from '@/components/ui/copy-link';
+import { Input } from '@/components/ui/input';
 import { DeviceSelector } from '@/features/media/components/device-selector';
 import { useDeviceValidation } from '@/features/media/hooks/use-device-validation';
 import type { Room } from '@/features/room/types/room.types';
@@ -10,10 +10,12 @@ import { RoomHeader } from './room-header';
 interface PrejoinViewProps {
   room: Room;
   roomUrl: string;
+  displayName: string;
+  onDisplayNameChange: (name: string) => void;
   onJoin: () => void;
 }
 
-export function PrejoinView({ room, roomUrl, onJoin }: PrejoinViewProps) {
+export function PrejoinView({ room, roomUrl, displayName, onDisplayNameChange, onJoin }: PrejoinViewProps) {
   const { errors: deviceErrors, validate, dismissError, dismissAll } = useDeviceValidation();
   const [isValidating, setIsValidating] = useState(false);
 
@@ -37,11 +39,11 @@ export function PrejoinView({ room, roomUrl, onJoin }: PrejoinViewProps) {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <RoomHeader variant="prejoin" room={room} />
+      <RoomHeader variant="prejoin" room={room} roomUrl={roomUrl} />
 
       <main className="flex flex-1 flex-col items-center justify-center p-4">
         <div className="mx-auto w-full max-w-xl space-y-4">
-          <DeviceSelector />
+          <DeviceSelector username={displayName} />
 
           {deviceErrors.length > 0 && (
             <div className="space-y-2">
@@ -72,13 +74,19 @@ export function PrejoinView({ room, roomUrl, onJoin }: PrejoinViewProps) {
             </div>
           )}
 
-          <div className="flex items-center justify-between gap-4">
-            <CopyLink url={roomUrl} variant="compact" />
+          <div className="flex items-center justify-center gap-3">
+            <Input
+              value={displayName}
+              onChange={(e) => onDisplayNameChange(e.target.value)}
+              placeholder="Your name"
+              className="max-w-[200px]"
+            />
 
             <Button size="lg" onClick={handleJoin} disabled={isValidating}>
               {isValidating ? 'Checking...' : 'Join Room'}
             </Button>
           </div>
+
         </div>
       </main>
     </div>

@@ -10,9 +10,10 @@ import { useDeviceSwitching } from '../hooks/use-device-switching';
 
 interface DeviceSelectorProps {
   className?: string;
+  username?: string;
 }
 
-export function DeviceSelector({ className }: DeviceSelectorProps) {
+export function DeviceSelector({ className, username }: DeviceSelectorProps) {
   const { stream, error, isLoading } = useMediaStreamContext();
   const mediaToggle = useMediaToggle();
   const mediaControls = useMediaControls();
@@ -92,6 +93,7 @@ export function DeviceSelector({ className }: DeviceSelectorProps) {
         {!isLoading && !error && stream && (
           <LocalVideo
             stream={stream}
+            username={username}
             isVideoEnabled={mediaControls.isVideoEnabled}
             isAudioEnabled={mediaControls.isAudioEnabled}
             className="h-full"

@@ -14,7 +14,7 @@ import { useMediaStreamContext } from '@/features/media/contexts/media-stream.co
 export interface UseRoomSessionOptions {
   room: Room;
   userId: string | undefined;
-  username: string | undefined;
+  displayName: string;
 }
 
 export interface UseRoomSessionResult {
@@ -34,7 +34,7 @@ export interface UseRoomSessionResult {
   localUserId: string;
 }
 
-export function useRoomSession({ room, userId, username }: UseRoomSessionOptions): UseRoomSessionResult {
+export function useRoomSession({ room, userId, displayName }: UseRoomSessionOptions): UseRoomSessionResult {
   const { setElement: handleRemoteMediaElement, primaryElement: primaryRemoteMediaElement } = useRemoteMediaElements();
 
   const { stream: localStream, error: mediaError, stop: stopMedia } = useMediaStreamContext();
@@ -58,6 +58,7 @@ export function useRoomSession({ room, userId, username }: UseRoomSessionOptions
     roomOwnerId: room.ownerId,
     localStream,
     onKicked: handleKicked,
+    displayName,
   });
 
   const { peerStats } = useQualityStats({ enabled: sfuState.connectionState === 'connected' });
@@ -71,7 +72,7 @@ export function useRoomSession({ room, userId, username }: UseRoomSessionOptions
 
   const { participants } = useRoomParticipants({
     userId,
-    username,
+    username: displayName,
     isAudioEnabled: mediaControls.isAudioEnabled,
     isVideoEnabled: mediaControls.isVideoEnabled,
     connectionState: sfuState.connectionState,
