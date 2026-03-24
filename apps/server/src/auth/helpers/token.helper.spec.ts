@@ -50,6 +50,7 @@ describe('TokenHelper', () => {
       const payload = {
         id: 'user-1',
         email: 'user@example.com',
+        role: 'USER' as const,
         tokenVersion: 0,
       };
       jwtService.sign.mockReturnValue('access-token');
@@ -64,7 +65,11 @@ describe('TokenHelper', () => {
     });
 
     it('uses correct expiration from config', () => {
-      const payload = { id: 'user-1', email: 'user@example.com' };
+      const payload = {
+        id: 'user-1',
+        email: 'user@example.com',
+        role: 'USER' as const,
+      };
       jwtService.sign.mockReturnValue('access-token');
 
       tokenHelper.generateAccessToken(payload);
@@ -78,7 +83,11 @@ describe('TokenHelper', () => {
     });
 
     it('uses correct secret from config', () => {
-      const payload = { id: 'user-1', email: 'user@example.com' };
+      const payload = {
+        id: 'user-1',
+        email: 'user@example.com',
+        role: 'USER' as const,
+      };
       jwtService.sign.mockReturnValue('access-token');
 
       tokenHelper.generateAccessToken(payload);
@@ -97,6 +106,7 @@ describe('TokenHelper', () => {
       const payload = {
         id: 'user-1',
         email: 'user@example.com',
+        role: 'USER' as const,
         tokenVersion: 0,
       };
       jwtService.sign.mockReturnValue('refresh-token');
@@ -112,7 +122,11 @@ describe('TokenHelper', () => {
     });
 
     it('generates unique jti for each token', () => {
-      const payload = { id: 'user-1', email: 'user@example.com' };
+      const payload = {
+        id: 'user-1',
+        email: 'user@example.com',
+        role: 'USER' as const,
+      };
       jwtService.sign.mockReturnValue('refresh-token');
 
       // Clear previous calls before this test
@@ -127,7 +141,11 @@ describe('TokenHelper', () => {
     });
 
     it('uses correct expiration from config', () => {
-      const payload = { id: 'user-1', email: 'user@example.com' };
+      const payload = {
+        id: 'user-1',
+        email: 'user@example.com',
+        role: 'USER' as const,
+      };
       jwtService.sign.mockReturnValue('refresh-token');
 
       tokenHelper.generateRefreshToken(payload);
@@ -141,7 +159,11 @@ describe('TokenHelper', () => {
     });
 
     it('uses correct secret from config', () => {
-      const payload = { id: 'user-1', email: 'user@example.com' };
+      const payload = {
+        id: 'user-1',
+        email: 'user@example.com',
+        role: 'USER' as const,
+      };
       jwtService.sign.mockReturnValue('refresh-token');
 
       tokenHelper.generateRefreshToken(payload);
@@ -157,7 +179,11 @@ describe('TokenHelper', () => {
 
   describe('integration', () => {
     it('uses different secrets for access and refresh tokens', () => {
-      const payload = { id: 'user-1', email: 'user@example.com' };
+      const payload = {
+        id: 'user-1',
+        email: 'user@example.com',
+        role: 'USER' as const,
+      };
       jwtService.sign.mockReturnValue('token');
 
       tokenHelper.generateAccessToken(payload);
@@ -175,6 +201,7 @@ describe('TokenHelper', () => {
       const payload = {
         id: 'user-1',
         email: 'user@example.com',
+        role: 'USER' as const,
         tokenVersion: 5,
       };
       jwtService.sign.mockReturnValue('token');
@@ -184,7 +211,12 @@ describe('TokenHelper', () => {
 
       expect(jwtService.sign).toHaveBeenCalledTimes(2);
       expect(jwtService.sign).toHaveBeenCalledWith(
-        { id: 'user-1', email: 'user@example.com', tokenVersion: 5 },
+        {
+          id: 'user-1',
+          email: 'user@example.com',
+          role: 'USER',
+          tokenVersion: 5,
+        },
         expect.any(Object),
       );
     });

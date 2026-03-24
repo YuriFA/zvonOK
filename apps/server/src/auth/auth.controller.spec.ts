@@ -210,7 +210,7 @@ describe('AuthController', () => {
       } as unknown as Response;
 
       const result = await controller.logout(
-        { id: 'user-1', email: 'user@example.com' },
+        { id: 'user-1', email: 'user@example.com', role: 'USER' },
         res,
       );
 
@@ -218,6 +218,7 @@ describe('AuthController', () => {
       expect(authService.logout).toHaveBeenCalledWith({
         id: 'user-1',
         email: 'user@example.com',
+        role: 'USER',
       });
       expect(res.clearCookie).toHaveBeenCalledWith(
         'access_token',
@@ -242,7 +243,7 @@ describe('AuthController', () => {
       } as unknown as Response;
 
       const result = await controller.refreshToken(
-        { id: 'user-1', email: 'user@example.com' },
+        { id: 'user-1', email: 'user@example.com', role: 'USER' },
         res,
       );
 
@@ -373,7 +374,10 @@ describe('AuthController', () => {
         clearCookie: jest.fn(),
       } as unknown as Response;
 
-      await controller.logout({ id: 'user-1', email: 'user@example.com' }, res);
+      await controller.logout(
+        { id: 'user-1', email: 'user@example.com', role: 'USER' },
+        res,
+      );
 
       expect(res.clearCookie).toHaveBeenCalledWith(
         'access_token',

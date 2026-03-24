@@ -339,6 +339,7 @@ describe('AuthService', () => {
       const result = await service.refreshToken({
         id: baseUser.id,
         email: baseUser.email,
+        role: 'USER',
       });
 
       expect(result).toEqual({

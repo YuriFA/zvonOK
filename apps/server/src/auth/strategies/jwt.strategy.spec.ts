@@ -60,6 +60,7 @@ describe('JwtStrategy', () => {
       const payload = {
         id: 'user-1',
         email: 'user@example.com',
+        role: 'USER' as const,
         tokenVersion: 0,
       };
 
@@ -68,6 +69,7 @@ describe('JwtStrategy', () => {
       expect(result).toEqual({
         id: 'user-1',
         email: 'user@example.com',
+        role: 'USER',
       });
     });
 
@@ -75,6 +77,7 @@ describe('JwtStrategy', () => {
       const payload = {
         id: 'user-1',
         email: 'user@example.com',
+        role: 'USER' as const,
         tokenVersion: 5,
       };
 
@@ -88,6 +91,7 @@ describe('JwtStrategy', () => {
       const payload = {
         id: 'user-1',
         email: 'user@example.com',
+        role: 'USER' as const,
         tokenVersion: 0,
       };
 
@@ -98,6 +102,7 @@ describe('JwtStrategy', () => {
       expect(result).toEqual({
         id: 'user-1',
         email: 'user@example.com',
+        role: 'USER',
       });
     });
 
@@ -105,6 +110,7 @@ describe('JwtStrategy', () => {
       const payload = {
         id: 'user-1',
         email: 'user@example.com',
+        role: 'USER' as const,
       };
 
       const result = await strategy.validate(payload);
@@ -112,6 +118,7 @@ describe('JwtStrategy', () => {
       expect(result).toEqual({
         id: 'user-1',
         email: 'user@example.com',
+        role: 'USER',
       });
       expect(userService.user).not.toHaveBeenCalled();
     });
@@ -120,6 +127,7 @@ describe('JwtStrategy', () => {
       const payload = {
         id: 'user-1',
         email: 'user@example.com',
+        role: 'USER' as const,
       };
 
       const result = await strategy.validate(payload);
@@ -127,6 +135,7 @@ describe('JwtStrategy', () => {
       expect(result).toEqual({
         id: 'user-1',
         email: 'user@example.com',
+        role: 'USER',
       });
     });
   });
@@ -143,11 +152,11 @@ describe('JwtStrategy', () => {
   });
 
   describe('integration', () => {
-    it('handles different user IDs', async () => {
+    it('handles different userIDs', async () => {
       const payloads = [
-        { id: 'user-1', email: 'user1@example.com' },
-        { id: 'user-2', email: 'user2@example.com' },
-        { id: 'user-3', email: 'user3@example.com' },
+        { id: 'user-1', email: 'user1@example.com', role: 'USER' as const },
+        { id: 'user-2', email: 'user2@example.com', role: 'USER' as const },
+        { id: 'user-3', email: 'user3@example.com', role: 'USER' as const },
       ];
 
       for (const payload of payloads) {
@@ -155,17 +164,24 @@ describe('JwtStrategy', () => {
         expect(result).toEqual({
           id: payload.id,
           email: payload.email,
+          role: payload.role,
         });
       }
     });
 
     it('does not throw on any valid payload structure', async () => {
       const validPayloads = [
-        { id: '123', email: 'test@test.com', tokenVersion: 0 },
-        { id: 'abc', email: 'a@b.c' },
+        {
+          id: '123',
+          email: 'test@test.com',
+          role: 'USER' as const,
+          tokenVersion: 0,
+        },
+        { id: 'abc', email: 'a@b.c', role: 'USER' as const },
         {
           id: 'user-with-dash',
           email: 'user+tag@example.com',
+          role: 'USER' as const,
           tokenVersion: 99,
         },
       ];
