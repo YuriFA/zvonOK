@@ -7,6 +7,8 @@ import { useAuth } from "@/features/auth/contexts/auth.context";
 import { useCreateRoom } from "@/features/room/hooks/use-create-room";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ROUTES, getRoomRoute } from "@/lib/config/routes";
+import HeroBg from '@/../public/hero-bg.svg?react';
 
 export const Home = () => {
   const navigate = useNavigate();
@@ -15,13 +17,13 @@ export const Home = () => {
 
   const createRoom = useCreateRoom({
     onSuccess: (room) => {
-      navigate(`/room/${room.slug}`);
+      navigate(getRoomRoute(room.slug));
     },
   });
 
   const handleJoinRoom = () => {
     if (!roomCode.trim()) return;
-    navigate(`/room/${roomCode}`);
+    navigate(getRoomRoute(roomCode));
   };
 
   const handleCreateRoom = () => {
@@ -32,53 +34,70 @@ export const Home = () => {
     <div className="min-h-screen flex flex-col">
       <AuthHeader />
 
-      <main className="flex flex-1 flex-col items-center justify-center p-4 gap-8">
-        {/* Join by code section */}
-        <div className="max-w-[600px] p-4 space-y-4 w-11/12 border border-border rounded-lg">
-          <p className="leading-7 text-center">Create or Join a Room</p>
+      <main className="flex flex-1 flex-col md:flex-row items-center justify-center gap-4 px-4">
+        <div className="flex flex-col">
+          <h1
+            className="text-4xl md:text-5xl font-bold mb-4"
+          >
+            Fast video meetings without the friction
+          </h1>
 
-          <div className="space-y-2 mx-auto max-w-[400px]">
-            <Input
-              type="text"
-              placeholder="Enter room code..."
-              value={roomCode}
-              onChange={(e) => setRoomCode(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleJoinRoom();
-                }
-              }}
-            />
+          <p
+            className="text-muted-foreground mb-8 max-w-md"
+          >
+            Create a room or join with a code — no installs, no setup
+          </p>
+
+          <div
+            className="w-full max-w-md"
+          >
+            <div className="flex gap-2">
+              <Input
+                type="text"
+                placeholder="Enter room code"
+                value={roomCode}
+                onChange={(e) => setRoomCode(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleJoinRoom();
+                  }
+                }}
+              />
+
+              <Button type="button" className="flex-1" onClick={handleJoinRoom}>
+                Join
+              </Button>
+            </div>
+
+            <div className="flex items-center gap-4 my-6">
+              <div className="flex-1 h-px bg-gray-200" />
+              <span className="text-sm text-gray-400">или</span>
+              <div className="flex-1 h-px bg-gray-200" />
+            </div>
+
             {isAuthenticated ? (
-              <div className="flex gap-2">
-                <Button type="button" className="flex-1" onClick={handleJoinRoom}>
-                  Join Room
-                </Button>
-                <Button
-                  type="button"
-                  onClick={handleCreateRoom}
-                  disabled={createRoom.isPending}
-                >
-                  <Plus className="size-4" />
-                  {createRoom.isPending ? "Creating..." : "Create Room"}
-                </Button>
-              </div>
+              <Button
+                type="button"
+                onClick={handleCreateRoom}
+                disabled={createRoom.isPending}
+              >
+                <Plus className="size-4" />
+                {createRoom.isPending ? "Creating..." : "Create Room"}
+              </Button>
             ) : (
-              <div className="text-center space-y-2">
-                <LinkButton to="/login" className="w-full">
-                  Login to Join Room
-                </LinkButton>
-                <p className="text-sm text-muted-foreground">
-                  or{" "}
-                  <LinkButton to="/register" className="underline-offset-4 hover:underline">
-                    Create an account
-                  </LinkButton>
-                </p>
-              </div>
+              <LinkButton to={ROUTES.REGISTER}>
+                Create an account
+              </LinkButton>
             )}
           </div>
         </div>
+
+        <HeroBg className="max-w-120" />
       </main>
+
+      <footer className="text-center text-sm text-gray-400 pb-6" >
+        © 2026 Meetly
+      </footer >
     </div>
   );
 };
