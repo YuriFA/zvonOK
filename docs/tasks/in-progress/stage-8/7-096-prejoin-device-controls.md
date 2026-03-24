@@ -8,22 +8,22 @@
 
 ## Description
 
-Редизайн prejoin-view: компактный layout + объединённое управление устройствами в одном ряду.
+Redesign prejoin-view: compact layout + unified device controls in a single row.
 
 ## Scope
 
-- Новый компонент DeviceControlGroup (toggle + device dropdown в одной группе)
-- Компактный вариант CopyLink
-- Обновление DeviceSelector для использования DeviceControlGroup
-- Упрощение layout в PrejoinView
+- New DeviceControlGroup component (toggle + device dropdown in one group)
+- Compact CopyLink variant
+- Update DeviceSelector to use DeviceControlGroup
+- Simplify PrejoinView layout
 
 ## Technical Design
 
 ### DeviceControlGroup
 
-Кнопка устройства в виде группы из двух частей:
-- **Toggle button** — включает/выключает устройство
-- **Dropdown button** — открывает список устройств
+Device button as a two-part group:
+- **Toggle button** — enables/disables the device
+- **Dropdown button** — opens device list
 
 Props:
 - `type: 'videoinput' | 'audioinput' | 'audiooutput'`
@@ -36,22 +36,22 @@ Props:
 
 ### Layout
 
-Горизонтальный ряд из 3 кнопок под превью:
-- Микрофон (audioinput)
-- Динамик (audiooutput) — только если поддерживается браузером
-- Камера (videoinput)
+Horizontal row of 3 buttons below preview:
+- Microphone (audioinput)
+- Speaker (audiooutput) — only if supported by browser
+- Camera (videoinput)
 
 ### CopyLink compact
 
-Только кнопка Copy без input поля.
+Copy button only, no input field.
 
 ## Acceptance Criteria
 
-- [x] На среднем экране (768px height) весь контент помещается без скролла
-- [x] Три кнопки устройств в ряд: микрофон, динамик, камера
-- [x] Каждая кнопка имеет toggle + dropdown выбора устройства (для speaker только dropdown)
-- [x] CopyLink имеет компактный вариант
-- [x] Динамик показывается только если поддерживается браузером
+- [x] On medium screen (768px height) all content fits without scrolling
+- [x] Three device buttons in a row: microphone, speaker, camera
+- [x] Each button has toggle + device dropdown (speaker only has dropdown)
+- [x] CopyLink has compact variant
+- [x] Speaker shown only if supported by browser
 
 ## Related Files
 
