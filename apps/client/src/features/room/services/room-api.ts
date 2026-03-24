@@ -1,7 +1,7 @@
 import { apiClient } from '@/lib/api/api-client';
 import type { Room, CreateRoomInput, UpdateRoomInput } from '../types/room.types';
 
-export class RoomApi {
+class RoomApi {
   private readonly client = apiClient;
 
   async createRoom(input: CreateRoomInput): Promise<Room> {

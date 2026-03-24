@@ -1,7 +1,7 @@
 import { apiClient } from '@/lib/api/api-client';
 import type { AuthResponse, User } from '../types/auth.types';
 
-export class AuthApi {
+class AuthApi {
   private readonly client = apiClient;
 
   async login(email: string, password: string): Promise<AuthResponse> {
