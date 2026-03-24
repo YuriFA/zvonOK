@@ -8,7 +8,6 @@ import { useMediaErrors } from '@/features/media/hooks/use-media-errors';
 import type { PermissionStateResult } from '@/features/media/hooks/use-permission-state';
 import type { UseRoomSessionResult } from '@/features/room/hooks/use-room-session';
 import type { Room } from '@/features/room/types/room.types';
-import { RoomInfoBar } from './room-info-bar';
 
 interface ActiveRoomViewProps {
   session: UseRoomSessionResult;
@@ -104,8 +103,6 @@ export function ActiveRoomView({
               />
             ))}
           </VideoGrid>
-
-          <RoomInfoBar room={room} className="mb-4" />
 
           <ConnectionStatus connectionState={sfuState.connectionState} />
         </div>

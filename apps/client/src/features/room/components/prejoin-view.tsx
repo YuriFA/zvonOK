@@ -6,7 +6,6 @@ import { DeviceSelector } from '@/features/media/components/device-selector';
 import { useDeviceValidation } from '@/features/media/hooks/use-device-validation';
 import type { Room } from '@/features/room/types/room.types';
 import { RoomHeader } from './room-header';
-import { RoomInfoBar } from './room-info-bar';
 
 interface PrejoinViewProps {
   room: Room;
@@ -26,7 +25,6 @@ export function PrejoinView({ room, roomUrl, onJoin }: PrejoinViewProps) {
         dismissAll();
         onJoin();
       }
-      // When invalid, errors are displayed — user can dismiss and retry
     } finally {
       setIsValidating(false);
     }
@@ -41,14 +39,9 @@ export function PrejoinView({ room, roomUrl, onJoin }: PrejoinViewProps) {
     <div className="min-h-screen flex flex-col">
       <RoomHeader variant="prejoin" room={room} />
 
-      <main className="flex flex-1 flex-col p-4">
-        <RoomInfoBar room={room} className="mb-6" />
-
-        <div className="mx-auto grid w-full max-w-2xl gap-6">
-          <div>
-            <h2 className="mb-4 text-xl font-semibold">Setup Your Devices</h2>
-            <DeviceSelector />
-          </div>
+      <main className="flex flex-1 flex-col items-center justify-center p-4">
+        <div className="mx-auto w-full max-w-xl space-y-4">
+          <DeviceSelector />
 
           {deviceErrors.length > 0 && (
             <div className="space-y-2">
@@ -79,17 +72,11 @@ export function PrejoinView({ room, roomUrl, onJoin }: PrejoinViewProps) {
             </div>
           )}
 
-          <div>
-            <h2 className="mb-2 text-xl font-semibold">Share Room Link</h2>
-            <p className="mb-4 text-sm text-muted-foreground">
-              Copy this link and share it with others to invite them to the room.
-            </p>
-            <CopyLink url={roomUrl} />
-          </div>
+          <div className="flex items-center justify-between gap-4">
+            <CopyLink url={roomUrl} variant="compact" />
 
-          <div className="flex justify-end">
             <Button size="lg" onClick={handleJoin} disabled={isValidating}>
-              {isValidating ? 'Checking devices...' : 'Join Room'}
+              {isValidating ? 'Checking...' : 'Join Room'}
             </Button>
           </div>
         </div>
