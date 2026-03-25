@@ -5,8 +5,9 @@ import { PermissionWarningIndicator } from '@/features/room/components/permissio
 import type { Room } from '@/features/room/types/room.types';
 import { APP_NAME } from '@/lib/config/app';
 import { ROUTES } from '@/lib/config/routes';
-import Logo from '@/../public/logo.svg?react';
+import Logo from '@/assets/logo.svg?react';
 import { Link } from 'react-router';
+import { ThemeSwitcher } from '@/components/ui/theme-switcher';
 
 interface RoomHeaderPrejoinProps {
   variant: 'prejoin';
@@ -38,34 +39,38 @@ export function RoomHeader(props: RoomHeaderProps) {
         <span className="text-lg font-semibold">{APP_NAME}</span>
       </Link>
 
-      {props.variant === 'prejoin' && (
-        <CopyLink url={props.roomUrl} variant="compact" />
-      )}
+      <div className="flex gap-4">
+        <ThemeSwitcher />
 
-      {props.variant === 'active' && (
-        <div className="flex items-center gap-2">
-          <PermissionWarningIndicator
-            isCameraDenied={props.isCameraDenied}
-            isMicrophoneDenied={props.isMicrophoneDenied}
-            onClick={props.onPermissionWarningClick}
-          />
-          <DeviceSettingsPanel
-            variant="popover"
-            remoteVideoElement={props.primaryRemoteMediaElement}
-            isVideoEnabled={props.isVideoEnabled}
-            isAudioEnabled={props.isAudioEnabled}
-          />
-          {props.isOwner && (
-            <Button
-              variant="destructive"
-              onClick={props.onEndRoom}
-              disabled={props.isEndingRoom}
-            >
-              {props.isEndingRoom ? 'Ending...' : 'End Room'}
-            </Button>
-          )}
-        </div>
-      )}
+        {props.variant === 'prejoin' && (
+          <CopyLink url={props.roomUrl} variant="compact" />
+        )}
+
+        {props.variant === 'active' && (
+          <div className="flex items-center gap-2">
+            <PermissionWarningIndicator
+              isCameraDenied={props.isCameraDenied}
+              isMicrophoneDenied={props.isMicrophoneDenied}
+              onClick={props.onPermissionWarningClick}
+            />
+            <DeviceSettingsPanel
+              variant="popover"
+              remoteVideoElement={props.primaryRemoteMediaElement}
+              isVideoEnabled={props.isVideoEnabled}
+              isAudioEnabled={props.isAudioEnabled}
+            />
+            {props.isOwner && (
+              <Button
+                variant="destructive"
+                onClick={props.onEndRoom}
+                disabled={props.isEndingRoom}
+              >
+                {props.isEndingRoom ? 'Ending...' : 'End Room'}
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
     </header>
   );
 }

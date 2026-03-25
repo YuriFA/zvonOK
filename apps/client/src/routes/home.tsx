@@ -8,7 +8,7 @@ import { useCreateRoom } from "@/features/room/hooks/use-create-room";
 import { ArrowRight, Plus, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ROUTES, getRoomRoute } from "@/lib/config/routes";
-import HeroBg from '@/../public/hero-bg.svg?react';
+import HeroBg from '@/assets/hero-bg.svg?react';
 import { APP_NAME } from "@/lib/config/app";
 
 export const Home = () => {

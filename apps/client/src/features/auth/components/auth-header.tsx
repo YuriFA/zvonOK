@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/auth.context';
 import { ProfileDropdown } from './profile-dropdown';
 import { ROUTES } from '@/lib/config/routes';
 import { APP_NAME } from '@/lib/config/app';
-import Logo from '@/../public/logo.svg?react';
+import Logo from '@/assets/logo.svg?react';
 import { ThemeSwitcher } from '@/components/ui/theme-switcher';
 
 export function AuthHeader() {
