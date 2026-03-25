@@ -88,8 +88,8 @@ export function useMediaDevices(): UseMediaDevicesReturn {
         const rawDevices = await navigator.mediaDevices.enumerateDevices();
         const mappedDevices = rawDevices.map(mapMediaDeviceInfo);
         setDevices(mappedDevices);
-      } catch {
-        console.warn('Failed to enumerate devices');
+      } catch(error) {
+        console.warn('Failed to enumerate devices', error);
       } finally {
         setIsLoading(false);
       }
