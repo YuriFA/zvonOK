@@ -28,7 +28,7 @@ export function LocalVideo({
   }, [stream]);
 
   return (
-    <div className={cn('relative overflow-hidden rounded-lg bg-black', className)}>
+    <div className={cn('relative overflow-hidden rounded-lg bg-muted', className)}>
       <video
         ref={videoRef}
         autoPlay
@@ -63,8 +63,8 @@ export function LocalVideo({
       )}
 
       {!isVideoEnabled && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-          <div className="flex size-16 items-center justify-center rounded-full bg-gray-700 text-xl text-white">
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="flex size-16 items-center justify-center rounded-full bg-gray-500 text-xl text-white">
             {getInitials(username ?? '')}
           </div>
         </div>
