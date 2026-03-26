@@ -1,205 +1,135 @@
-/**
- * Media manager facade.
- * Composes state store, acquisition, track controller, device switcher,
- * and permissions into a unified interface implementing IMediaManager.
- */
+import type { IMediaDeviceService } from './device-service';
+import type { IErrorClassifier } from './error-classifier';
+import type { IMediaManager, IMediaCapture } from './interfaces';
+import type { StateCallback, TrackChangeEvent, StreamChangeCallback } from './types';
+import { CaptureState } from './capture-state';
+import { MediaCapture } from './capture';
 
-import { MediaStateStore } from './state-store';
-import {
-  MediaAcquisition,
-  PermissionDeniedStrategy,
-  DeviceNotFoundStrategy,
-} from './acquisition';
-import { MediaTrackController } from './track-controller';
-import { DeviceGoneFallbackStrategy } from './track-fallback';
-import { DeviceSwitcher } from './device-switcher';
-import { checkPermissions } from './permissions';
-import type { IMediaManager } from './interfaces';
-import type {
-  UserMediaConstraints,
-  MediaDeviceInfo,
-  MediaPermissionStatus,
-  MediaStatus,
-  TrackAvailabilityCallback,
-  MediaStatusCallback,
-} from './types';
-
-// Re-export types for backward compatibility
-export type {
-  MediaStatus,
-  MediaStatusCallback,
-  UserMediaConstraints as MediaStreamConstraints,
-  MediaPermissionStatus,
-  TrackAvailabilityCallback,
-} from './types';
-
-/**
- * Facade for media management.
- * Implements IMediaManager by composing focused modules.
- */
 export class MediaStreamManager implements IMediaManager {
-  private stateStore = new MediaStateStore();
-  private trackController: MediaTrackController;
-  private acquisition: MediaAcquisition;
+  readonly videoCapture: IMediaCapture;
+  readonly audioCapture: IMediaCapture;
+  private combinedStream: MediaStream | null = null;
+  private deviceService: IMediaDeviceService;
+  private trackChangeCallbacks = new Set<(event: TrackChangeEvent) => void>();
+  private combinedStreamCallbacks = new Set<StreamChangeCallback>();
 
-  constructor() {
-    const deviceSwitcher = new DeviceSwitcher(this.stateStore);
+  constructor(deps: { deviceService: IMediaDeviceService; errorClassifier: IErrorClassifier }) {
+    this.deviceService = deps.deviceService;
+    this.videoCapture = new MediaCapture(deps.deviceService, 'video', deps.errorClassifier);
+    this.audioCapture = new MediaCapture(deps.deviceService, 'audio', deps.errorClassifier);
 
-    // Track controller is the single source of truth for preferences.
-    // Create it first so acquisition can reference it via callback.
-    this.trackController = new MediaTrackController(
-      () => this.acquisition.getStream(),
-      this.stateStore,
-      [new DeviceGoneFallbackStrategy()],
-      deviceSwitcher,
-    );
-    this.acquisition = new MediaAcquisition(
-      this.stateStore,
-      [new PermissionDeniedStrategy(), new DeviceNotFoundStrategy()],
-      this.trackController
-    );
+    this.videoCapture.onStateChange((state, track) => {
+      if (state === CaptureState.ACTIVE && track) {
+        this.addTrackToCombined(track);
+      } else if (state !== CaptureState.ACTIVE) {
+        this.removeKindFromCombined('video');
+      }
+      this.emitTrackChange('video', state === CaptureState.ACTIVE ? track : null);
+    });
+
+    this.audioCapture.onStateChange((state, track) => {
+      if (state === CaptureState.ACTIVE && track) {
+        this.addTrackToCombined(track);
+      } else if (state !== CaptureState.ACTIVE) {
+        this.removeKindFromCombined('audio');
+      }
+      this.emitTrackChange('audio', state === CaptureState.ACTIVE ? track : null);
+    });
   }
 
-  // IMediaAcquisition
-  async startStream(constraints?: UserMediaConstraints): Promise<MediaStream> {
-    return this.acquisition.start(constraints);
+  getCombinedStream(): MediaStream | null {
+    return this.combinedStream;
   }
 
-  stopStream(): void {
-    this.acquisition.stop();
+  onCombinedStreamChange(cb: StreamChangeCallback): () => void {
+    this.combinedStreamCallbacks.add(cb);
+    cb(this.combinedStream);
+    return () => { this.combinedStreamCallbacks.delete(cb); };
   }
 
-  getStream(): MediaStream | null {
-    return this.acquisition.getStream();
+  onTrackChange(cb: (event: TrackChangeEvent) => void): () => void {
+    this.trackChangeCallbacks.add(cb);
+    return () => { this.trackChangeCallbacks.delete(cb); };
   }
 
-  // IMediaTrackController
-  async startVideoTrack(): Promise<MediaStreamTrack | null> {
-    return this.trackController.startVideoTrack();
+  getDeviceService(): IMediaDeviceService {
+    return this.deviceService;
   }
 
-  stopVideoTrack(reason?: string): void {
-    this.trackController.stopVideoTrack(reason);
+  async start(options?: { video?: boolean; audio?: boolean; videoDeviceId?: string; audioDeviceId?: string }): Promise<void> {
+    const startVideo = options?.video ?? true;
+    const startAudio = options?.audio ?? true;
+
+    if (!this.combinedStream) {
+      this.combinedStream = new MediaStream();
+      this.emitCombinedStreamChange();
+    }
+
+    const promises: Promise<void>[] = [];
+
+    if (startVideo) {
+      promises.push(
+        this.videoCapture.start(options?.videoDeviceId).then(() => { }).catch((e) => console.warn('[MediaManager] Video capture start failed:', e)),
+      );
+    }
+    if (startAudio) {
+      promises.push(
+        this.audioCapture.start(options?.audioDeviceId).then(() => { }).catch((e) => console.warn('[MediaManager] Audio capture start failed:', e)),
+      );
+    }
+
+    await Promise.all(promises);
   }
 
-  async startAudioTrack(): Promise<MediaStreamTrack | null> {
-    return this.trackController.startAudioTrack();
-  }
-
-  stopAudioTrack(reason?: string): void {
-    this.trackController.stopAudioTrack(reason);
-  }
-
-  hasVideoTrack(): boolean {
-    return this.trackController.hasVideoTrack();
-  }
-
-  hasAudioTrack(): boolean {
-    return this.trackController.hasAudioTrack();
-  }
-
-  isVideoEnabled(): boolean {
-    return this.trackController.isVideoEnabled();
-  }
-
-  isAudioEnabled(): boolean {
-    return this.trackController.isAudioEnabled();
-  }
-
-  isPreferredVideoEnabled(): boolean {
-    return this.trackController.isPreferredVideoEnabled();
-  }
-
-  isPreferredAudioEnabled(): boolean {
-    return this.trackController.isPreferredAudioEnabled();
-  }
-
-  setPreferredVideoEnabled(enabled: boolean): void {
-    this.trackController.setPreferredVideoEnabled(enabled);
-  }
-
-  setPreferredAudioEnabled(enabled: boolean): void {
-    this.trackController.setPreferredAudioEnabled(enabled);
-  }
-
-  // IMediaDeviceSelector
-  async enumerateDevices(): Promise<MediaDeviceInfo[]> {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    return devices
-      .filter((d) => d.kind === 'videoinput' || d.kind === 'audioinput')
-      .map((d) => ({
-        deviceId: d.deviceId,
-        kind: d.kind as 'videoinput' | 'audioinput',
-        label: d.label,
-      }));
-  }
-
-  async switchVideoDevice(deviceId: string): Promise<MediaStreamTrack | null> {
-    return this.trackController.switchVideoDevice(deviceId);
-  }
-
-  async switchAudioDevice(deviceId: string): Promise<MediaStreamTrack | null> {
-    return this.trackController.switchAudioDevice(deviceId);
-  }
-
-  getVideoDeviceId(): string | null {
-    return this.trackController.getVideoDeviceId();
-  }
-
-  getAudioDeviceId(): string | null {
-    return this.trackController.getAudioDeviceId();
-  }
-
-  setSelectedVideoDeviceId(deviceId: string | null): void {
-    this.trackController.setSelectedVideoDeviceId(deviceId);
-  }
-
-  setSelectedAudioDeviceId(deviceId: string | null): void {
-    this.trackController.setSelectedAudioDeviceId(deviceId);
-  }
-
-  // IMediaPermissionChecker
-  async checkPermissions(): Promise<MediaPermissionStatus> {
-    return checkPermissions();
-  }
-
-  // IMediaStateNotifier
-  getStatus(): MediaStatus {
-    return this.stateStore.getStatus();
-  }
-
-  onStatusChange(callback: MediaStatusCallback): () => void {
-    return this.stateStore.onStatusChange(callback);
-  }
-
-  onVideoAvailabilityChange(callback: TrackAvailabilityCallback): () => void {
-    return this.stateStore.onVideoAvailabilityChange(callback);
-  }
-
-  onAudioAvailabilityChange(callback: TrackAvailabilityCallback): () => void {
-    return this.stateStore.onAudioAvailabilityChange(callback);
-  }
-
-  async toggleVideo(enabled: boolean): Promise<boolean> {
-    if (enabled) {
-      const track = await this.startVideoTrack();
-      return track !== null;
-    } else {
-      this.stopVideoTrack();
-      return true;
+  stop(): void {
+    this.videoCapture.stop();
+    this.audioCapture.stop();
+    if (this.combinedStream) {
+      this.combinedStream.getTracks().forEach(t => t.stop());
+      this.combinedStream = null;
+      this.emitCombinedStreamChange();
     }
   }
 
-  async toggleAudio(enabled: boolean): Promise<boolean> {
-    if (enabled) {
-      const track = await this.startAudioTrack();
-      return track !== null;
-    } else {
-      this.stopAudioTrack();
-      return true;
+  onVideoStateChange(cb: StateCallback): () => void {
+    return this.videoCapture.onStateChange(cb);
+  }
+
+  onAudioStateChange(cb: StateCallback): () => void {
+    return this.audioCapture.onStateChange(cb);
+  }
+
+  private addTrackToCombined(track: MediaStreamTrack): void {
+    if (!this.combinedStream) {
+      this.combinedStream = new MediaStream();
     }
+
+    const kind = track.kind === 'video' ? 'video' : 'audio';
+    this.combinedStream.getTracks()
+      .filter(t => t.kind === kind)
+      .forEach(t => this.combinedStream!.removeTrack(t));
+
+    this.combinedStream.addTrack(track);
+    this.emitCombinedStreamChange();
+  }
+
+  private removeKindFromCombined(kind: 'video' | 'audio'): void {
+    if (!this.combinedStream) return;
+
+    const trackKind = kind === 'video' ? 'video' : 'audio';
+    this.combinedStream.getTracks()
+      .filter(t => t.kind === trackKind)
+      .forEach(t => this.combinedStream!.removeTrack(t));
+
+    this.emitCombinedStreamChange();
+  }
+
+  private emitTrackChange(kind: 'video' | 'audio', track: MediaStreamTrack | null): void {
+    const event: TrackChangeEvent = { kind, track };
+    this.trackChangeCallbacks.forEach(cb => cb(event));
+  }
+
+  private emitCombinedStreamChange(): void {
+    this.combinedStreamCallbacks.forEach(cb => cb(this.combinedStream));
   }
 }
-
-/** Singleton instance for backward compatibility */
-export const mediaManager = new MediaStreamManager();

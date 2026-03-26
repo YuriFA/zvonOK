@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { STORAGE_KEYS } from '@/lib/constants/storage-keys';
+import { useDeviceService } from '@/features/media/contexts/media-manager.context';
 
 export type DeviceType = 'videoinput' | 'audioinput' | 'audiooutput';
 
@@ -7,7 +8,6 @@ export interface MediaDevice {
   deviceId: string;
   kind: DeviceType;
   label: string;
-  groupId: string;
 }
 
 export interface SelectedDevices {
@@ -27,11 +27,6 @@ export interface UseMediaDevicesReturn {
   isLoading: boolean;
 }
 
-/**
- * Read saved device selections from localStorage.
- * Used internally by `useMediaDevices` for initial state, and exported for
- * `MediaStreamProvider` to seed the track controller on mount.
- */
 export function loadSelectedDevices(): SelectedDevices {
   try {
     const stored = localStorage.getItem(STORAGE_KEYS.SELECTED_DEVICES);
@@ -56,44 +51,38 @@ function saveSelectedDevices(devices: SelectedDevices): void {
   }
 }
 
-function mapMediaDeviceInfo(device: MediaDeviceInfo): MediaDevice {
-  return {
-    deviceId: device.deviceId,
-    kind: device.kind as DeviceType,
-    label: device.label || `Unknown ${device.kind}`,
-    groupId: device.groupId,
-  };
-}
-
 export function useMediaDevices(): UseMediaDevicesReturn {
   const [devices, setDevices] = useState<MediaDevice[]>([]);
   const [selectedDevices, setSelectedDevices] = useState<SelectedDevices>(loadSelectedDevices);
   const [isLoading, setIsLoading] = useState(true);
-  const isPermissionGranted = useRef(false);
+  // const isPermissionGranted = useRef(false);
+  const deviceService = useDeviceService();
 
-  // Listen for device changes
   useEffect(() => {
     const handleDeviceChange = async () => {
       setIsLoading(true);
 
       try {
-        // Request permissions if not already granted
-        if (!isPermissionGranted.current) {
-          // Stop all tracks immediately — we only need the permission prompt
-          const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-          stream.getTracks().forEach((t) => t.stop());
-          isPermissionGranted.current = true;
-        }
+        // if (!isPermissionGranted.current) {
+        //   const stream = await deviceService.getUserMedia({ video: true, audio: true });
+        //   stream.getTracks().forEach((t) => t.stop());
+        //   isPermissionGranted.current = true;
+        // }
 
-        const rawDevices = await navigator.mediaDevices.enumerateDevices();
-        const mappedDevices = rawDevices.map(mapMediaDeviceInfo);
+        const rawDevices = await deviceService.enumerateDevices();
+        const mappedDevices = rawDevices.map((device): MediaDevice => {
+          return {
+            deviceId: device.deviceId,
+            kind: device.kind,
+            label: device.label || `Unknown ${device.kind}`,
+          };
+        });
         setDevices(mappedDevices);
-      } catch(error) {
+      } catch (error) {
         console.warn('Failed to enumerate devices', error);
       } finally {
         setIsLoading(false);
       }
-
     };
 
     handleDeviceChange();
@@ -101,9 +90,8 @@ export function useMediaDevices(): UseMediaDevicesReturn {
     return () => {
       navigator.mediaDevices.removeEventListener('devicechange', handleDeviceChange);
     };
-  }, [isPermissionGranted]);
+  }, [deviceService]);
 
-  // Persist selected devices
   useEffect(() => {
     saveSelectedDevices(selectedDevices);
   }, [selectedDevices]);
@@ -120,7 +108,6 @@ export function useMediaDevices(): UseMediaDevicesReturn {
     setSelectedDevices((prev) => ({ ...prev, speakerDeviceId: deviceId }));
   }, []);
 
-  // Derived device lists
   const videoDevices = devices.filter((d) => d.kind === 'videoinput');
   const audioDevices = devices.filter((d) => d.kind === 'audioinput');
   const speakerDevices = devices.filter((d) => d.kind === 'audiooutput');

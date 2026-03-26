@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { Video, VideoOff, Mic, MicOff, Volume2, ChevronDown, Check } from 'lucide-react';
+import { Video, VideoOff, Mic, MicOff, Volume2, ChevronDown, Check, AlertTriangle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -12,40 +12,41 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import type { MediaDevice, DeviceType } from '../hooks/use-media-devices';
+import { CaptureState, getCaptureStateDisplay, canToggle } from '@/lib/media/capture-state';
 
 export interface DeviceControlGroupProps {
   type: DeviceType;
-  isEnabled?: boolean;
+  captureState?: CaptureState;
   onToggle?: () => void;
   devices: MediaDevice[];
   selectedDeviceId: string | null;
   onDeviceChange: (deviceId: string) => void;
-  disabled?: boolean;
   isSwitching?: boolean;
   className?: string;
 }
 
-const deviceConfig: Record<DeviceType, { label: string; enabledIcon: typeof Video; disabledIcon: typeof Video }> = {
-  videoinput: { label: 'Camera', enabledIcon: Video, disabledIcon: VideoOff },
-  audioinput: { label: 'Microphone', enabledIcon: Mic, disabledIcon: MicOff },
-  audiooutput: { label: 'Speaker', enabledIcon: Volume2, disabledIcon: Volume2 },
+const deviceConfig: Record<DeviceType, { label: string; kind: 'video' | 'audio' }> = {
+  videoinput: { label: 'Camera', kind: 'video' },
+  audioinput: { label: 'Microphone', kind: 'audio' },
+  audiooutput: { label: 'Speaker', kind: 'audio' },
 };
 
 export function DeviceControlGroup({
   type,
-  isEnabled = true,
+  captureState = CaptureState.STOPPED,
   onToggle,
   devices,
   selectedDeviceId,
   onDeviceChange,
-  disabled = false,
   isSwitching = false,
   className,
 }: DeviceControlGroupProps) {
   const config = deviceConfig[type];
-  const Icon = isEnabled ? config.enabledIcon : config.disabledIcon;
   const hasDevices = devices.length > 0;
   const isOutputDevice = type === 'audiooutput';
+  const display = getCaptureStateDisplay(captureState, config.kind);
+  const toggleEnabled = canToggle(captureState) && hasDevices;
+  const dropdownEnabled = captureState === CaptureState.ACTIVE && hasDevices && !isSwitching;
 
   const handleDeviceSelect = useCallback(
     (deviceId: string) => {
@@ -53,7 +54,7 @@ export function DeviceControlGroup({
         onDeviceChange(deviceId);
       }
     },
-    [onDeviceChange, selectedDeviceId]
+    [onDeviceChange, selectedDeviceId],
   );
 
   if (isOutputDevice) {
@@ -65,7 +66,7 @@ export function DeviceControlGroup({
               type="button"
               variant="outline"
               size="sm"
-              disabled={disabled || !hasDevices || isSwitching}
+              disabled={!hasDevices || isSwitching}
               className={cn('gap-2', className)}
               title={config.label}
             />
@@ -99,6 +100,20 @@ export function DeviceControlGroup({
     );
   }
 
+  const renderIcon = () => {
+    if (display.icon === 'spinner') {
+      return <Loader2 className="size-5 animate-spin" />;
+    }
+    if (display.icon === 'off-warning' || display.icon === 'off-error') {
+      return <AlertTriangle className={cn('size-5', display.icon === 'off-warning' && 'text-yellow-500')} />;
+    }
+    const isOn = display.icon === 'on';
+    if (type === 'videoinput') {
+      return isOn ? <Video className="size-5" /> : <VideoOff className="size-5" />;
+    }
+    return isOn ? <Mic className="size-5" /> : <MicOff className="size-5" />;
+  };
+
   return (
     <div className={cn('inline-flex rounded-lg border', className)}>
       <Button
@@ -106,14 +121,14 @@ export function DeviceControlGroup({
         variant="ghost"
         size="sm"
         onClick={onToggle}
-        disabled={disabled || !hasDevices}
+        disabled={!toggleEnabled && captureState !== CaptureState.CAPTURE_CANCELED}
         className={cn(
           'rounded-r-none border-r px-3',
-          !isEnabled && 'text-muted-foreground'
+          !canToggle(captureState) && captureState !== CaptureState.CAPTURE_CANCELED && 'text-muted-foreground',
         )}
-        title={isEnabled ? `Turn off ${config.label}` : `Turn on ${config.label}`}
+        title={display.tooltip}
       >
-        <Icon className="size-5" />
+        {renderIcon()}
       </Button>
 
       <DropdownMenu>
@@ -123,7 +138,7 @@ export function DeviceControlGroup({
               type="button"
               variant="ghost"
               size="sm"
-              disabled={disabled || !hasDevices || isSwitching}
+              disabled={!dropdownEnabled}
               className="rounded-l-none px-2"
               title={`Select ${config.label}`}
             />
@@ -153,6 +168,12 @@ export function DeviceControlGroup({
           </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      {display.statusText && (
+        <div className="flex items-center px-2 text-xs text-muted-foreground">
+          {display.statusText}
+        </div>
+      )}
     </div>
   );
 }

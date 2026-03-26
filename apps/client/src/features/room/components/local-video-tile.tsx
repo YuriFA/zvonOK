@@ -1,16 +1,16 @@
 import { LocalVideo } from '@/components/local-video';
 import { VideoTile } from '@/components/video-grid';
 import { MediaControls } from '@/features/media/components/media-controls';
-import type { MediaErrorType } from '@/features/media/hooks/use-media-errors';
+import { CaptureState, isActive } from '@/lib/media/capture-state';
 
 interface LocalVideoTileProps {
   stream: MediaStream | null;
   username?: string;
   isVideoEnabled: boolean;
   isAudioEnabled: boolean;
+  videoCaptureState: CaptureState;
+  audioCaptureState: CaptureState;
   isActiveSpeaker: boolean;
-  videoError?: MediaErrorType;
-  audioError?: MediaErrorType;
   onToggleVideo: () => Promise<void>;
   onToggleAudio: () => Promise<void>;
 }
@@ -20,9 +20,9 @@ export function LocalVideoTile({
   username,
   isVideoEnabled,
   isAudioEnabled,
+  videoCaptureState,
+  audioCaptureState,
   isActiveSpeaker,
-  videoError,
-  audioError,
   onToggleVideo,
   onToggleAudio,
 }: LocalVideoTileProps) {
@@ -31,19 +31,17 @@ export function LocalVideoTile({
       <LocalVideo
         stream={stream}
         username={username}
-        isVideoEnabled={!videoError && isVideoEnabled}
-        isAudioEnabled={!audioError && isAudioEnabled}
+        isVideoEnabled={isActive(videoCaptureState)}
         className="h-full w-full"
-        showControls={false}
       />
       <div className="absolute bottom-2 left-1/2 -translate-x-1/2">
         <MediaControls
           isVideoEnabled={isVideoEnabled}
           isAudioEnabled={isAudioEnabled}
+          videoCaptureState={videoCaptureState}
+          audioCaptureState={audioCaptureState}
           onToggleVideo={onToggleVideo}
           onToggleAudio={onToggleAudio}
-          videoError={videoError}
-          audioError={audioError}
         />
       </div>
     </VideoTile>

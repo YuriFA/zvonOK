@@ -19,7 +19,6 @@ export interface UseRoomSessionOptions {
 
 export interface UseRoomSessionResult {
   localStream: MediaStream | null;
-  mediaError: string | null;
   mediaControls: UseMediaControlsReturn;
   toggleVideo: () => Promise<void>;
   toggleAudio: () => Promise<void>;
@@ -37,7 +36,7 @@ export interface UseRoomSessionResult {
 export function useRoomSession({ room, userId, displayName }: UseRoomSessionOptions): UseRoomSessionResult {
   const { setElement: handleRemoteMediaElement, primaryElement: primaryRemoteMediaElement } = useRemoteMediaElements();
 
-  const { stream: localStream, error: mediaError, stop: stopMedia } = useMediaStreamContext();
+  const { stream: localStream, stop: stopMedia } = useMediaStreamContext();
 
   const localUserId = userId ?? 'local';
 
@@ -82,7 +81,6 @@ export function useRoomSession({ room, userId, displayName }: UseRoomSessionOpti
 
   return {
     localStream,
-    mediaError,
     mediaControls,
     toggleVideo,
     toggleAudio,

@@ -4,9 +4,10 @@ import { DeviceControlGroup } from './device-control-group';
 import { LocalVideo } from '@/components/local-video';
 import { cn } from '@/lib/utils';
 import { useMediaStreamContext } from '../contexts/media-stream.context';
-import { useMediaToggle } from '../contexts/media-manager.context';
+import { useVideoCaptureControl, useAudioCaptureControl, useVideoCaptureState, useAudioCaptureState } from '../contexts/media-manager.context';
 import { useMediaDevices } from '../hooks/use-media-devices';
 import { useDeviceSwitching } from '../hooks/use-device-switching';
+import { CaptureState, isActive } from '@/lib/media/capture-state';
 
 interface DeviceSelectorProps {
   className?: string;
@@ -14,9 +15,13 @@ interface DeviceSelectorProps {
 }
 
 export function DeviceSelector({ className, username }: DeviceSelectorProps) {
-  const { stream, error, isLoading } = useMediaStreamContext();
-  const mediaToggle = useMediaToggle();
+  const { stream, videoState, audioState } = useMediaStreamContext();
   const mediaControls = useMediaControls();
+
+  const videoControl = useVideoCaptureControl();
+  const audioControl = useAudioCaptureControl();
+  const videoStateReader = useVideoCaptureState();
+  const audioStateReader = useAudioCaptureState();
 
   const {
     videoDevices,
@@ -31,22 +36,22 @@ export function DeviceSelector({ className, username }: DeviceSelectorProps) {
   const { switchVideoDevice, switchAudioDevice, isSpeakerSwitchSupported } = useDeviceSwitching();
 
   const handleToggleVideo = useCallback(async () => {
-    const nextEnabled = !mediaControls.isVideoEnabled;
+    const nextEnabled = !isActive(videoStateReader.getState());
     mediaControls.setVideoEnabled(nextEnabled);
-    const success = await mediaToggle.toggleVideo(nextEnabled);
+    const success = await videoControl.toggle(nextEnabled);
     if (!success) {
       mediaControls.setVideoEnabled(false);
     }
-  }, [mediaToggle, mediaControls]);
+  }, [videoControl, videoStateReader, mediaControls]);
 
   const handleToggleAudio = useCallback(async () => {
-    const nextEnabled = !mediaControls.isAudioEnabled;
+    const nextEnabled = !isActive(audioStateReader.getState());
     mediaControls.setAudioEnabled(nextEnabled);
-    const success = await mediaToggle.toggleAudio(nextEnabled);
+    const success = await audioControl.toggle(nextEnabled);
     if (!success) {
       mediaControls.setAudioEnabled(false);
     }
-  }, [mediaToggle, mediaControls]);
+  }, [audioControl, audioStateReader, mediaControls]);
 
   const handleVideoDeviceChange = useCallback(
     async (deviceId: string) => {
@@ -55,7 +60,7 @@ export function DeviceSelector({ className, username }: DeviceSelectorProps) {
         setSelectedVideoDevice(deviceId);
       }
     },
-    [switchVideoDevice, setSelectedVideoDevice]
+    [switchVideoDevice, setSelectedVideoDevice],
   );
 
   const handleAudioDeviceChange = useCallback(
@@ -65,39 +70,32 @@ export function DeviceSelector({ className, username }: DeviceSelectorProps) {
         setSelectedAudioDevice(deviceId);
       }
     },
-    [switchAudioDevice, setSelectedAudioDevice]
+    [switchAudioDevice, setSelectedAudioDevice],
   );
 
   const handleSpeakerDeviceChange = useCallback(
     (deviceId: string) => {
       setSelectedSpeakerDevice(deviceId);
     },
-    [setSelectedSpeakerDevice]
+    [setSelectedSpeakerDevice],
   );
 
-  const hasStream = !!stream && !error;
+  const isVideoLoading = videoState === CaptureState.STARTING;
 
   return (
     <div className={cn('space-y-3', className)}>
       <div className="relative aspect-video overflow-hidden rounded-lg bg-muted">
-        {isLoading && (
+        {isVideoLoading && (
           <div className="flex h-full items-center justify-center">
             <p className="text-sm text-muted-foreground">Loading camera...</p>
           </div>
         )}
-        {error && (
-          <div className="flex h-full items-center justify-center">
-            <p className="text-sm text-destructive">{error}</p>
-          </div>
-        )}
-        {!isLoading && !error && stream && (
+        {!isVideoLoading && stream && (
           <LocalVideo
             stream={stream}
             username={username}
-            isVideoEnabled={mediaControls.isVideoEnabled}
-            isAudioEnabled={mediaControls.isAudioEnabled}
+            isVideoEnabled={isActive(videoState)}
             className="h-full"
-            showControls={false}
           />
         )}
       </div>
@@ -105,12 +103,11 @@ export function DeviceSelector({ className, username }: DeviceSelectorProps) {
       <div className="flex items-center justify-center gap-2">
         <DeviceControlGroup
           type="audioinput"
-          isEnabled={mediaControls.isAudioEnabled}
+          captureState={audioState}
           onToggle={handleToggleAudio}
           devices={audioDevices}
           selectedDeviceId={selectedDevices.audioDeviceId}
           onDeviceChange={handleAudioDeviceChange}
-          disabled={!hasStream}
         />
 
         {isSpeakerSwitchSupported && (
@@ -124,14 +121,22 @@ export function DeviceSelector({ className, username }: DeviceSelectorProps) {
 
         <DeviceControlGroup
           type="videoinput"
-          isEnabled={mediaControls.isVideoEnabled}
+          captureState={videoState}
           onToggle={handleToggleVideo}
           devices={videoDevices}
           selectedDeviceId={selectedDevices.videoDeviceId}
           onDeviceChange={handleVideoDeviceChange}
-          disabled={!hasStream}
         />
       </div>
     </div>
   );
 }
+
+// function getVideoPreviewDisplay(state: CaptureState): string | null {
+//   if (state === CaptureState.SYSTEM_DENIED) return 'Camera blocked in system settings';
+//   if (state === CaptureState.DEVICE_NOT_FOUND) return 'Camera blocked. Click to retry.';
+//   if (state === CaptureState.DEVICE_IN_USE) return 'Camera in use by another app';
+//   if (state === CaptureState.NO_DEVICE) return 'No camera found';
+//   if (state === CaptureState.DEVICE_ERROR) return 'Camera unavailable';
+//   return null;
+// }

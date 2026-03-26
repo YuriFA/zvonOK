@@ -1,8 +1,10 @@
 import { useCallback, useEffect } from 'react';
 import { useMediasoup, type RemotePeerMedia } from '@/hooks/use-mediasoup';
 import { useMediaControls, type UseMediaControlsReturn } from '@/features/media/hooks/use-media-controls';
-import { useMediaTrackController } from '@/features/media/contexts/media-manager.context';
+import { useVideoCaptureControl, useAudioCaptureControl, useVideoCaptureState, useAudioCaptureState, useCaptureTrackProvider } from '@/features/media/contexts/media-manager.context';
+import { useSfuTrackSync } from '@/features/media/hooks/use-sfu-track-sync';
 import type { SfuState } from '@/lib/sfu/types';
+import { isActive } from '@/lib/media/capture-state';
 
 export interface UseRoomSfuOptions {
   roomId: string;
@@ -29,8 +31,15 @@ export function useRoomSfu({
   onKicked,
   displayName,
 }: UseRoomSfuOptions): UseRoomSfuResult {
-  const trackController = useMediaTrackController();
+  const videoControl = useVideoCaptureControl();
+  const audioControl = useAudioCaptureControl();
+  const videoTrackProvider = useCaptureTrackProvider('video');
+  const audioTrackProvider = useCaptureTrackProvider('audio');
+  const videoStateReader = useVideoCaptureState();
+  const audioStateReader = useAudioCaptureState();
   const mediaControls = useMediaControls();
+
+  useSfuTrackSync();
 
   const {
     state: sfuState,
@@ -40,7 +49,6 @@ export function useRoomSfu({
     produceTrack,
     pauseProducer,
     resumeProducer,
-    replaceTrack,
     hasProducer,
   } = useMediasoup({
     roomId,
@@ -56,31 +64,30 @@ export function useRoomSfu({
   }, [wasKicked, onKicked]);
 
   const toggleVideo = useCallback(async () => {
-    const nextEnabled = !mediaControls.isVideoEnabled;
+    const nextEnabled = !isActive(videoStateReader.getState());
     mediaControls.setVideoEnabled(nextEnabled);
 
     if (nextEnabled) {
-      const newTrack = await trackController.startVideoTrack();
-      if (!newTrack) {
+      const success = await videoControl.toggle(true);
+      if (!success) {
+        mediaControls.setVideoEnabled(false);
+        return;
+      }
+
+      const track = videoTrackProvider.getTrack();
+      if (!track) {
         mediaControls.setVideoEnabled(false);
         return;
       }
 
       if (!hasProducer('video')) {
-        const produced = await produceTrack(newTrack);
+        const produced = await produceTrack(track);
         if (!produced) {
-          trackController.stopVideoTrack('Failed to publish camera');
+          videoControl.stop();
           mediaControls.setVideoEnabled(false);
           return;
         }
         resumeProducer('video');
-        return;
-      }
-
-      const replaced = await replaceTrack('video', newTrack);
-      if (!replaced) {
-        trackController.stopVideoTrack('Failed to publish camera');
-        mediaControls.setVideoEnabled(false);
         return;
       }
 
@@ -89,38 +96,35 @@ export function useRoomSfu({
       if (hasProducer('video')) {
         pauseProducer('video');
       }
-
-      await replaceTrack('video', null);
-      trackController.stopVideoTrack();
+      videoControl.stop();
     }
-  }, [trackController, produceTrack, mediaControls, hasProducer, pauseProducer, resumeProducer, replaceTrack]);
+  }, [videoControl, videoTrackProvider, videoStateReader, produceTrack, mediaControls, hasProducer, pauseProducer, resumeProducer]);
 
   const toggleAudio = useCallback(async () => {
-    const nextEnabled = !mediaControls.isAudioEnabled;
+    const nextEnabled = !isActive(audioStateReader.getState());
     mediaControls.setAudioEnabled(nextEnabled);
 
     if (nextEnabled) {
-      const newTrack = await trackController.startAudioTrack();
-      if (!newTrack) {
+      const success = await audioControl.toggle(true);
+      if (!success) {
+        mediaControls.setAudioEnabled(false);
+        return;
+      }
+
+      const track = audioTrackProvider.getTrack();
+      if (!track) {
         mediaControls.setAudioEnabled(false);
         return;
       }
 
       if (!hasProducer('audio')) {
-        const produced = await produceTrack(newTrack);
+        const produced = await produceTrack(track);
         if (!produced) {
-          trackController.stopAudioTrack('Failed to publish microphone');
+          audioControl.stop();
           mediaControls.setAudioEnabled(false);
           return;
         }
         resumeProducer('audio');
-        return;
-      }
-
-      const replaced = await replaceTrack('audio', newTrack);
-      if (!replaced) {
-        trackController.stopAudioTrack('Failed to publish microphone');
-        mediaControls.setAudioEnabled(false);
         return;
       }
 
@@ -129,11 +133,9 @@ export function useRoomSfu({
       if (hasProducer('audio')) {
         pauseProducer('audio');
       }
-
-      await replaceTrack('audio', null);
-      trackController.stopAudioTrack();
+      audioControl.stop();
     }
-  }, [trackController, produceTrack, mediaControls, hasProducer, pauseProducer, resumeProducer, replaceTrack]);
+  }, [audioControl, audioTrackProvider, audioStateReader, produceTrack, mediaControls, hasProducer, pauseProducer, resumeProducer]);
 
   return {
     sfuState,

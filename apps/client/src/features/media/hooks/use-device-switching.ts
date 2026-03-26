@@ -1,6 +1,6 @@
 import { useCallback, useRef } from 'react';
-import { useMediaDeviceSelector, useMediaTrackController } from '@/features/media/contexts/media-manager.context';
-import { useSfuManager } from '@/features/sfu/contexts/sfu-manager.context';
+import { useVideoCaptureControl, useAudioCaptureControl, useVideoCaptureState, useAudioCaptureState } from '@/features/media/contexts/media-manager.context';
+import { isActive } from '@/lib/media/capture-state';
 
 export interface UseDeviceSwitchingReturn {
   switchVideoDevice: (deviceId: string) => Promise<boolean>;
@@ -10,9 +10,10 @@ export interface UseDeviceSwitchingReturn {
 }
 
 export function useDeviceSwitching(): UseDeviceSwitchingReturn {
-  const deviceSelector = useMediaDeviceSelector();
-  const trackController = useMediaTrackController();
-  const sfuManager = useSfuManager();
+  const videoController = useVideoCaptureControl();
+  const audioController = useAudioCaptureControl();
+  const videoStateReader = useVideoCaptureState();
+  const audioStateReader = useAudioCaptureState();
   const isSwitchingRef = useRef(false);
 
   const switchVideoDevice = useCallback(async (deviceId: string): Promise<boolean> => {
@@ -24,32 +25,18 @@ export function useDeviceSwitching(): UseDeviceSwitchingReturn {
     isSwitchingRef.current = true;
 
     try {
-      if (!trackController.hasVideoTrack()) {
-        deviceSelector.setSelectedVideoDeviceId(deviceId);
+      if (!isActive(videoStateReader.getState())) {
         return true;
       }
 
-      const newTrack = await deviceSelector.switchVideoDevice(deviceId);
-
-      if (!newTrack) {
-        console.error('[DeviceSwitching] Failed to get new video track');
-        return false;
-      }
-
-      const sfuSuccess = await sfuManager.replaceTrack('video', newTrack);
-
-      if (!sfuSuccess) {
-        console.warn('[DeviceSwitching] Some peer connections failed to update video track');
-      }
-
-      return sfuSuccess;
+      return await videoController.switchDevice(deviceId);
     } catch (error) {
       console.error('[DeviceSwitching] Failed to switch video device:', error);
       return false;
     } finally {
       isSwitchingRef.current = false;
     }
-  }, [deviceSelector, trackController, sfuManager]);
+  }, [videoController, videoStateReader]);
 
   const switchAudioDevice = useCallback(async (deviceId: string): Promise<boolean> => {
     if (isSwitchingRef.current) {
@@ -60,33 +47,18 @@ export function useDeviceSwitching(): UseDeviceSwitchingReturn {
     isSwitchingRef.current = true;
 
     try {
-      if (!trackController.hasAudioTrack()) {
-        deviceSelector.setSelectedAudioDeviceId(deviceId);
+      if (!isActive(audioStateReader.getState())) {
         return true;
       }
 
-      const newTrack = await deviceSelector.switchAudioDevice(deviceId);
-
-      if (!newTrack) {
-        console.error('[DeviceSwitching] Failed to get new audio track');
-        return false;
-      }
-
-      // Replace track in all WebRTC peer connections
-      const sfuSuccess = await sfuManager.replaceTrack('audio', newTrack);
-
-      if (!sfuSuccess) {
-        console.warn('[DeviceSwitching] Some peer connections failed to update audio track');
-      }
-
-      return sfuSuccess;
+      return await audioController.switchDevice(deviceId);
     } catch (error) {
       console.error('[DeviceSwitching] Failed to switch audio device:', error);
       return false;
     } finally {
       isSwitchingRef.current = false;
     }
-  }, [deviceSelector, trackController, sfuManager]);
+  }, [audioController, audioStateReader]);
 
   const switchSpeakerDevice = useCallback(
     async (element: HTMLMediaElement | null, deviceId: string): Promise<boolean> => {
@@ -95,7 +67,6 @@ export function useDeviceSwitching(): UseDeviceSwitchingReturn {
         return false;
       }
 
-      // Check if setSinkId is supported
       if (!('setSinkId' in HTMLMediaElement.prototype)) {
         console.warn('[DeviceSwitching] setSinkId not supported in this browser');
         return false;
@@ -109,10 +80,9 @@ export function useDeviceSwitching(): UseDeviceSwitchingReturn {
         return false;
       }
     },
-    []
+    [],
   );
 
-  // Check if speaker switching is supported
   const isSpeakerSwitchSupported = 'setSinkId' in HTMLMediaElement.prototype;
 
   return {
@@ -122,4 +92,3 @@ export function useDeviceSwitching(): UseDeviceSwitchingReturn {
     isSpeakerSwitchSupported,
   };
 }
-

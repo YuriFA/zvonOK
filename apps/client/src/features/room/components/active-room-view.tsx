@@ -4,7 +4,6 @@ import { ParticipantsList } from '@/components/room/ParticipantsList';
 import { LocalVideoTile } from '@/features/room/components/local-video-tile';
 import { RemoteVideoTile } from '@/features/room/components/remote-video-tile';
 import { ConnectionStatus } from '@/features/room/components/connection-status';
-import { useMediaErrors } from '@/features/media/hooks/use-media-errors';
 import type { PermissionStateResult } from '@/features/media/hooks/use-permission-state';
 import type { UseRoomSessionResult } from '@/features/room/hooks/use-room-session';
 import type { Room } from '@/features/room/types/room.types';
@@ -29,7 +28,6 @@ export function ActiveRoomView({
 }: ActiveRoomViewProps) {
   const {
     localStream,
-    mediaError,
     mediaControls,
     toggleVideo,
     toggleAudio,
@@ -42,25 +40,7 @@ export function ActiveRoomView({
     kickPeer,
   } = session;
 
-  const { videoError: rawVideoError, audioError: rawAudioError } = useMediaErrors({
-    streamError: mediaError,
-    isVideoAvailable: mediaControls.isVideoAvailable,
-    isAudioAvailable: mediaControls.isAudioAvailable,
-    isVideoEnabled: mediaControls.isVideoEnabled,
-    isAudioEnabled: mediaControls.isAudioEnabled,
-  });
-
-  // Override error type when browser-level permission is denied.
-  // useMediaErrors returns null when the user has deliberately turned off
-  // the device (isVideoEnabled=false), but we still want to show the
-  // permission-denied warning on the toggle button so the user knows
-  // clicking it will require granting permission first.
-  const videoError = permissionState.isCameraDenied ? 'permission-denied' as const : rawVideoError;
-  const audioError = permissionState.isMicrophoneDenied ? 'permission-denied' as const : rawAudioError;
-
   const handleToggleVideo = useCallback(async () => {
-    // When camera permission is denied at browser level, opening the modal
-    // is the only meaningful action — getUserMedia would fail silently.
     if (permissionState.isCameraDenied) {
       onPermissionModalOpenChange(true);
       return;
@@ -86,9 +66,9 @@ export function ActiveRoomView({
               username={currentUsername}
               isVideoEnabled={mediaControls.isVideoEnabled}
               isAudioEnabled={mediaControls.isAudioEnabled}
+              videoCaptureState={mediaControls.videoCaptureState}
+              audioCaptureState={mediaControls.audioCaptureState}
               isActiveSpeaker={activeSpeakerId === localUserId}
-              videoError={videoError}
-              audioError={audioError}
               onToggleVideo={handleToggleVideo}
               onToggleAudio={handleToggleAudio}
             />

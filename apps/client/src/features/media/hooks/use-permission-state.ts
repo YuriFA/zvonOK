@@ -1,10 +1,7 @@
-/**
- * Reactive permission state hook.
- * Uses the Permissions API with `onchange` listeners to track camera and
- * microphone permission state without polling.
- */
-
 import { useCallback, useEffect, useState } from 'react';
+import { useDeviceService } from '@/features/media/contexts/media-manager.context';
+import { CaptureState } from '@/lib/media/capture-state';
+import { useVideoCaptureState, useAudioCaptureState } from '@/features/media/contexts/media-manager.context';
 
 type DevicePermission = 'granted' | 'denied' | 'prompt';
 
@@ -14,17 +11,7 @@ export interface PermissionStateResult {
   isCameraDenied: boolean;
   isMicrophoneDenied: boolean;
   isAnyDenied: boolean;
-  /** Re-request access; resolves to true on grant, false on deny. */
   requestPermission: (kind: 'camera' | 'microphone' | 'both') => Promise<boolean>;
-}
-
-async function queryPermission(name: 'camera' | 'microphone'): Promise<PermissionStatus | null> {
-  if (!navigator.permissions) return null;
-  try {
-    return await navigator.permissions.query({ name: name as PermissionName });
-  } catch {
-    return null;
-  }
 }
 
 function toDevicePermission(state: PermissionState | null): DevicePermission {
@@ -34,6 +21,10 @@ function toDevicePermission(state: PermissionState | null): DevicePermission {
 }
 
 export function usePermissionState(): PermissionStateResult {
+  const deviceService = useDeviceService();
+  const videoCapture = useVideoCaptureState();
+  const audioCapture = useAudioCaptureState();
+
   const [cameraPermission, setCameraPermission] = useState<DevicePermission>('prompt');
   const [microphonePermission, setMicrophonePermission] = useState<DevicePermission>('prompt');
 
@@ -55,8 +46,16 @@ export function usePermissionState(): PermissionStateResult {
     };
 
     async function init() {
-      cameraStatus = await queryPermission('camera');
-      micStatus = await queryPermission('microphone');
+      try {
+        cameraStatus = await deviceService.queryPermission('video');
+      } catch {
+        cameraStatus = null;
+      }
+      try {
+        micStatus = await deviceService.queryPermission('audio');
+      } catch {
+        micStatus = null;
+      }
 
       if (cancelled) return;
 
@@ -82,7 +81,37 @@ export function usePermissionState(): PermissionStateResult {
         micStatus.removeEventListener('change', handleMicChange);
       }
     };
-  }, []);
+  }, [deviceService]);
+
+  useEffect(() => {
+    const updateFromCaptureState = (videoState: CaptureState, audioState: CaptureState) => {
+      if (videoState === CaptureState.DEVICE_NOT_FOUND || videoState === CaptureState.SYSTEM_DENIED) {
+        setCameraPermission('denied');
+      } else if (videoState === CaptureState.ACTIVE) {
+        setCameraPermission('granted');
+      }
+
+      if (audioState === CaptureState.DEVICE_NOT_FOUND || audioState === CaptureState.SYSTEM_DENIED) {
+        setMicrophonePermission('denied');
+      } else if (audioState === CaptureState.ACTIVE) {
+        setMicrophonePermission('granted');
+      }
+    };
+
+    updateFromCaptureState(videoCapture.getState(), audioCapture.getState());
+
+    const unsubVideo = videoCapture.onStateChange((state) => {
+      updateFromCaptureState(state, audioCapture.getState());
+    });
+    const unsubAudio = audioCapture.onStateChange((state) => {
+      updateFromCaptureState(videoCapture.getState(), state);
+    });
+
+    return () => {
+      unsubVideo();
+      unsubAudio();
+    };
+  }, [videoCapture, audioCapture]);
 
   const requestPermission = useCallback(
     async (kind: 'camera' | 'microphone' | 'both'): Promise<boolean> => {
@@ -92,8 +121,7 @@ export function usePermissionState(): PermissionStateResult {
       };
 
       try {
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
-        // Stop the temporary stream — tracks will be re-acquired by the manager
+        const stream = await deviceService.getUserMedia(constraints);
         for (const track of stream.getTracks()) {
           track.stop();
         }
@@ -102,7 +130,7 @@ export function usePermissionState(): PermissionStateResult {
         return false;
       }
     },
-    [],
+    [deviceService],
   );
 
   const isCameraDenied = cameraPermission === 'denied';
