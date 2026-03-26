@@ -52,6 +52,7 @@ export const RoomPage = () => {
     if (!user) {
       saveGuestDisplayName(displayName);
     }
+
     setViewState('active');
   };
 

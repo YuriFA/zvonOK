@@ -27,14 +27,70 @@ const hasStream = !!stream && !error;
 
 ## Scope
 
+- Create MediaDeviceService as single source of truth for `getUserMedia`
 - Split stream management into independent video/audio tracks
 - Add per-device capture state tracking
 - Create MediaCapture class for each device type (Google Meet pattern)
 - Update UI to reflect individual device states
 - Handle re-requesting permissions on toggle
 - Support retry logic for transient errors (device in use)
+- Remove code duplication in track-controller, device-switcher, acquisition
 
 ## Technical Design
+
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        MediaStreamManager                            │
+│  ┌─────────────────────┐  ┌─────────────────────┐                   │
+│  │   videoCapture      │  │   audioCapture      │                   │
+│  │   (MediaCapture)    │  │   (MediaCapture)    │                   │
+│  └──────────┬──────────┘  └──────────┬──────────┘                   │
+│             │                        │                               │
+│             └────────────┬───────────┘                               │
+│                          ▼                                           │
+│              ┌───────────────────────┐                               │
+│              │  MediaDeviceService   │  ◄── Single source of truth  │
+│              │  - getUserMedia()     │      for navigator access    │
+│              │  - enumerateDevices() │                               │
+│              └───────────┬───────────┘                               │
+│                          ▼                                           │
+│              navigator.mediaDevices                                  │
+└─────────────────────────────────────────────────────────────────────┘
+
+React hooks (use-media-devices, use-permission-state)
+                          │
+                          ▼
+              MediaDeviceService (via context)
+```
+
+### MediaDeviceService (New)
+
+Low-level abstraction over `navigator.mediaDevices`. Single point for all `getUserMedia` calls.
+
+```typescript
+interface IMediaDeviceService {
+  getUserMedia(constraints: MediaStreamConstraints): Promise<MediaStream>;
+  enumerateDevices(): Promise<MediaDeviceInfo[]>;
+}
+
+class MediaDeviceService implements IMediaDeviceService {
+  async getUserMedia(constraints: MediaStreamConstraints): Promise<MediaStream> {
+    return navigator.mediaDevices.getUserMedia(constraints);
+  }
+
+  async enumerateDevices(): Promise<MediaDeviceInfo[]> {
+    return navigator.mediaDevices.enumerateDevices();
+  }
+}
+```
+
+**Benefits:**
+- SOLID: Single Responsibility for browser API access
+- Testability: Easy to mock in unit tests
+- DRY: Fallback logic centralized in MediaCapture, not duplicated
+- All existing classes (track-controller, device-switcher, acquisition) will be replaced by MediaCapture + MediaDeviceService
 
 ### Capture States (per device)
 
@@ -118,73 +174,95 @@ interface IMediaManager {
 
 #### New Files
 
-1. **`lib/media/capture.ts`** - MediaCapture class
+1. **`lib/media/device-service.ts`** - MediaDeviceService
+   - Single point for `getUserMedia()` calls
+   - Single point for `enumerateDevices()` calls
+   - Interface for easy mocking in tests
+   - Injected into MediaCapture
+
+2. **`lib/media/capture.ts`** - MediaCapture class
    - Per-device state machine
-   - Independent getUserMedia calls
+   - Uses MediaDeviceService (no direct getUserMedia)
    - Error classification and mapping
    - Retry logic for NotReadableError
    - Device switching
 
-2. **`lib/media/capture-state.ts`** - State utilities
+3. **`lib/media/capture-state.ts`** - State utilities
    - CaptureState enum
    - Error to state mapping
    - State predicates (isRecoverable, canRetry, etc.)
 
 #### Modified Files
 
-3. **`lib/media/manager.ts`**
+4. **`lib/media/manager.ts`**
+   - Create MediaDeviceService instance
    - Replace single stream with videoCapture + audioCapture
    - Provide combined stream helper
    - Delegate to captures
+   - Expose deviceService for hooks
 
-4. **`lib/media/types.ts`**
+5. **`lib/media/types.ts`**
    - Add CaptureState enum
    - Add StateCallback type
 
-5. **`lib/media/interfaces.ts`**
+6. **`lib/media/interfaces.ts`**
    - Update IMediaManager for new architecture
    - Add IMediaCapture interface
+   - Add IMediaDeviceService interface
 
-6. **`features/media/contexts/media-stream.context.tsx`**
+7. **`features/media/contexts/media-stream.context.tsx`**
    - Use per-device states
    - Remove global error
    - Provide combined stream for backward compat
 
-7. **`features/media/contexts/media-manager.context.tsx`**
+8. **`features/media/contexts/media-manager.context.tsx`**
    - Add hooks for per-device state
+   - Expose MediaDeviceService for hooks
 
-8. **`features/media/components/device-selector.tsx`**
-   - Use individual device states
-   - Show per-device errors
+9. **`features/media/hooks/use-media-devices.ts`**
+   - Use MediaDeviceService from context instead of direct getUserMedia
+   - Remove duplicate permission request logic
 
-9. **`features/media/components/device-control-group.tsx`**
-   - Accept capture state prop
-   - Display state-appropriate UI
+10. **`features/media/hooks/use-permission-state.ts`**
+    - Use MediaDeviceService from context for requestPermission
+
+11. **`features/media/components/device-selector.tsx`**
+    - Use individual device states
+    - Show per-device errors
+
+12. **`features/media/components/device-control-group.tsx`**
+    - Accept capture state prop
+    - Display state-appropriate UI
 
 ### State Flow
 
 ```
 Initial mount:
-  1. MediaStreamProvider creates manager
-  2. videoCapture.start() → getUserMedia({ video })
-     - Parallel with audioCapture.start() → getUserMedia({ audio })
-  3. Each capture manages its own state independently:
-     - Video blocked → videoCapture.state = DEVICE_NOT_FOUND
-     - Audio works → audioCapture.state = ACTIVE
+   1. MediaStreamProvider creates manager with MediaDeviceService
+   2. videoCapture.start() → deviceService.getUserMedia({ video })
+      - Parallel with audioCapture.start() → deviceService.getUserMedia({ audio })
+   3. Each capture manages its own state independently:
+      - Video blocked → videoCapture.state = DEVICE_NOT_FOUND
+      - Audio works → audioCapture.state = ACTIVE
 
 User toggles blocked video:
-  1. onToggle(true) → videoCapture.toggle(true)
-  2. videoCapture.start() → getUserMedia({ video })
-  3. Browser shows permission prompt
-  4. If granted → state → ACTIVE
-  5. If denied → state → DEVICE_NOT_FOUND (stays)
+   1. onToggle(true) → videoCapture.toggle(true)
+   2. videoCapture.start() → deviceService.getUserMedia({ video })
+   3. Browser shows permission prompt
+   4. If granted → state → ACTIVE
+   5. If denied → state → DEVICE_NOT_FOUND (stays)
 ```
 
 ### Retry Logic for NotReadableError
 
 ```typescript
 // In MediaCapture
-private pendingRetryTimer: NodeJS.Timeout | null = null;
+private pendingRetryTimer: ReturnType<typeof setTimeout> | null = null;
+
+constructor(
+  private deviceService: IMediaDeviceService,
+  private kind: 'video' | 'audio'
+) {}
 
 private async handleNotReadableError(error: Error): Promise<void> {
   if (this.pendingRetryTimer) return; // Already retrying
@@ -193,8 +271,20 @@ private async handleNotReadableError(error: Error): Promise<void> {
   
   this.pendingRetryTimer = setTimeout(async () => {
     this.pendingRetryTimer = null;
-    await this.start(this.deviceId); // Retry
+    await this.start(this.deviceId); // Retry via deviceService
   }, 2000);
+}
+
+async start(deviceId?: string): Promise<boolean> {
+  this.setState(CaptureState.STARTING);
+  
+  try {
+    const constraints = this.buildConstraints(deviceId);
+    const stream = await this.deviceService.getUserMedia(constraints);
+    // ... handle success
+  } catch (error) {
+    // ... handle error with classification
+  }
 }
 ```
 
@@ -212,14 +302,18 @@ private async handleNotReadableError(error: Error): Promise<void> {
 
 ### Implementation Steps
 
-1. Create `capture-state.ts` with enum and helpers
-2. Create `capture.ts` with MediaCapture class
-3. Update `manager.ts` to use MediaCapture instances
-4. Update context to expose per-device states
-5. Update DeviceControlGroup to accept state
-6. Update DeviceSelector to use per-device states
-7. Remove global error handling in MediaStreamProvider
-8. Add tests for new capture logic
+1. Create `device-service.ts` with MediaDeviceService class and interface
+2. Create `capture-state.ts` with enum and helpers
+3. Create `capture.ts` with MediaCapture class (uses MediaDeviceService)
+4. Update `manager.ts` to create MediaDeviceService and MediaCapture instances
+5. Update context to expose per-device states and deviceService
+6. Update `use-media-devices.ts` to use deviceService from context
+7. Update `use-permission-state.ts` to use deviceService from context
+8. Update DeviceControlGroup to accept state
+9. Update DeviceSelector to use per-device states
+10. Remove global error handling in MediaStreamProvider
+11. Add tests for new capture logic
+12. Remove deprecated files (acquisition.ts, track-controller.ts, device-switcher.ts)
 
 ## Acceptance Criteria
 
@@ -235,6 +329,7 @@ private async handleNotReadableError(error: Error): Promise<void> {
 ## Related Files
 
 ### New
+- `apps/client/src/lib/media/device-service.ts`
 - `apps/client/src/lib/media/capture.ts`
 - `apps/client/src/lib/media/capture-state.ts`
 
@@ -244,13 +339,18 @@ private async handleNotReadableError(error: Error): Promise<void> {
 - `apps/client/src/lib/media/interfaces.ts`
 - `apps/client/src/features/media/contexts/media-stream.context.tsx`
 - `apps/client/src/features/media/contexts/media-manager.context.tsx`
+- `apps/client/src/features/media/hooks/use-media-devices.ts`
+- `apps/client/src/features/media/hooks/use-permission-state.ts`
 - `apps/client/src/features/media/components/device-selector.tsx`
 - `apps/client/src/features/media/components/device-control-group.tsx`
 - `apps/client/src/features/room/components/prejoin-view.tsx`
 
-### May be removed/simplified
-- `apps/client/src/lib/media/acquisition.ts` (replaced by MediaCapture)
+### Removed (after migration complete)
+- `apps/client/src/lib/media/acquisition.ts` (replaced by MediaCapture + MediaDeviceService)
 - `apps/client/src/lib/media/track-controller.ts` (logic moved to MediaCapture)
+- `apps/client/src/lib/media/device-switcher.ts` (logic moved to MediaCapture)
+- `apps/client/src/lib/media/track-fallback.ts` (logic moved to MediaCapture)
+- `apps/client/src/lib/media/state-store.ts` (replaced by per-capture state)
 
 ## References
 
