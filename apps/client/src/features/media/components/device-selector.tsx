@@ -4,10 +4,10 @@ import { DeviceControlGroup } from './device-control-group';
 import { LocalVideo } from '@/components/local-video';
 import { cn } from '@/lib/utils';
 import { useMediaStreamContext } from '../contexts/media-stream.context';
-import { useVideoCaptureControl, useAudioCaptureControl, useVideoCaptureState, useAudioCaptureState } from '../contexts/media-manager.context';
+import { useVideoCaptureControl, useAudioCaptureControl } from '../contexts/media-manager.context';
 import { useMediaDevices } from '../hooks/use-media-devices';
 import { useDeviceSwitching } from '../hooks/use-device-switching';
-import { CaptureState, isActive } from '@/lib/media/capture-state';
+import { CaptureState } from '@/lib/media/capture-state';
 import { SpeakerDeviceControlGroup } from './speaker-device-control-group';
 import { PermissionRequestModal } from './permission-request-modal';
 import { AlertTriangleIcon, Mic, MicOff, Video, VideoOff } from 'lucide-react';
@@ -29,8 +29,6 @@ export function DeviceSelector({ className, username }: DeviceSelectorProps) {
 
   const videoControl = useVideoCaptureControl();
   const audioControl = useAudioCaptureControl();
-  const videoStateReader = useVideoCaptureState();
-  const audioStateReader = useAudioCaptureState();
 
   const {
     videoDevices,
@@ -48,30 +46,30 @@ export function DeviceSelector({ className, username }: DeviceSelectorProps) {
   const [deniedDevices, setDeniedDevices] = useState({ camera: false, microphone: false });
 
   const handleToggleVideo = useCallback(async () => {
-    const nextEnabled = !isActive(videoStateReader.getState());
+    const nextEnabled = !mediaControls.isVideoEnabled;
     mediaControls.setVideoEnabled(nextEnabled);
     const success = await videoControl.toggle(nextEnabled);
     if (!success) {
       mediaControls.setVideoEnabled(false);
-      if (isPermissionDenied(videoStateReader.getState())) {
+      if (isPermissionDenied(mediaControls.getVideoCaptureState())) {
         setDeniedDevices(prev => ({ ...prev, camera: true }));
         setPermissionModalOpen(true);
       }
     }
-  }, [videoControl, videoStateReader, mediaControls]);
+  }, [videoControl, mediaControls]);
 
   const handleToggleAudio = useCallback(async () => {
-    const nextEnabled = !isActive(audioStateReader.getState());
+    const nextEnabled = !mediaControls.isAudioEnabled;
     mediaControls.setAudioEnabled(nextEnabled);
     const success = await audioControl.toggle(nextEnabled);
     if (!success) {
       mediaControls.setAudioEnabled(false);
-      if (isPermissionDenied(audioStateReader.getState())) {
+      if (isPermissionDenied(mediaControls.getAudioCaptureState())) {
         setDeniedDevices(prev => ({ ...prev, microphone: true }));
         setPermissionModalOpen(true);
       }
     }
-  }, [audioControl, audioStateReader, mediaControls]);
+  }, [audioControl, mediaControls]);
 
   const handleModalOpenChange = useCallback((open: boolean) => {
     setPermissionModalOpen(open);
@@ -122,7 +120,7 @@ export function DeviceSelector({ className, username }: DeviceSelectorProps) {
           <LocalVideo
             stream={videoStream}
             username={username}
-            isVideoEnabled={isActive(videoState)}
+            isVideoEnabled={mediaControls.isVideoEnabled}
             className="h-full"
           />
         )}

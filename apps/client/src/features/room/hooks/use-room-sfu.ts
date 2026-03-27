@@ -1,10 +1,9 @@
 import { useCallback, useEffect } from 'react';
 import { useMediasoup, type RemotePeerMedia } from '@/hooks/use-mediasoup';
 import { useMediaControls, type UseMediaControlsReturn } from '@/features/media/hooks/use-media-controls';
-import { useVideoCaptureControl, useAudioCaptureControl, useVideoCaptureState, useAudioCaptureState, useCaptureTrackProvider } from '@/features/media/contexts/media-manager.context';
+import { useVideoCaptureControl, useAudioCaptureControl, useCaptureTrackProvider } from '@/features/media/contexts/media-manager.context';
 import { useSfuTrackSync } from '@/features/media/hooks/use-sfu-track-sync';
 import type { SfuState } from '@/lib/sfu/types';
-import { isActive } from '@/lib/media/capture-state';
 
 export interface UseRoomSfuOptions {
   roomId: string;
@@ -37,8 +36,6 @@ export function useRoomSfu({
   const audioControl = useAudioCaptureControl();
   const videoTrackProvider = useCaptureTrackProvider('video');
   const audioTrackProvider = useCaptureTrackProvider('audio');
-  const videoStateReader = useVideoCaptureState();
-  const audioStateReader = useAudioCaptureState();
   const mediaControls = useMediaControls();
 
   useSfuTrackSync();
@@ -67,7 +64,7 @@ export function useRoomSfu({
   }, [wasKicked, onKicked]);
 
   const toggleVideo = useCallback(async () => {
-    const nextEnabled = !isActive(videoStateReader.getState());
+    const nextEnabled = !mediaControls.isVideoEnabled;
     mediaControls.setVideoEnabled(nextEnabled);
 
     if (nextEnabled) {
@@ -101,10 +98,10 @@ export function useRoomSfu({
       }
       videoControl.stop();
     }
-  }, [videoControl, videoTrackProvider, videoStateReader, produceTrack, mediaControls, hasProducer, pauseProducer, resumeProducer]);
+  }, [videoControl, videoTrackProvider, produceTrack, mediaControls, hasProducer, pauseProducer, resumeProducer]);
 
   const toggleAudio = useCallback(async () => {
-    const nextEnabled = !isActive(audioStateReader.getState());
+    const nextEnabled = !mediaControls.isAudioEnabled;
     mediaControls.setAudioEnabled(nextEnabled);
 
     if (nextEnabled) {
@@ -138,7 +135,7 @@ export function useRoomSfu({
       }
       audioControl.stop();
     }
-  }, [audioControl, audioTrackProvider, audioStateReader, produceTrack, mediaControls, hasProducer, pauseProducer, resumeProducer]);
+  }, [audioControl, audioTrackProvider, produceTrack, mediaControls, hasProducer, pauseProducer, resumeProducer]);
 
   return {
     sfuState,

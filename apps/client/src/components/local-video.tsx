@@ -5,14 +5,14 @@ import { getInitials } from '@/lib/utils/display-name';
 export interface LocalVideoProps {
   stream: MediaStream | null;
   username?: string;
-  isVideoEnabled?: boolean;
+  isVideoEnabled: boolean;
   className?: string;
 }
 
 export function LocalVideo({
   stream,
   username,
-  isVideoEnabled = true,
+  isVideoEnabled,
   className,
 }: LocalVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);

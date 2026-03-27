@@ -7,6 +7,8 @@ export interface UseMediaControlsReturn {
   isAudioEnabled: boolean;
   videoCaptureState: CaptureState;
   audioCaptureState: CaptureState;
+  getVideoCaptureState: () => CaptureState;
+  getAudioCaptureState: () => CaptureState;
   setVideoEnabled: (enabled: boolean) => void;
   setAudioEnabled: (enabled: boolean) => void;
 }
@@ -43,6 +45,16 @@ export function useMediaControls(): UseMediaControlsReturn {
     };
   }, [videoStateReader, audioStateReader]);
 
+  const getVideoCaptureState = useCallback(
+    () => videoStateReader.getState(),
+    [videoStateReader],
+  );
+
+  const getAudioCaptureState = useCallback(
+    () => audioStateReader.getState(),
+    [audioStateReader],
+  );
+
   const setVideoEnabled = useCallback(
     (enabled: boolean) => {
       setIsVideoEnabled(enabled);
@@ -62,6 +74,8 @@ export function useMediaControls(): UseMediaControlsReturn {
     isAudioEnabled,
     videoCaptureState,
     audioCaptureState,
+    getVideoCaptureState,
+    getAudioCaptureState,
     setVideoEnabled,
     setAudioEnabled,
   };

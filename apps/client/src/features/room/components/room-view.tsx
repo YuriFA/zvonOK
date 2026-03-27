@@ -1,8 +1,6 @@
-import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useEndRoom } from "../hooks/use-end-room";
 import { useRoomSession } from "../hooks/use-room-session";
-import { usePermissionState } from "@/features/media/hooks/use-permission-state";
 import { ActiveRoomView } from "./active-room-view"
 import { RoomAlerts } from "./room-alerts"
 import { RoomHeader } from "./room-header"
@@ -22,8 +20,6 @@ export const RoomView = ({ room, displayName }: Props) => {
   const { user } = useAuth();
   const isOwner = user?.id === room.ownerId;
   const session = useRoomSession({ room, userId: user?.id, displayName });
-  const permissionState = usePermissionState();
-  const [permissionModalOpen, setPermissionModalOpen] = useState(false);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -48,9 +44,6 @@ export const RoomView = ({ room, displayName }: Props) => {
         room={room}
         currentUserId={user?.id}
         currentUsername={displayName}
-        permissionState={permissionState}
-        permissionModalOpen={permissionModalOpen}
-        onPermissionModalOpenChange={setPermissionModalOpen}
       />
     </div>
   )
