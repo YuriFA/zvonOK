@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useMediaControls } from '../hooks/use-media-controls';
 import { DeviceControlGroup } from './device-control-group';
 import { LocalVideo } from '@/components/local-video';
@@ -9,6 +9,7 @@ import { useMediaDevices } from '../hooks/use-media-devices';
 import { useDeviceSwitching } from '../hooks/use-device-switching';
 import { CaptureState, isActive } from '@/lib/media/capture-state';
 import { SpeakerDeviceControlGroup } from './speaker-device-control-group';
+import { PermissionRequestModal } from './permission-request-modal';
 import { AlertTriangleIcon, Mic, MicOff, Video, VideoOff } from 'lucide-react';
 import { Alert, AlertTitle } from '@/components/ui/alert';
 
@@ -16,6 +17,11 @@ interface DeviceSelectorProps {
   className?: string;
   username?: string;
 }
+
+const isPermissionDenied = (state: CaptureState) =>
+  state === CaptureState.SYSTEM_DENIED ||
+  state === CaptureState.DEVICE_NOT_FOUND ||
+  state === CaptureState.CAPTURE_CANCELED;
 
 export function DeviceSelector({ className, username }: DeviceSelectorProps) {
   const { videoStream, videoState, audioState } = useMediaStreamContext();
@@ -38,12 +44,19 @@ export function DeviceSelector({ className, username }: DeviceSelectorProps) {
 
   const { switchVideoDevice, switchAudioDevice, isSpeakerSwitchSupported } = useDeviceSwitching();
 
+  const [permissionModalOpen, setPermissionModalOpen] = useState(false);
+  const [deniedDevices, setDeniedDevices] = useState({ camera: false, microphone: false });
+
   const handleToggleVideo = useCallback(async () => {
     const nextEnabled = !isActive(videoStateReader.getState());
     mediaControls.setVideoEnabled(nextEnabled);
     const success = await videoControl.toggle(nextEnabled);
     if (!success) {
       mediaControls.setVideoEnabled(false);
+      if (isPermissionDenied(videoStateReader.getState())) {
+        setDeniedDevices(prev => ({ ...prev, camera: true }));
+        setPermissionModalOpen(true);
+      }
     }
   }, [videoControl, videoStateReader, mediaControls]);
 
@@ -53,8 +66,37 @@ export function DeviceSelector({ className, username }: DeviceSelectorProps) {
     const success = await audioControl.toggle(nextEnabled);
     if (!success) {
       mediaControls.setAudioEnabled(false);
+      if (isPermissionDenied(audioStateReader.getState())) {
+        setDeniedDevices(prev => ({ ...prev, microphone: true }));
+        setPermissionModalOpen(true);
+      }
     }
   }, [audioControl, audioStateReader, mediaControls]);
+
+  const handleModalOpenChange = useCallback((open: boolean) => {
+    setPermissionModalOpen(open);
+    if (!open) {
+      setDeniedDevices({ camera: false, microphone: false });
+    }
+  }, []);
+
+  const handleRequestPermission = useCallback(async (kind: 'camera' | 'microphone' | 'both') => {
+    let success = true;
+
+    if (kind === 'camera' || kind === 'both') {
+      const videoSuccess = await videoControl.toggle(true);
+      if (videoSuccess) mediaControls.setVideoEnabled(true);
+      success = success && videoSuccess;
+    }
+
+    if (kind === 'microphone' || kind === 'both') {
+      const audioSuccess = await audioControl.toggle(true);
+      if (audioSuccess) mediaControls.setAudioEnabled(true);
+      success = success && audioSuccess;
+    }
+
+    return success;
+  }, [videoControl, audioControl, mediaControls]);
 
   const handleVideoDeviceChange = useCallback(
     async (deviceId: string) => {
@@ -150,6 +192,13 @@ export function DeviceSelector({ className, username }: DeviceSelectorProps) {
           onDeviceChange={handleVideoDeviceChange}
         />
       </div>
+
+      <PermissionRequestModal
+        open={permissionModalOpen}
+        onOpenChange={handleModalOpenChange}
+        deniedDevices={deniedDevices}
+        onRequestPermission={handleRequestPermission}
+      />
     </div>
   );
 }
