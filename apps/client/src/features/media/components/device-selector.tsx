@@ -8,14 +8,13 @@ import { useVideoCaptureControl, useAudioCaptureControl, useVideoCaptureState, u
 import { useMediaDevices } from '../hooks/use-media-devices';
 import { useDeviceSwitching } from '../hooks/use-device-switching';
 import { CaptureState, isActive } from '@/lib/media/capture-state';
-
 interface DeviceSelectorProps {
   className?: string;
   username?: string;
 }
 
 export function DeviceSelector({ className, username }: DeviceSelectorProps) {
-  const { stream, videoState, audioState } = useMediaStreamContext();
+  const { videoStream, videoState, audioState } = useMediaStreamContext();
   const mediaControls = useMediaControls();
 
   const videoControl = useVideoCaptureControl();
@@ -90,9 +89,14 @@ export function DeviceSelector({ className, username }: DeviceSelectorProps) {
             <p className="text-sm text-muted-foreground">Loading camera...</p>
           </div>
         )}
-        {!isVideoLoading && stream && (
+        {videoDevices.length === 0 && !isVideoLoading && (
+          <div className="flex h-full items-center justify-center">
+            <p className="text-sm text-muted-foreground">No camera found</p>
+          </div>
+        )}
+        {!isVideoLoading && (
           <LocalVideo
-            stream={stream}
+            stream={videoStream}
             username={username}
             isVideoEnabled={isActive(videoState)}
             className="h-full"
@@ -101,18 +105,8 @@ export function DeviceSelector({ className, username }: DeviceSelectorProps) {
       </div>
 
       <div className="flex items-center justify-center gap-2">
-        <DeviceControlGroup
-          type="audioinput"
-          captureState={audioState}
-          onToggle={handleToggleAudio}
-          devices={audioDevices}
-          selectedDeviceId={selectedDevices.audioDeviceId}
-          onDeviceChange={handleAudioDeviceChange}
-        />
-
         {isSpeakerSwitchSupported && (
-          <DeviceControlGroup
-            type="audiooutput"
+          <SpeakerDeviceControlGroup
             devices={speakerDevices}
             selectedDeviceId={selectedDevices.speakerDeviceId}
             onDeviceChange={handleSpeakerDeviceChange}
@@ -120,7 +114,20 @@ export function DeviceSelector({ className, username }: DeviceSelectorProps) {
         )}
 
         <DeviceControlGroup
-          type="videoinput"
+          label="Microphone"
+          captureState={audioState}
+          onIcon={<Mic className="size-5" />}
+          offIcon={<MicOff className="size-5" />}
+          onToggle={handleToggleAudio}
+          devices={audioDevices}
+          selectedDeviceId={selectedDevices.audioDeviceId}
+          onDeviceChange={handleAudioDeviceChange}
+        />
+
+        <DeviceControlGroup
+          label="Camera"
+          onIcon={<Video className="size-5" />}
+          offIcon={<VideoOff className="size-5" />}
           captureState={videoState}
           onToggle={handleToggleVideo}
           devices={videoDevices}
@@ -132,11 +139,3 @@ export function DeviceSelector({ className, username }: DeviceSelectorProps) {
   );
 }
 
-// function getVideoPreviewDisplay(state: CaptureState): string | null {
-//   if (state === CaptureState.SYSTEM_DENIED) return 'Camera blocked in system settings';
-//   if (state === CaptureState.DEVICE_NOT_FOUND) return 'Camera blocked. Click to retry.';
-//   if (state === CaptureState.DEVICE_IN_USE) return 'Camera in use by another app';
-//   if (state === CaptureState.NO_DEVICE) return 'No camera found';
-//   if (state === CaptureState.DEVICE_ERROR) return 'Camera unavailable';
-//   return null;
-// }

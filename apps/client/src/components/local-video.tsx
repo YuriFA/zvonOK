@@ -34,7 +34,7 @@ export function LocalVideo({
       />
 
       {!isVideoEnabled && (
-        <div className="absolute inset-0 flex items-center justify-center">
+        <div className="absolute inset-0 flex items-center justify-center select-none">
           <div className="flex size-16 items-center justify-center rounded-full bg-gray-500 text-xl text-white">
             {getInitials(username ?? '')}
           </div>

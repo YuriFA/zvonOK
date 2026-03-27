@@ -31,7 +31,7 @@ export function MediaControls({
   disabled = false,
   className,
   size = 'icon',
-  variant = 'secondary',
+  variant = 'outline',
 }: MediaControlsProps) {
   const videoDisplay = getCaptureStateDisplay(videoCaptureState, 'video');
   const audioDisplay = getCaptureStateDisplay(audioCaptureState, 'audio');
