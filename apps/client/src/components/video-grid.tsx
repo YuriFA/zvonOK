@@ -6,39 +6,11 @@ export interface VideoGridProps {
   className?: string;
 }
 
-/**
- * Returns grid class based on participant count.
- * - 1: Full width, centered
- * - 2: 2 columns
- * - 3-4: 2x2 grid
- * - 5-6: 3x2 grid
- * - 7+: 3-column grid
- */
 function getGridClass(count: number): string {
-  if (count === 1) {
-    // Single participant - centered, max width
-    return 'grid-cols-1 max-w-3xl mx-auto';
-  }
-  if (count === 2) {
-    // Two participants - side by side
-    return 'grid-cols-1 sm:grid-cols-2 max-w-5xl mx-auto';
-  }
-  if (count <= 4) {
-    // 3-4 participants - 2x2 grid
-    return 'grid-cols-1 sm:grid-cols-2 max-w-5xl mx-auto';
-  }
-  if (count <= 6) {
-    // 5-6 participants - 3 columns
-    return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
-  }
-  // 7+ participants - keep 3 columns as defined by the task
-  return 'grid-cols-2 sm:grid-cols-3';
+  if (count === 1) return 'grid-cols-1';
+  return 'grid-cols-2';
 }
 
-/**
- * Adaptive video grid that adjusts layout based on participant count.
- * Uses CSS Grid for responsive, aspect-ratio-preserving tiles.
- */
 export function VideoGrid({ children, className }: VideoGridProps) {
   const childArray = useMemo(() => {
     return Array.isArray(children) ? children.filter(Boolean) : [children].filter(Boolean);
@@ -46,10 +18,23 @@ export function VideoGrid({ children, className }: VideoGridProps) {
 
   const count = childArray.length;
   const gridClass = getGridClass(count);
+  const isLastCentered = count > 1 && count % 2 === 1;
 
   return (
     <div className={cn('grid gap-4', gridClass, className)}>
-      {childArray}
+      {childArray.map((child, index) => {
+        const isLast = index === count - 1;
+
+        if (isLast && isLastCentered) {
+          const key = (child as { key?: React.Key })?.key ?? index;
+          return (
+            <div key={key} className="col-span-2 flex justify-center">
+              <div className="w-1/2">{child}</div>
+            </div>
+          );
+        }
+        return child;
+      })}
     </div>
   );
 }
@@ -68,7 +53,7 @@ export function VideoTile({ children, className, isActiveSpeaker = false }: Vide
   return (
     <div
       className={cn(
-        'relative aspect-video overflow-hidden rounded-lg transition-all duration-300',
+        'relative h-full w-full overflow-hidden rounded-lg transition-all duration-300',
         isActiveSpeaker && 'ring-4 ring-green-500 ring-offset-2 ring-offset-background',
         className
       )}
