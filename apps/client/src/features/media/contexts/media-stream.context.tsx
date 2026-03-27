@@ -12,7 +12,8 @@ import { loadSelectedDevices } from '@/features/media/hooks/use-media-devices';
 import { CaptureState } from '@/lib/media/capture-state';
 
 export interface MediaStreamContextValue {
-  stream: MediaStream | null;
+  videoStream: MediaStream | null;
+  audioStream: MediaStream | null;
   videoState: CaptureState;
   audioState: CaptureState;
   start: () => Promise<void>;
@@ -27,7 +28,8 @@ export interface MediaStreamProviderProps {
 
 export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
   const manager = useMediaManagerDirect();
-  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
+  const [audioStream, setAudioStream] = useState<MediaStream | null>(null);
   const [videoState, setVideoState] = useState<CaptureState>(CaptureState.STOPPED);
   const [audioState, setAudioState] = useState<CaptureState>(CaptureState.STOPPED);
   const mountedRef = useRef(true);
@@ -40,18 +42,20 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
   }, []);
 
   useEffect(() => {
-    const unsubStream = manager.onCombinedStreamChange((s) => {
-      if (mountedRef.current) setStream(s);
-    });
     const unsubVideo = manager.onVideoStateChange((state) => {
-      if (mountedRef.current) setVideoState(state);
+      if (mountedRef.current) {
+        setVideoState(state);
+        setVideoStream(manager.videoCapture.getStream());
+      }
     });
     const unsubAudio = manager.onAudioStateChange((state) => {
-      if (mountedRef.current) setAudioState(state);
+      if (mountedRef.current) {
+        setAudioState(state);
+        setAudioStream(manager.audioCapture.getStream());
+      }
     });
 
     return () => {
-      unsubStream();
       unsubVideo();
       unsubAudio();
     };
@@ -81,7 +85,7 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
   }, []);
 
   return (
-    <MediaStreamContext.Provider value={{ stream, videoState, audioState, start, stop }}>
+    <MediaStreamContext.Provider value={{ videoStream, audioStream, videoState, audioState, start, stop }}>
       {children}
     </MediaStreamContext.Provider>
   );

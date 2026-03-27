@@ -27,6 +27,10 @@ export class MediaCapture implements IMediaCapture {
     this.errorClassifier = errorClassifier;
   }
 
+  getStream(): MediaStream | null {
+    return this.stream;
+  }
+
   getState(): CaptureState {
     return this.state;
   }

@@ -6,9 +6,3 @@ export type StateCallback = (
   reason?: string,
 ) => void;
 
-export type TrackChangeEvent = {
-  kind: 'video' | 'audio';
-  track: MediaStreamTrack | null;
-};
-
-export type StreamChangeCallback = (stream: MediaStream | null) => void;

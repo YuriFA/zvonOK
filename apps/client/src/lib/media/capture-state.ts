@@ -27,14 +27,6 @@ export function isError(state: CaptureState): boolean {
   );
 }
 
-export function isRecoverable(state: CaptureState): boolean {
-  return (
-    state === CaptureState.DEVICE_ERROR ||
-    state === CaptureState.DEVICE_NOT_FOUND ||
-    state === CaptureState.CAPTURE_CANCELED
-  );
-}
-
 export function canToggle(state: CaptureState): boolean {
   return (
     state === CaptureState.STOPPED ||
@@ -77,7 +69,7 @@ export function getCaptureStateDisplay(
     case CaptureState.STARTING:
       return { variant: 'default', icon: 'spinner', tooltip: `${label} starting...`, statusText: 'Starting...' };
     case CaptureState.DEVICE_NOT_FOUND:
-      return { variant: 'warning', icon: 'off-warning', tooltip: `${label} blocked. Click to retry.`, statusText: 'Blocked. Click to retry.' };
+      return { variant: 'warning', icon: 'off-warning', tooltip: `${label} blocked. You can turn on in browser settings`, statusText: 'Blocked' };
     case CaptureState.SYSTEM_DENIED:
       return { variant: 'destructive', icon: 'off-error', tooltip: `${label} blocked in system settings`, statusText: 'Blocked in system settings' };
     case CaptureState.DEVICE_IN_USE:

@@ -1,7 +1,8 @@
 import type { CaptureState } from './capture-state';
-import type { StateCallback, TrackChangeEvent, StreamChangeCallback } from './types';
+import type { StateCallback } from './types';
 
 export interface IMediaCapture {
+  getStream(): MediaStream | null;
   getState(): CaptureState;
   getTrack(): MediaStreamTrack | null;
   onStateChange(cb: StateCallback): () => void;
@@ -44,9 +45,6 @@ export interface ICaptureTrackProvider {
 export interface IMediaManager {
   readonly videoCapture: IMediaCapture;
   readonly audioCapture: IMediaCapture;
-  getCombinedStream(): MediaStream | null;
-  onCombinedStreamChange(cb: StreamChangeCallback): () => void;
-  onTrackChange(cb: (event: TrackChangeEvent) => void): () => void;
   getDeviceService(): IMediaDeviceService;
   start(options?: { video?: boolean; audio?: boolean; videoDeviceId?: string; audioDeviceId?: string }): Promise<void>;
   stop(): void;

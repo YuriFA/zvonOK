@@ -18,7 +18,8 @@ export interface UseRoomSessionOptions {
 }
 
 export interface UseRoomSessionResult {
-  localStream: MediaStream | null;
+  localVideoStream: MediaStream | null;
+  localAudioStream: MediaStream | null;
   mediaControls: UseMediaControlsReturn;
   toggleVideo: () => Promise<void>;
   toggleAudio: () => Promise<void>;
@@ -36,7 +37,7 @@ export interface UseRoomSessionResult {
 export function useRoomSession({ room, userId, displayName }: UseRoomSessionOptions): UseRoomSessionResult {
   const { setElement: handleRemoteMediaElement, primaryElement: primaryRemoteMediaElement } = useRemoteMediaElements();
 
-  const { stream: localStream, stop: stopMedia } = useMediaStreamContext();
+  const { videoStream: localVideoStream, audioStream: localAudioStream, stop: stopMedia } = useMediaStreamContext();
 
   const localUserId = userId ?? 'local';
 
@@ -55,7 +56,8 @@ export function useRoomSession({ room, userId, displayName }: UseRoomSessionOpti
   } = useRoomSfu({
     roomId: room.id,
     roomOwnerId: room.ownerId,
-    localStream,
+    localVideoStream,
+    localAudioStream,
     onKicked: handleKicked,
     displayName,
   });
@@ -65,7 +67,7 @@ export function useRoomSession({ room, userId, displayName }: UseRoomSessionOpti
   const activeSpeakerId = useActiveSpeaker({
     remotePeers,
     localUserId,
-    localStream,
+    localAudioStream,
     enabled: sfuState.connectionState === 'connected',
   });
 
@@ -80,7 +82,8 @@ export function useRoomSession({ room, userId, displayName }: UseRoomSessionOpti
   });
 
   return {
-    localStream,
+    localVideoStream,
+    localAudioStream,
     mediaControls,
     toggleVideo,
     toggleAudio,

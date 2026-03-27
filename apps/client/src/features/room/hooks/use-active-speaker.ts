@@ -10,7 +10,7 @@ interface AudioAnalyser {
 interface UseActiveSpeakerOptions {
   remotePeers: RemotePeerMedia[];
   localUserId?: string;
-  localStream: MediaStream | null;
+  localAudioStream: MediaStream | null;
   enabled?: boolean;
   /** Sample interval in ms (default: 200ms) */
   sampleInterval?: number;
@@ -38,7 +38,7 @@ interface SpeakerState {
 export function useActiveSpeaker({
   remotePeers,
   localUserId,
-  localStream,
+  localAudioStream,
   enabled = true,
   sampleInterval = 200,
   speakingThreshold = 0.003,
@@ -129,10 +129,10 @@ export function useActiveSpeaker({
     const currentIds = new Set<string>();
 
     // Add local user analyser
-    if (localStream && localUserId) {
+    if (localAudioStream && localUserId) {
       currentIds.add(localUserId);
       if (!analysersRef.current.has(localUserId)) {
-        const analyser = createAnalyser(localStream);
+        const analyser = createAnalyser(localAudioStream);
         if (analyser) {
           analysersRef.current.set(localUserId, analyser);
         }
@@ -163,7 +163,7 @@ export function useActiveSpeaker({
         smoothedLevelsRef.current.delete(id);
       }
     }
-  }, [enabled, localStream, localUserId, remotePeers, createAnalyser, cleanupAnalyser]);
+  }, [enabled, localAudioStream, localUserId, remotePeers, createAnalyser, cleanupAnalyser]);
 
   // Main detection loop
   useEffect(() => {

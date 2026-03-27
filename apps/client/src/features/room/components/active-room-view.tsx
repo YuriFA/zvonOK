@@ -27,7 +27,7 @@ export function ActiveRoomView({
   onPermissionModalOpenChange,
 }: ActiveRoomViewProps) {
   const {
-    localStream,
+    localVideoStream,
     mediaControls,
     toggleVideo,
     toggleAudio,
@@ -62,7 +62,7 @@ export function ActiveRoomView({
         <div className="min-w-0">
           <VideoGrid className="mb-4">
             <LocalVideoTile
-              stream={localStream}
+              stream={localVideoStream}
               username={currentUsername}
               isVideoEnabled={mediaControls.isVideoEnabled}
               isAudioEnabled={mediaControls.isAudioEnabled}

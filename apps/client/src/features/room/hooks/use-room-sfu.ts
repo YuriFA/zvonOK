@@ -9,7 +9,8 @@ import { isActive } from '@/lib/media/capture-state';
 export interface UseRoomSfuOptions {
   roomId: string;
   roomOwnerId: string;
-  localStream: MediaStream | null;
+  localVideoStream: MediaStream | null;
+  localAudioStream: MediaStream | null;
   onKicked: () => void;
   displayName: string;
 }
@@ -27,7 +28,8 @@ export interface UseRoomSfuResult {
 export function useRoomSfu({
   roomId,
   roomOwnerId,
-  localStream,
+  localVideoStream,
+  localAudioStream,
   onKicked,
   displayName,
 }: UseRoomSfuOptions): UseRoomSfuResult {
@@ -53,7 +55,8 @@ export function useRoomSfu({
   } = useMediasoup({
     roomId,
     roomOwnerId,
-    localStream,
+    localVideoStream,
+    localAudioStream,
     displayName,
   });
 
