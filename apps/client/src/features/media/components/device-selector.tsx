@@ -80,24 +80,6 @@ export function DeviceSelector({ className, username }: DeviceSelectorProps) {
     }
   }, []);
 
-  const handleRequestPermission = useCallback(async (kind: 'camera' | 'microphone' | 'both') => {
-    let success = true;
-
-    if (kind === 'camera' || kind === 'both') {
-      const videoSuccess = await videoControl.toggle(true);
-      if (videoSuccess) mediaControls.setVideoEnabled(true);
-      success = success && videoSuccess;
-    }
-
-    if (kind === 'microphone' || kind === 'both') {
-      const audioSuccess = await audioControl.toggle(true);
-      if (audioSuccess) mediaControls.setAudioEnabled(true);
-      success = success && audioSuccess;
-    }
-
-    return success;
-  }, [videoControl, audioControl, mediaControls]);
-
   const handleVideoDeviceChange = useCallback(
     async (deviceId: string) => {
       const success = await switchVideoDevice(deviceId);
@@ -197,7 +179,6 @@ export function DeviceSelector({ className, username }: DeviceSelectorProps) {
         open={permissionModalOpen}
         onOpenChange={handleModalOpenChange}
         deniedDevices={deniedDevices}
-        onRequestPermission={handleRequestPermission}
       />
     </div>
   );
