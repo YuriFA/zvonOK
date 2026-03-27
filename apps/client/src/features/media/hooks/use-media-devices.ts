@@ -25,6 +25,7 @@ export interface UseMediaDevicesReturn {
   setSelectedAudioDevice: (deviceId: string | null) => void;
   setSelectedSpeakerDevice: (deviceId: string | null) => void;
   isLoading: boolean;
+  isPermissionGranted: boolean;
 }
 
 export function loadSelectedDevices(): SelectedDevices {
@@ -55,7 +56,7 @@ export function useMediaDevices(): UseMediaDevicesReturn {
   const [devices, setDevices] = useState<MediaDevice[]>([]);
   const [selectedDevices, setSelectedDevices] = useState<SelectedDevices>(loadSelectedDevices);
   const [isLoading, setIsLoading] = useState(true);
-  // const isPermissionGranted = useRef(false);
+  const [isPermissionGranted, setIsPermissionGranted] = useState(false);
   const deviceService = useDeviceService();
 
   useEffect(() => {
@@ -63,21 +64,12 @@ export function useMediaDevices(): UseMediaDevicesReturn {
       setIsLoading(true);
 
       try {
-        // if (!isPermissionGranted.current) {
-        //   const stream = await deviceService.getUserMedia({ video: true, audio: true });
-        //   stream.getTracks().forEach((t) => t.stop());
-        //   isPermissionGranted.current = true;
-        // }
-
         const rawDevices = await deviceService.enumerateDevices();
-        const mappedDevices = rawDevices.map((device): MediaDevice => {
-          return {
-            deviceId: device.deviceId,
-            kind: device.kind,
-            label: device.label || `Unknown ${device.kind}`,
-          };
-        });
-        setDevices(mappedDevices);
+        if (rawDevices[0] && rawDevices[0].label) {
+          setIsPermissionGranted(true);
+        }
+
+        setDevices(rawDevices);
       } catch (error) {
         console.warn('Failed to enumerate devices', error);
       } finally {
@@ -121,5 +113,6 @@ export function useMediaDevices(): UseMediaDevicesReturn {
     setSelectedAudioDevice,
     setSelectedSpeakerDevice,
     isLoading,
+    isPermissionGranted,
   };
 }

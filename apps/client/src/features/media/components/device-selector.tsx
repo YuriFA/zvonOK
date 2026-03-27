@@ -8,6 +8,10 @@ import { useVideoCaptureControl, useAudioCaptureControl, useVideoCaptureState, u
 import { useMediaDevices } from '../hooks/use-media-devices';
 import { useDeviceSwitching } from '../hooks/use-device-switching';
 import { CaptureState, isActive } from '@/lib/media/capture-state';
+import { SpeakerDeviceControlGroup } from './speaker-device-control-group';
+import { AlertTriangleIcon, Mic, MicOff, Video, VideoOff } from 'lucide-react';
+import { Alert, AlertTitle } from '@/components/ui/alert';
+
 interface DeviceSelectorProps {
   className?: string;
   username?: string;
@@ -80,6 +84,7 @@ export function DeviceSelector({ className, username }: DeviceSelectorProps) {
   );
 
   const isVideoLoading = videoState === CaptureState.STARTING;
+  const isAudioLoading = audioState === CaptureState.STARTING;
 
   return (
     <div className={cn('space-y-3', className)}>
@@ -87,11 +92,6 @@ export function DeviceSelector({ className, username }: DeviceSelectorProps) {
         {isVideoLoading && (
           <div className="flex h-full items-center justify-center">
             <p className="text-sm text-muted-foreground">Loading camera...</p>
-          </div>
-        )}
-        {videoDevices.length === 0 && !isVideoLoading && (
-          <div className="flex h-full items-center justify-center">
-            <p className="text-sm text-muted-foreground">No camera found</p>
           </div>
         )}
         {!isVideoLoading && (
@@ -103,6 +103,21 @@ export function DeviceSelector({ className, username }: DeviceSelectorProps) {
           />
         )}
       </div>
+
+      {videoDevices.length === 0 && !isVideoLoading && (
+        <Alert className="order-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-50">
+          <AlertTriangleIcon />
+          <AlertTitle>No camera found</AlertTitle>
+        </Alert>
+      )}
+
+      {audioDevices.length === 0 && !isAudioLoading && (
+        <Alert className="order-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-50">
+          <AlertTriangleIcon />
+          <AlertTitle>No microphone found</AlertTitle>
+        </Alert>
+      )}
+
 
       <div className="flex items-center justify-center gap-2">
         {isSpeakerSwitchSupported && (
