@@ -1,12 +1,12 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { VideoGrid } from '@/components/video-grid';
 import { ParticipantsList } from '@/components/room/ParticipantsList';
 import { LocalVideoTile } from '@/features/room/components/local-video-tile';
 import { RemoteVideoTile } from '@/features/room/components/remote-video-tile';
-import { ConnectionStatus } from '@/features/room/components/connection-status';
 import type { UseRoomSessionResult } from '@/features/room/hooks/use-room-session';
 import type { Room } from '@/features/room/types/room.types';
 import { MediaControls } from '@/features/media/components/media-controls';
+import { cn } from '@/lib/utils';
 
 interface ActiveRoomViewProps {
   session: UseRoomSessionResult;
@@ -43,11 +43,13 @@ export function ActiveRoomView({
     await toggleAudio();
   }, [toggleAudio]);
 
+  const [isParticipantsVisible, setIsParticipantsVisible] = useState(false);
+
   return (
-    <main className="flex flex-1 flex-col p-4">
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <div className="relative min-w-0">
-          <VideoGrid className="mb-4">
+    <main className="flex flex-1 flex-col">
+      <div className="flex-1 flex flex-col">
+        <div className="flex flex-1 p-4">
+          <VideoGrid className="flex-1">
             <LocalVideoTile
               stream={localVideoStream}
               username={currentUsername}
@@ -66,30 +68,35 @@ export function ActiveRoomView({
             ))}
           </VideoGrid>
 
-          <ConnectionStatus connectionState={sfuState.connectionState} />
-
-          <div className="absolute bottom-2 left-1/2 -translate-x-1/2">
-            <MediaControls
-              isVideoEnabled={mediaControls.isVideoEnabled}
-              isAudioEnabled={mediaControls.isAudioEnabled}
-              videoCaptureState={mediaControls.videoCaptureState}
-              audioCaptureState={mediaControls.audioCaptureState}
-              onToggleVideo={handleToggleVideo}
-              onToggleAudio={handleToggleAudio}
+          <aside
+            className={cn(
+              'transition-all duration-300 ease-in-out overflow-hidden',
+              isParticipantsVisible ? 'max-w-80 ml-4' : 'max-w-0 ml-0',
+            )}
+          >
+            <ParticipantsList
+              participants={participants}
+              currentUserId={currentUserId}
+              roomOwnerId={room.ownerId}
+              onKickParticipant={kickPeer}
             />
-          </div>
+          </aside>
         </div>
 
-        <aside className="min-w-0">
-          <ParticipantsList
-            participants={participants}
-            currentUserId={currentUserId}
-            roomOwnerId={room.ownerId}
-            onKickParticipant={kickPeer}
-            className="lg:sticky lg:top-4"
+        <div className="flex items-center justify-center border-t py-4">
+          <MediaControls
+            isVideoEnabled={mediaControls.isVideoEnabled}
+            isAudioEnabled={mediaControls.isAudioEnabled}
+            videoCaptureState={mediaControls.videoCaptureState}
+            audioCaptureState={mediaControls.audioCaptureState}
+            onToggleVideo={handleToggleVideo}
+            onToggleAudio={handleToggleAudio}
+            isParticipantsVisible={isParticipantsVisible}
+            onToggleParticipants={() => setIsParticipantsVisible((v) => !v)}
           />
-        </aside>
+        </div>
       </div>
+
     </main>
   );
 }

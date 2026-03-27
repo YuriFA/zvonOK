@@ -4,7 +4,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Video, VideoOff, Mic, MicOff, AlertTriangle, Loader2 } from 'lucide-react';
+import { Video, VideoOff, Mic, MicOff, AlertTriangle, Loader2, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CaptureState, getCaptureStateDisplay, isActive } from '@/lib/media/capture-state';
 
@@ -15,6 +15,8 @@ export interface MediaControlsProps {
   audioCaptureState: CaptureState;
   onToggleVideo: () => void;
   onToggleAudio: () => void;
+  isParticipantsVisible?: boolean;
+  onToggleParticipants?: () => void;
   disabled?: boolean;
   className?: string;
   size?: 'default' | 'sm' | 'lg' | 'icon';
@@ -28,6 +30,8 @@ export function MediaControls({
   audioCaptureState,
   onToggleVideo,
   onToggleAudio,
+  isParticipantsVisible,
+  onToggleParticipants,
   disabled = false,
   className,
   size = 'icon',
@@ -92,6 +96,26 @@ export function MediaControls({
         </TooltipTrigger>
         <TooltipContent>{audioDisplay.tooltip}</TooltipContent>
       </Tooltip>
+
+      {onToggleParticipants && (
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                type="button"
+                variant={isParticipantsVisible ? 'secondary' : variant}
+                size={size}
+                onClick={onToggleParticipants}
+                disabled={disabled}
+                aria-label="Toggle participants"
+              />
+            }
+          >
+            <Users className="size-4" />
+          </TooltipTrigger>
+          <TooltipContent>Participants</TooltipContent>
+        </Tooltip>
+      )}
     </div>
   );
 }
