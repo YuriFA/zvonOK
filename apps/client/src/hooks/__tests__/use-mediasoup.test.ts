@@ -181,7 +181,7 @@ describe('useMediasoup', () => {
     const localVideoStream = new MockMediaStream([videoTrack]) as unknown as MediaStream;
     const localAudioStream = new MockMediaStream([audioTrack]) as unknown as MediaStream;
 
-    renderHook(() => useMediasoup({ roomId: 'room-1', localVideoStream, localAudioStream, enabled: true }));
+    renderHook(() => useMediasoup({ roomId: 'room-1', localVideoStream, localAudioStream, enabled: true, displayName: 'alice' }));
 
     expect(sfuMock.connect).toHaveBeenCalled();
 

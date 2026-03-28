@@ -32,7 +32,8 @@ describe('ParticipantsList', () => {
       />
     );
 
-    expect(screen.getByRole('button', { name: /participants/i })).toHaveTextContent('2');
+    expect(screen.getByText('Participants').closest('div')).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
     expect(screen.getByLabelText('Participants list')).toBeInTheDocument();
     expect(screen.getByText('alice')).toBeInTheDocument();
     expect(screen.getByText('bob')).toBeInTheDocument();
@@ -43,28 +44,15 @@ describe('ParticipantsList', () => {
     expect(onKickParticipant).toHaveBeenCalledWith('user-2');
   });
 
-  it('supports collapsing the list', () => {
+  it('shows empty message when no participants', () => {
     render(
       <ParticipantsList
-        participants={[
-          {
-            id: 'user-1',
-            userId: 'user-1',
-            username: 'alice',
-            isMuted: false,
-            isVideoOff: false,
-            isConnected: true,
-          },
-        ]}
+        participants={[]}
         currentUserId="user-1"
         roomOwnerId="user-2"
       />
     );
 
-    const toggle = screen.getByRole('button', { name: /participants/i });
-    fireEvent.click(toggle);
-
-    expect(toggle).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByLabelText('Participants list')).not.toBeInTheDocument();
+    expect(screen.getByText('No participants')).toBeInTheDocument();
   });
 });

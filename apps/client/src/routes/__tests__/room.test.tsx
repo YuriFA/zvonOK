@@ -7,16 +7,10 @@ import { CaptureState } from '@/lib/media/capture-state';
 const mockUseRoom = vi.hoisted(() => vi.fn());
 const mockUseEndRoom = vi.hoisted(() => vi.fn());
 const mockUseAuth = vi.hoisted(() => vi.fn());
-const mockManagerStart = vi.hoisted(() => vi.fn());
-const mockManagerStop = vi.hoisted(() => vi.fn());
-const mockUseRoomSfu = vi.hoisted(() => vi.fn());
+const mockUseRoomSession = vi.hoisted(() => vi.fn());
 const mockKickPeer = vi.hoisted(() => vi.fn());
 const mockToggleVideo = vi.hoisted(() => vi.fn());
 const mockToggleAudio = vi.hoisted(() => vi.fn());
-const mockSetVideoEnabled = vi.hoisted(() => vi.fn());
-const mockSetAudioEnabled = vi.hoisted(() => vi.fn());
-const mockUseQualityStats = vi.hoisted(() => vi.fn());
-const mockUseActiveSpeaker = vi.hoisted(() => vi.fn());
 
 vi.mock('@/features/room/hooks/use-room', () => ({
   useRoom: mockUseRoom,
@@ -32,21 +26,15 @@ vi.mock('@/features/auth/contexts/auth.context', () => ({
 
 vi.mock('@/lib/media/manager-factory', () => ({
   createMediaManager: () => ({
-    start: mockManagerStart,
-    stop: mockManagerStop,
+    start: vi.fn().mockResolvedValue(undefined),
+    stop: vi.fn(),
     getVideoState: () => CaptureState.ACTIVE,
     getAudioState: () => CaptureState.ACTIVE,
-    getCombinedStream: () => ({ id: 'local-stream' } as unknown as MediaStream),
-    onCombinedStreamChange: vi.fn(() => () => {}),
-    onTrackChange: vi.fn(() => () => {}),
-    enumerateDevices: vi.fn(async () => []),
     getDeviceService: () => ({
       getUserMedia: vi.fn(),
       enumerateDevices: vi.fn(),
       queryPermission: vi.fn(),
     }),
-    onVideoStateChange: vi.fn(() => () => {}),
-    onAudioStateChange: vi.fn(() => () => {}),
     videoCapture: {
       getState: () => CaptureState.ACTIVE,
       getTrack: () => ({ kind: 'video' }) as MediaStreamTrack,
@@ -80,18 +68,23 @@ vi.mock('@/features/media/contexts/media-manager.context', () => ({
     queryPermission: vi.fn(),
   }),
   useMediaManagerDirect: () => ({
-    start: mockManagerStart,
-    stop: mockManagerStop,
+    start: vi.fn().mockResolvedValue(undefined),
+    stop: vi.fn(),
     getVideoState: () => CaptureState.ACTIVE,
     getAudioState: () => CaptureState.ACTIVE,
-    getCombinedStream: () => ({ id: 'local-stream' } as unknown as MediaStream),
-    onCombinedStreamChange: vi.fn(() => () => {}),
-    onVideoStateChange: vi.fn(() => () => {}),
-    onAudioStateChange: vi.fn(() => () => {}),
     videoCapture: { getState: () => CaptureState.ACTIVE },
     audioCapture: { getState: () => CaptureState.ACTIVE },
   }),
   MediaManagerProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
+vi.mock('@/features/media/contexts/media-stream.context', () => ({
+  useMediaStreamContext: () => ({
+    videoStream: { id: 'local-video-stream' } as unknown as MediaStream,
+    audioStream: { id: 'local-audio-stream' } as unknown as MediaStream,
+    stop: vi.fn(),
+  }),
+  MediaStreamProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 const mockOnRoomEnded = vi.hoisted(() => vi.fn(() => () => {}));
@@ -110,8 +103,8 @@ vi.mock('@/features/sfu/contexts/sfu-manager.context', () => ({
   SfuManagerProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-vi.mock('@/features/room/hooks/use-room-sfu', () => ({
-  useRoomSfu: mockUseRoomSfu,
+vi.mock('@/features/room/hooks/use-room-session', () => ({
+  useRoomSession: mockUseRoomSession,
 }));
 
 vi.mock('@/components/local-video', () => ({
@@ -132,28 +125,28 @@ vi.mock('@/features/media/components/device-settings-panel', () => ({
   DeviceSettingsPanel: () => <div data-testid="device-settings-panel">settings</div>,
 }));
 
-vi.mock('@/hooks/use-quality-stats', () => ({
-  useQualityStats: mockUseQualityStats,
+vi.mock('@/assets/logo.svg?react', () => ({
+  default: () => null,
 }));
 
-vi.mock('@/features/room/hooks/use-active-speaker', () => ({
-  useActiveSpeaker: mockUseActiveSpeaker,
+vi.mock('@/lib/utils/display-name', () => ({
+  loadGuestDisplayName: () => 'Guest',
+  saveGuestDisplayName: () => {},
 }));
 
-vi.mock('@/features/media/hooks/use-sfu-track-sync', () => ({
-  useSfuTrackSync: () => {},
-}));
-
-vi.mock('@/features/media/hooks/use-media-controls', () => ({
-  useMediaControls: () => ({
-    isVideoEnabled: true,
-    isAudioEnabled: true,
-    videoCaptureState: CaptureState.ACTIVE,
-    audioCaptureState: CaptureState.ACTIVE,
-    setVideoEnabled: mockSetVideoEnabled,
-    setAudioEnabled: mockSetAudioEnabled,
-  }),
-}));
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+});
 
 import { RoomPage } from '../room';
 
@@ -189,8 +182,19 @@ describe('RoomPage', () => {
         username: 'alice',
       },
     });
-    mockManagerStart.mockResolvedValue(undefined);
-    mockUseRoomSfu.mockReturnValue({
+    mockUseRoomSession.mockReturnValue({
+      localVideoStream: { id: 'local-video-stream' } as unknown as MediaStream,
+      localAudioStream: { id: 'local-audio-stream' } as unknown as MediaStream,
+      mediaControls: {
+        isVideoEnabled: true,
+        isAudioEnabled: true,
+        videoCaptureState: CaptureState.ACTIVE,
+        audioCaptureState: CaptureState.ACTIVE,
+        setVideoEnabled: vi.fn(),
+        setAudioEnabled: vi.fn(),
+      },
+      toggleVideo: mockToggleVideo,
+      toggleAudio: mockToggleAudio,
       sfuState: {
         connectionState: 'connected',
         isDeviceLoaded: true,
@@ -210,23 +214,17 @@ describe('RoomPage', () => {
       ],
       wasKicked: false,
       kickPeer: mockKickPeer,
-      mediaControls: {
-        isVideoEnabled: true,
-        isAudioEnabled: true,
-        videoCaptureState: CaptureState.ACTIVE,
-        audioCaptureState: CaptureState.ACTIVE,
-        setVideoEnabled: mockSetVideoEnabled,
-        setAudioEnabled: mockSetAudioEnabled,
-      },
-      toggleVideo: mockToggleVideo,
-      toggleAudio: mockToggleAudio,
+      participants: [
+        { id: 'user-1', userId: 'user-1', username: 'alice', isMuted: false, isVideoOff: false, isConnected: true },
+        { id: 'user-2', userId: 'user-2', username: 'bob', isMuted: false, isVideoOff: false, isConnected: true },
+      ],
+      activeSpeakerId: null,
+      localUserId: 'user-1',
+      mixer: null,
+      audioElement: null,
     });
     mockToggleVideo.mockResolvedValue(undefined);
     mockToggleAudio.mockResolvedValue(undefined);
-    mockUseQualityStats.mockReturnValue({
-      peerStats: new Map(),
-    });
-    mockUseActiveSpeaker.mockReturnValue(null);
   });
 
   const renderRoomPage = () =>
@@ -240,25 +238,21 @@ describe('RoomPage', () => {
       </TooltipProvider>
     );
 
-  it('renders room details, starts media, and shows remote SFU peers', async () => {
+  it('renders prejoin view and transitions to active room after joining', async () => {
     renderRoomPage();
 
-    expect(screen.getByText('Alpha Room')).toBeInTheDocument();
-    expect(screen.getByText('Code: alpha')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Join Room' })).toBeInTheDocument();
+    expect(screen.getByTestId('device-selector')).toBeInTheDocument();
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Join Room' }));
     });
 
-    expect(screen.getByText('Connected')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /participants/i })).toHaveTextContent('2');
-
     await waitFor(() => {
-      expect(mockManagerStart).toHaveBeenCalled();
+      expect(screen.getByTestId('local-video')).toHaveTextContent('local-stream-ready');
     });
 
     expect(screen.getAllByText('bob')).toHaveLength(2);
-    expect(await screen.findByTestId('local-video')).toHaveTextContent('local-stream-ready');
   });
 
   it('calls toggleVideo and toggleAudio when media control buttons are clicked', async () => {
@@ -268,13 +262,9 @@ describe('RoomPage', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Join Room' }));
     });
 
-    await waitFor(() => {
-      expect(mockManagerStart).toHaveBeenCalled();
-    });
-
     await act(async () => {
       fireEvent.click(screen.getByLabelText('Turn off camera'));
-      fireEvent.click(screen.getByLabelText('Mute microphone'));
+      fireEvent.click(screen.getByLabelText('Turn off microphone'));
       fireEvent.click(screen.getByRole('button', { name: 'End Room' }));
     });
 
@@ -290,8 +280,8 @@ describe('RoomPage', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Join Room' }));
     });
 
-    await waitFor(() => {
-      expect(mockManagerStart).toHaveBeenCalled();
+    await act(async () => {
+      fireEvent.click(screen.getByLabelText('Toggle participants'));
     });
 
     await act(async () => {
