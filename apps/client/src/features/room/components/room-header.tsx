@@ -17,7 +17,7 @@ interface RoomHeaderPrejoinProps {
 interface RoomHeaderActiveProps {
   variant: 'active';
   room: Room;
-  primaryRemoteMediaElement: HTMLVideoElement | null;
+  audioElement: HTMLAudioElement | null;
   isVideoEnabled: boolean;
   isAudioEnabled: boolean;
   isOwner: boolean;
@@ -46,7 +46,7 @@ export function RoomHeader(props: RoomHeaderProps) {
           <div className="flex items-center gap-2">
             <DeviceSettingsPanel
               variant="popover"
-              remoteVideoElement={props.primaryRemoteMediaElement}
+              audioElement={props.audioElement}
               isVideoEnabled={props.isVideoEnabled}
               isAudioEnabled={props.isAudioEnabled}
             />

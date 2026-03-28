@@ -26,7 +26,7 @@ export const RoomView = ({ room, displayName }: Props) => {
       <RoomHeader
         variant="active"
         room={room}
-        primaryRemoteMediaElement={session.primaryRemoteMediaElement}
+        audioElement={session.audioElement}
         isVideoEnabled={session.mediaControls.isVideoEnabled}
         isAudioEnabled={session.mediaControls.isAudioEnabled}
         isOwner={isOwner}

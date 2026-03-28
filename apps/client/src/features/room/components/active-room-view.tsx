@@ -3,6 +3,7 @@ import { VideoGrid } from '@/components/video-grid';
 import { ParticipantsList } from '@/components/room/ParticipantsList';
 import { LocalVideoTile } from '@/features/room/components/local-video-tile';
 import { RemoteVideoTile } from '@/features/room/components/remote-video-tile';
+import { RemoteAudio } from '@/components/remote-audio';
 import type { UseRoomSessionResult } from '@/features/room/hooks/use-room-session';
 import type { Room } from '@/features/room/types/room.types';
 import { MediaControls } from '@/features/media/components/media-controls';
@@ -30,9 +31,9 @@ export function ActiveRoomView({
     remotePeers,
     activeSpeakerId,
     localUserId,
-    handleRemoteMediaElement,
     participants,
     kickPeer,
+    mixer,
   } = session;
 
   const handleToggleVideo = useCallback(async () => {
@@ -62,10 +63,11 @@ export function ActiveRoomView({
               peer={peer}
               isActiveSpeaker={activeSpeakerId === peer.userId}
               connectionState={sfuState.connectionState}
-              onMediaElement={handleRemoteMediaElement}
             />
           ))}
         </VideoGrid>
+
+        <RemoteAudio mixer={mixer} />
 
         <aside
           className={cn(

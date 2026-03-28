@@ -7,7 +7,6 @@ export interface RemoteVideoProps {
   username?: string;
   isVideoEnabled?: boolean;
   isAudioEnabled?: boolean;
-  onMediaElement?: (element: HTMLVideoElement | null) => void;
   className?: string;
 }
 
@@ -16,12 +15,9 @@ export function RemoteVideo({
   username,
   isVideoEnabled = true,
   isAudioEnabled = true,
-  onMediaElement,
   className,
 }: RemoteVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const onMediaElementRef = useRef(onMediaElement);
-  onMediaElementRef.current = onMediaElement;
 
   useEffect(() => {
     if (videoRef.current && stream) {
@@ -29,19 +25,13 @@ export function RemoteVideo({
     }
   }, [stream]);
 
-  useEffect(() => {
-    onMediaElementRef.current?.(videoRef.current);
-    return () => {
-      onMediaElementRef.current?.(null);
-    };
-  }, []);
-
   return (
     <div className={cn('relative overflow-hidden rounded-lg bg-black', className)}>
       <video
         ref={videoRef}
         autoPlay
         playsInline
+        muted
         className="h-full w-full object-cover"
       />
 

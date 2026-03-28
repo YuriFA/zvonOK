@@ -7,14 +7,12 @@ interface RemoteVideoTileProps {
   peer: RemotePeerMedia;
   isActiveSpeaker: boolean;
   connectionState: SfuConnectionState;
-  onMediaElement: (peerId: string, element: HTMLVideoElement | null) => void;
 }
 
 export function RemoteVideoTile({
   peer,
   isActiveSpeaker,
   connectionState,
-  onMediaElement,
 }: RemoteVideoTileProps) {
   return (
     <VideoTile isActiveSpeaker={isActiveSpeaker}>
@@ -23,7 +21,6 @@ export function RemoteVideoTile({
         username={peer.username}
         isVideoEnabled={peer.isVideoEnabled}
         isAudioEnabled={peer.isAudioEnabled}
-        onMediaElement={(element) => onMediaElement(peer.userId, element)}
         className="h-full w-full"
       />
       {connectionState !== 'connected' && (
