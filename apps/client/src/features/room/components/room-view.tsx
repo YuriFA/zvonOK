@@ -22,7 +22,7 @@ export const RoomView = ({ room, displayName }: Props) => {
   const session = useRoomSession({ room, userId: user?.id, displayName });
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="h-screen flex flex-col">
       <RoomHeader
         variant="active"
         room={room}

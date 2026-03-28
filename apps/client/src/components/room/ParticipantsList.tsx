@@ -43,7 +43,7 @@ export function ParticipantsList({
   });
 
   return (
-    <div className={cn('rounded-lg border bg-card w-80', className)}>
+    <div className={cn('rounded-lg border bg-card', className)}>
       <div className="flex items-center gap-2 px-4 py-3">
         <Users className="size-4 text-muted-foreground" />
         <span className="font-medium">Participants</span>

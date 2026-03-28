@@ -46,57 +46,55 @@ export function ActiveRoomView({
   const [isParticipantsVisible, setIsParticipantsVisible] = useState(false);
 
   return (
-    <main className="flex flex-1 flex-col">
-      <div className="flex-1 flex flex-col">
-        <div className="flex flex-1 p-4">
-          <VideoGrid className="flex-1">
-            <LocalVideoTile
-              stream={localVideoStream}
-              username={currentUsername}
-              isVideoEnabled={mediaControls.isVideoEnabled}
-              isActiveSpeaker={activeSpeakerId === localUserId}
-            />
-
-            {remotePeers.map((peer) => (
-              <RemoteVideoTile
-                key={peer.userId}
-                peer={peer}
-                isActiveSpeaker={activeSpeakerId === peer.userId}
-                connectionState={sfuState.connectionState}
-                onMediaElement={handleRemoteMediaElement}
-              />
-            ))}
-          </VideoGrid>
-
-          <aside
-            className={cn(
-              'transition-all duration-300 ease-in-out overflow-hidden',
-              isParticipantsVisible ? 'max-w-80 ml-4' : 'max-w-0 ml-0',
-            )}
-          >
-            <ParticipantsList
-              participants={participants}
-              currentUserId={currentUserId}
-              roomOwnerId={room.ownerId}
-              onKickParticipant={kickPeer}
-            />
-          </aside>
-        </div>
-
-        <div className="flex items-center justify-center border-t py-4">
-          <MediaControls
+    <main className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-0 flex-1 p-4">
+        <VideoGrid className="flex-1">
+          <LocalVideoTile
+            stream={localVideoStream}
+            username={currentUsername}
             isVideoEnabled={mediaControls.isVideoEnabled}
-            isAudioEnabled={mediaControls.isAudioEnabled}
-            videoCaptureState={mediaControls.videoCaptureState}
-            audioCaptureState={mediaControls.audioCaptureState}
-            onToggleVideo={handleToggleVideo}
-            onToggleAudio={handleToggleAudio}
-            isParticipantsVisible={isParticipantsVisible}
-            onToggleParticipants={() => setIsParticipantsVisible((v) => !v)}
+            isActiveSpeaker={activeSpeakerId === localUserId}
           />
-        </div>
+
+          {remotePeers.length > 0 && remotePeers.map((peer) => (
+            <RemoteVideoTile
+              key={peer.userId}
+              peer={peer}
+              isActiveSpeaker={activeSpeakerId === peer.userId}
+              connectionState={sfuState.connectionState}
+              onMediaElement={handleRemoteMediaElement}
+            />
+          ))}
+        </VideoGrid>
+
+        <aside
+          className={cn(
+            'flex-1 transition-all duration-300 ease-in-out overflow-hidden',
+            isParticipantsVisible ? 'max-w-80 ml-4' : 'max-w-0 ml-0',
+          )}
+        >
+          <ParticipantsList
+            className="size-full"
+            participants={participants}
+            currentUserId={currentUserId}
+            roomOwnerId={room.ownerId}
+            onKickParticipant={kickPeer}
+          />
+        </aside>
       </div>
 
+      <div className="flex items-center justify-center border-t py-4">
+        <MediaControls
+          isVideoEnabled={mediaControls.isVideoEnabled}
+          isAudioEnabled={mediaControls.isAudioEnabled}
+          videoCaptureState={mediaControls.videoCaptureState}
+          audioCaptureState={mediaControls.audioCaptureState}
+          onToggleVideo={handleToggleVideo}
+          onToggleAudio={handleToggleAudio}
+          isParticipantsVisible={isParticipantsVisible}
+          onToggleParticipants={() => setIsParticipantsVisible((v) => !v)}
+        />
+      </div>
     </main>
   );
 }
