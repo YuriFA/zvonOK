@@ -1,7 +1,6 @@
 # Chat Module
 
 ## Purpose
-
 Real-time text chat within video conference rooms. Delivers messages via WebSocket with persistent history stored in PostgreSQL.
 
 ---
@@ -15,11 +14,11 @@ Real-time text chat within video conference rooms. Delivers messages via WebSock
 
 ### 2. Receive Messages
 - All peers in the room receive new messages in real time
-- Messages include sender username and timestamp
+ - Messages include sender username and timestamp
 
 ### 3. Load Chat History
 - When a user joins a room, fetch message history via REST
-- Paginated: newest messages first, default limit 50
+ - Paginated: newest messages first, default limit 50
 
 ---
 
@@ -52,7 +51,7 @@ model Message {
 }
 ```
 
-> **Note:** Requires updating `User` and `Room` models with `messages Message[]` relation. Added in Stage 6.
+> **Note:** Requires updating `User` and `Room` models with `messages Message[]` relation. Not yet implemented — see [gateway.md](./gateway.md).
 
 ---
 
@@ -60,12 +59,12 @@ model Message {
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/api/rooms/:slug/messages` | Protected | Get chat history for room |
-| POST | `/api/rooms/:slug/messages` | Protected | Send a message to room |
+| GET | `/rooms/:slug/messages` | Protected | Get chat history for room |
+| POST | `/rooms/:slug/messages` | Protected | Send a message to room |
 
 ### Request/Response Examples
 
-**GET /api/rooms/:slug/messages**
+**GET /rooms/:slug/messages**
 ```json
 // Response 200
 {
@@ -85,7 +84,7 @@ model Message {
 }
 ```
 
-**POST /api/rooms/:slug/messages**
+**POST /rooms/:slug/messages**
 ```json
 // Request
 {
@@ -166,8 +165,12 @@ model Message {
 
 ## Files
 
-- `apps/server/src/chat/chat.service.ts` — Business logic (save, query messages)
-- `apps/server/src/chat/chat.controller.ts` — REST endpoints
-- `apps/server/src/chat/chat.gateway.ts` — WebSocket event handlers
-- `apps/server/src/chat/chat.module.ts` — Module definition
-- `apps/server/src/chat/dto/` — CreateMessageDto
+> **Note:** This module is planned but not yet implemented (see Stage 9 in roadmap).
+
+ No source files exist yet.
+
+- `apps/server/src/chat/chat.service.ts` — Business logic (save, query messages) *planned*
+- `apps/server/src/chat/chat.controller.ts` — REST endpoints *planned*
+- `apps/server/src/chat/chat.gateway.ts` — WebSocket event handlers *planned*
+- `apps/server/src/chat/chat.module.ts` — Module definition *planned*
+- `apps/server/src/chat/dto/` — CreateMessageDto *planned*
