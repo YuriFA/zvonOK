@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { getInitials } from '@/lib/utils/display-name';
 
-export interface LocalVideoProps {
+interface Props {
   stream: MediaStream | null;
   username?: string;
   isVideoEnabled: boolean;
@@ -14,7 +14,7 @@ export function LocalVideo({
   username,
   isVideoEnabled,
   className,
-}: LocalVideoProps) {
+}: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {

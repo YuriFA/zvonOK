@@ -7,7 +7,6 @@ import { MediaControls } from '@/features/media/components/media-controls';
 import { cn } from '@/lib/utils';
 import { computeLayout } from '@zvonok/video-layout';
 import { VideoGrid, VideoTile } from '@/components/video-grid';
-import { LocalVideo } from '@/components/local-video';
 import { RemoteVideo } from '@/components/remote-video';
 
 interface ActiveRoomViewProps {
@@ -88,7 +87,7 @@ export function ActiveRoomView({
 
   const [isParticipantsVisible, setIsParticipantsVisible] = useState(false);
 
-  console.log('ActiveRoomView render', {remotePeers })
+  console.log('ActiveRoomView render', { remotePeers })
   return (
     <main className="flex flex-1 flex-col overflow-hidden">
       <div className="flex min-h-0 flex-1 p-4">
@@ -105,10 +104,11 @@ export function ActiveRoomView({
                   transform: `translateX(${layout.tiles[0].x}px) translateY(${layout.tiles[0].y}px)`
                 }}
               >
-                <LocalVideo
+                <RemoteVideo
                   stream={localVideoStream}
                   username={currentUsername}
                   isVideoEnabled={mediaControls.isVideoEnabled}
+                  isAudioEnabled={mediaControls.isAudioEnabled}
                   className="h-full w-full"
                 />
               </VideoTile>
