@@ -1,13 +1,14 @@
-import { useCallback, useState } from 'react';
-import { VideoGrid } from '@/components/video-grid';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ParticipantsList } from '@/components/room/ParticipantsList';
-import { LocalVideoTile } from '@/features/room/components/local-video-tile';
-import { RemoteVideoTile } from '@/features/room/components/remote-video-tile';
 import { RemoteAudio } from '@/components/remote-audio';
 import type { UseRoomSessionResult } from '@/features/room/hooks/use-room-session';
 import type { Room } from '@/features/room/types/room.types';
 import { MediaControls } from '@/features/media/components/media-controls';
 import { cn } from '@/lib/utils';
+import { computeLayout } from '@zvonok/video-layout';
+import { VideoGrid, VideoTile } from '@/components/video-grid';
+import { LocalVideo } from '@/components/local-video';
+import { RemoteVideo } from '@/components/remote-video';
 
 interface ActiveRoomViewProps {
   session: UseRoomSessionResult;
@@ -27,7 +28,6 @@ export function ActiveRoomView({
     mediaControls,
     toggleVideo,
     toggleAudio,
-    sfuState,
     remotePeers,
     activeSpeakerId,
     localUserId,
@@ -35,6 +35,48 @@ export function ActiveRoomView({
     kickPeer,
     mixer,
   } = session;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
+  const layout = useMemo(
+    () => computeLayout({
+      containerWidth: dimensions.width,
+      containerHeight: dimensions.height,
+      participantCount: remotePeers.length + 1,
+    }),
+    [dimensions.width, dimensions.height, remotePeers.length],
+  );
+
+  useEffect(() => {
+    const element = containerRef.current
+    if (!element) {
+      return
+    }
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { clientWidth: width, clientHeight: height } = entry.target
+        setDimensions((prev) => {
+          if (prev.width === width && prev.height === height) {
+            return prev
+          }
+          return { width, height }
+        })
+      }
+    })
+
+    observer.observe(element)
+
+    // Get initial dimensions
+    setDimensions({
+      width: element.clientWidth,
+      height: element.clientHeight,
+    })
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [])
 
   const handleToggleVideo = useCallback(async () => {
     await toggleVideo();
@@ -49,22 +91,51 @@ export function ActiveRoomView({
   return (
     <main className="flex flex-1 flex-col overflow-hidden">
       <div className="flex min-h-0 flex-1 p-4">
-        <VideoGrid className="flex-1">
-          <LocalVideoTile
-            stream={localVideoStream}
-            username={currentUsername}
-            isVideoEnabled={mediaControls.isVideoEnabled}
-            isActiveSpeaker={activeSpeakerId === localUserId}
-          />
+        <VideoGrid ref={containerRef}>
+          {dimensions.width > 0 && dimensions.height > 0 && (
+            <>
+              <VideoTile isActiveSpeaker={activeSpeakerId === localUserId}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: layout.tileWidth,
+                  height: layout.tileHeight,
+                  transform: `translateX(${layout.tiles[0].x}px) translateY(${layout.tiles[0].y}px)`
+                }}
+              >
+                <LocalVideo
+                  stream={localVideoStream}
+                  username={currentUsername}
+                  isVideoEnabled={mediaControls.isVideoEnabled}
+                  className="h-full w-full"
+                />
+              </VideoTile>
 
-          {remotePeers.length > 0 && remotePeers.map((peer) => (
-            <RemoteVideoTile
-              key={peer.userId}
-              peer={peer}
-              isActiveSpeaker={activeSpeakerId === peer.userId}
-              connectionState={sfuState.connectionState}
-            />
-          ))}
+              {remotePeers.length > 0 && remotePeers.map((peer, index) => (
+                <VideoTile
+                  key={peer.userId}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: layout.tileWidth,
+                    height: layout.tileHeight,
+                    transform: `translateX(${layout.tiles[index + 1].x}px) translateY(${layout.tiles[index + 1].y}px)`
+                  }}
+                  isActiveSpeaker={activeSpeakerId === peer.userId}
+                >
+                  <RemoteVideo
+                    stream={peer.stream}
+                    username={peer.username}
+                    isVideoEnabled={peer.isVideoEnabled}
+                    isAudioEnabled={peer.isAudioEnabled}
+                    className="h-full w-full"
+                  />
+                </VideoTile>
+              ))}
+            </>
+          )}
         </VideoGrid>
 
         <RemoteAudio mixer={mixer} />

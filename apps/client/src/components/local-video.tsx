@@ -30,11 +30,12 @@ export function LocalVideo({
         autoPlay
         playsInline
         muted
+        style={{ backgroundColor: 'transparent' }}
         className="h-full w-full object-cover mirror"
       />
 
       {!isVideoEnabled && (
-        <div className="absolute inset-0 flex items-center justify-center select-none">
+        <div className="absolute inset-0 flex items-center justify-center select-none bg-muted">
           <div className="flex size-16 items-center justify-center rounded-full bg-gray-500 text-xl text-white">
             {getInitials(username ?? '')}
           </div>

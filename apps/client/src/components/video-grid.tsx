@@ -1,37 +1,27 @@
-import { type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
-interface VideoGridProps {
-  children: ReactNode;
-  className?: string;
-}
 
-export function VideoGrid({ children, className }: VideoGridProps) {
+export function VideoGrid({ children, className, ref }: React.ComponentProps<'div'>) {
   return (
-    <div className={cn('grid min-h-0 items-start grid-cols-2 gap-4', className)}>
+    <div className={cn('flex-1 relative size-full', className)} ref={ref}>
       {children}
     </div>
   );
 }
 
-/**
- * Video tile wrapper that maintains aspect ratio and provides consistent styling.
- */
-export interface VideoTileProps {
-  children: ReactNode;
-  className?: string;
-  /** Whether this tile represents the active speaker */
+interface VideoTileProps extends React.ComponentProps<'div'> {
   isActiveSpeaker?: boolean;
 }
 
-export function VideoTile({ children, className, isActiveSpeaker = false }: VideoTileProps) {
+export function VideoTile({ children, className, isActiveSpeaker = false, ...rest }: VideoTileProps) {
   return (
     <div
       className={cn(
-        'relative aspect-video max-h-full overflow-hidden rounded-lg transition-all duration-300',
+        'relative aspect-video max-h-full overflow-hidden rounded-lg transition-all duration-100',
         isActiveSpeaker && 'ring-4 ring-green-500 ring-offset-2 ring-offset-background',
         className
       )}
+      {...rest}
     >
       {children}
     </div>

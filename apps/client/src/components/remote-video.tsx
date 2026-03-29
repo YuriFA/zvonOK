@@ -26,7 +26,7 @@ export function RemoteVideo({
   }, [stream]);
 
   return (
-    <div className={cn('relative overflow-hidden rounded-lg bg-black', className)}>
+    <div className={cn('relative overflow-hidden rounded-lg bg-muted', className)}>
       <video
         ref={videoRef}
         autoPlay
@@ -34,6 +34,14 @@ export function RemoteVideo({
         muted
         className="h-full w-full object-cover"
       />
+
+      {!isVideoEnabled && (
+        <div className="absolute inset-0 flex items-center justify-center select-none bg-muted">
+          <div className="flex size-16 items-center justify-center rounded-full bg-gray-500 text-xl text-white">
+            {getInitials(username ?? '')}
+          </div>
+        </div>
+      )}
 
       {/* Username overlay */}
       {username && (
