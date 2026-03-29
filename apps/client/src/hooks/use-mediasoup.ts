@@ -126,6 +126,7 @@ export function useMediasoup({
       );
 
       track.onmute = () => {
+        console.log(`[SFU] Track muted: ${kind} from user ${userId}`);
         setRemotePeers((prev) =>
           updateRemotePeer(prev, userId, (current) => ({
             ...current,
@@ -138,6 +139,7 @@ export function useMediasoup({
       };
 
       track.onunmute = () => {
+        console.log(`[SFU] Track unmuted: ${kind} from user ${userId}`);
         setRemotePeers((prev) =>
           updateRemotePeer(prev, userId, (current) => ({
             ...current,
@@ -150,6 +152,7 @@ export function useMediasoup({
       };
 
       track.onended = () => {
+        console.log(`[SFU] Track ended: ${kind} from user ${userId}`);
         setRemotePeers((prev) => {
           const next = new Map(prev);
           const current = next.get(userId);
