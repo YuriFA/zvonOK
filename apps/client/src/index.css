@@ -43,6 +43,22 @@
 }
 
 :root {
+  --avatar-color-1: oklch(0.82 0.08 0);
+  --avatar-color-2: oklch(0.82 0.08 22);
+  --avatar-color-3: oklch(0.82 0.08 45);
+  --avatar-color-4: oklch(0.82 0.08 67);
+  --avatar-color-5: oklch(0.82 0.08 90);
+  --avatar-color-6: oklch(0.82 0.08 112);
+  --avatar-color-7: oklch(0.82 0.08 135);
+  --avatar-color-8: oklch(0.82 0.08 157);
+  --avatar-color-9: oklch(0.82 0.08 180);
+  --avatar-color-10: oklch(0.82 0.08 202);
+  --avatar-color-11: oklch(0.82 0.08 225);
+  --avatar-color-12: oklch(0.82 0.08 247);
+  --avatar-color-13: oklch(0.82 0.08 270);
+  --avatar-color-14: oklch(0.82 0.08 292);
+  --avatar-color-15: oklch(0.82 0.08 315);
+  --avatar-color-16: oklch(0.82 0.08 337);
   --radius: 0.625rem;
   --background: oklch(0.97 0.008 85);
   --foreground: oklch(0.15 0.025 280);
@@ -130,6 +146,22 @@
 }
 
 .dark {
+  --avatar-color-1: oklch(0.35 0.10 0);
+  --avatar-color-2: oklch(0.35 0.10 22);
+  --avatar-color-3: oklch(0.35 0.10 45);
+  --avatar-color-4: oklch(0.35 0.10 67);
+  --avatar-color-5: oklch(0.35 0.10 90);
+  --avatar-color-6: oklch(0.35 0.10 112);
+  --avatar-color-7: oklch(0.35 0.10 135);
+  --avatar-color-8: oklch(0.35 0.10 157);
+  --avatar-color-9: oklch(0.35 0.10 180);
+  --avatar-color-10: oklch(0.35 0.10 202);
+  --avatar-color-11: oklch(0.35 0.10 225);
+  --avatar-color-12: oklch(0.35 0.10 247);
+  --avatar-color-13: oklch(0.35 0.10 270);
+  --avatar-color-14: oklch(0.35 0.10 292);
+  --avatar-color-15: oklch(0.35 0.10 315);
+  --avatar-color-16: oklch(0.35 0.10 337);
   --background: oklch(0.15 0.025 280);
   --foreground: oklch(0.95 0.008 85);
   --card: oklch(0.20 0.03 280);

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
-import { getInitials } from '@/lib/utils/display-name';
+import { getInitials, getAvatarColor } from '@/lib/utils/display-name';
+import { Mic, MicOff } from 'lucide-react';
 
 export interface RemoteVideoProps {
   stream: MediaStream | null;
@@ -37,7 +38,7 @@ export function RemoteVideo({
 
       {!isVideoEnabled && (
         <div className="absolute inset-0 flex items-center justify-center select-none bg-muted">
-          <div className="flex size-16 items-center justify-center rounded-full bg-gray-500 text-xl text-white">
+          <div className="flex size-16 items-center justify-center rounded-full text-xl text-black dark:text-white" style={{ backgroundColor: getAvatarColor(username ?? '') }}>
             {getInitials(username ?? '')}
           </div>
         </div>
@@ -53,35 +54,11 @@ export function RemoteVideo({
       {/* Media state indicators */}
       <div className="absolute bottom-2 right-2 flex gap-1">
         <div
-          className={cn(
-            'rounded px-1.5 py-0.5 text-xs font-medium',
-            isVideoEnabled
-              ? 'bg-green-500/80 text-white'
-              : 'bg-red-500/80 text-white'
-          )}
+          className="rounded px-2 py-1 bg-black/50 text-white"
         >
-          {isVideoEnabled ? 'Cam' : 'Cam Off'}
-        </div>
-        <div
-          className={cn(
-            'rounded px-1.5 py-0.5 text-xs font-medium',
-            isAudioEnabled
-              ? 'bg-green-500/80 text-white'
-              : 'bg-red-500/80 text-white'
-          )}
-        >
-          {isAudioEnabled ? 'Mic' : 'Muted'}
+          {isAudioEnabled ? <Mic className="size-4" /> : <MicOff className="size-4" />}
         </div>
       </div>
-
-      {/* No video fallback */}
-      {!isVideoEnabled && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="flex size-16 items-center justify-center rounded-full bg-gray-700 text-xl text-white">
-            {getInitials(username ?? '')}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
