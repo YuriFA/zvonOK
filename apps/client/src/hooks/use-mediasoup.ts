@@ -180,6 +180,19 @@ export function useMediasoup({
       };
     });
 
+    const unsubscribeProducerState = sfuManager.onProducerStateChange((payload) => {
+      const { userId, kind, paused } = payload;
+      setRemotePeers((prev) =>
+        updateRemotePeer(prev, userId, (current) => ({
+          ...current,
+          isVideoEnabled:
+            kind === 'video' ? !paused : current.isVideoEnabled,
+          isAudioEnabled:
+            kind === 'audio' ? !paused : current.isAudioEnabled,
+        }))
+      );
+    });
+
     const unsubscribePeerLeft = sfuManager.onPeerLeft((userId) => {
       setRemotePeers((prev) => {
         const next = new Map(prev);
@@ -200,6 +213,7 @@ export function useMediasoup({
       unsubscribeState();
       unsubscribePeerJoined();
       unsubscribeTrack();
+      unsubscribeProducerState();
       unsubscribePeerLeft();
       unsubscribeKicked();
       producedKinds.clear();

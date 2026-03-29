@@ -13,6 +13,7 @@ import type {
   SfuPeerJoinedPayload,
   SfuKickedPayload,
   SfuRoomEndedPayload,
+  SfuProducerStateChangedPayload,
 } from './types';
 import type { SfuExistingPeersPayload } from './types';
 
@@ -30,6 +31,7 @@ export interface SfuEventHandlers {
   onExistingPeers(payload: SfuExistingPeersPayload[]): void;
   onNewProducer(payload: SfuNewProducerPayload): void;
   onConsumerCreated(payload: SfuConsumerCreatedPayload): Promise<void>;
+  onProducerStateChanged(payload: SfuProducerStateChangedPayload): void;
   onPeerLeft(payload: { userId: string }): void;
   onKicked(payload: SfuKickedPayload): void;
   onRoomEnded(payload: SfuRoomEndedPayload): void;
@@ -79,6 +81,9 @@ export class SfuEventRouter {
     );
     socket.on('sfu:consumer-created', (payload: SfuConsumerCreatedPayload) =>
       this.handlers.onConsumerCreated(payload)
+    );
+    socket.on('sfu:producer-state-changed', (payload: SfuProducerStateChangedPayload) =>
+      this.handlers.onProducerStateChanged(payload)
     );
     socket.on('sfu:peer-left', (payload: { userId: string }) =>
       this.handlers.onPeerLeft(payload)

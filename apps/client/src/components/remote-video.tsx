@@ -13,8 +13,8 @@ export interface RemoteVideoProps {
 export function RemoteVideo({
   stream,
   username,
-  isVideoEnabled = true,
-  isAudioEnabled = true,
+  isVideoEnabled,
+  isAudioEnabled,
   className,
 }: RemoteVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -76,7 +76,7 @@ export function RemoteVideo({
 
       {/* No video fallback */}
       {!isVideoEnabled && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+        <div className="absolute inset-0 flex items-center justify-center">
           <div className="flex size-16 items-center justify-center rounded-full bg-gray-700 text-xl text-white">
             {getInitials(username ?? '')}
           </div>
