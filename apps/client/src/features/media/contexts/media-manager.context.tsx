@@ -1,25 +1,10 @@
-/**
- * Media manager context for dependency injection.
- * Provides IMediaManager to components and hooks.
- *
- * Narrower hooks (useMediaAcquisition, useMediaTrackController, etc.) expose
- * only the slice of IMediaManager that each consumer actually needs,
- * following the Interface Segregation Principle without requiring separate
- * React contexts.
- *
- * useMediaManager is intentionally kept internal (no export) to enforce ISP:
- * consumers must pick the narrowest hook that covers their needs.
- */
-
 import { createContext, useContext, type ReactNode } from 'react';
 import type {
   IMediaManager,
-  IMediaAcquisition,
-  IMediaTrackController,
-  IMediaDeviceSelector,
-  IMediaPermissionChecker,
-  IMediaStateNotifier,
-  IMediaToggle,
+  ICaptureStateReader,
+  ICaptureController,
+  ICaptureTrackProvider,
+  IMediaDeviceService,
 } from '@/lib/media/interfaces';
 
 const MediaManagerContext = createContext<IMediaManager | null>(null);
@@ -42,44 +27,44 @@ export function MediaManagerProvider({
 
 function useMediaManager(): IMediaManager {
   const manager = useContext(MediaManagerContext);
-
   if (!manager) {
-    throw new Error(
-      'useMediaManager must be used within a MediaManagerProvider'
-    );
+    throw new Error('useMediaManager must be used within a MediaManagerProvider');
   }
-
   return manager;
 }
 
-// -- ISP: Narrower hooks -----------------------------------------------
-
 // eslint-disable-next-line react-refresh/only-export-components
-export function useMediaAcquisition(): IMediaAcquisition {
-  return useMediaManager();
+export function useVideoCaptureState(): ICaptureStateReader {
+  return useMediaManager().videoCapture;
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
-export function useMediaTrackController(): IMediaTrackController {
-  return useMediaManager();
+export function useAudioCaptureState(): ICaptureStateReader {
+  return useMediaManager().audioCapture;
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
-export function useMediaDeviceSelector(): IMediaDeviceSelector {
-  return useMediaManager();
+export function useVideoCaptureControl(): ICaptureController {
+  return useMediaManager().videoCapture;
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
-export function useMediaPermissionChecker(): IMediaPermissionChecker {
-  return useMediaManager();
+export function useAudioCaptureControl(): ICaptureController {
+  return useMediaManager().audioCapture;
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
-export function useMediaStateNotifier(): IMediaStateNotifier {
-  return useMediaManager();
+export function useCaptureTrackProvider(kind: 'video' | 'audio'): ICaptureTrackProvider {
+  const manager = useMediaManager();
+  return kind === 'video' ? manager.videoCapture : manager.audioCapture;
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
-export function useMediaToggle(): IMediaToggle {
+export function useDeviceService(): IMediaDeviceService {
+  return useMediaManager().getDeviceService();
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
+export function useMediaManagerDirect(): IMediaManager {
   return useMediaManager();
 }

@@ -48,12 +48,12 @@ flowchart TB
 │                                          │
 │  ┌──────────┐  ┌─────────────────────┐  │
 │  │ REST API │  │ WebSocket Gateway   │  │
-│  │ /api/*   │  │ /sfu namespace      │  │
+│  │ /*      │  │ /sfu namespace      │  │
 │  └────┬─────┘  └──────────┬──────────┘  │
 │       │                   │             │
 │       │         ┌─────────▼──────────┐  │
 │       │         │  mediasoup SFU     │  │
-│       │         │  (Workers × cores) │  │
+│       │  │  (Workers × 1)     │  │
 │       │         └────────────────────┘  │
 └───────┼───────────────────────────────── ┘
         │ Prisma ORM (TCP :5432)
@@ -76,7 +76,7 @@ Media flow (RTP/SRTP — bypasses REST/WS path):
 |-----------|-------------|----------|
 | **REST API** | Auth, user, and room management endpoints | `apps/server/src/auth/`, `user/`, `room/` |
 | **WebSocket Gateway** | SFU signalling via Socket.io `/sfu` namespace | `apps/server/src/sfu/` |
-| **mediasoup SFU** | Worker pool routing media for group calls | `apps/server/src/sfu/` |
+| **mediasoup SFU** | Single Worker routing media for group calls | `apps/server/src/sfu/` |
 | **PostgreSQL** | Persistent storage for users and rooms | Docker service, accessed via Prisma |
 | **Browser Clients** | React SPA — auth, room UI, SFU client | `apps/client/src/` |
 

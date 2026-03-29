@@ -69,9 +69,9 @@ C4Container
 │                              ▼                                   │
 │  ┌─────────────────────────────────────────────────────┐        │
 │  │  NestJS Server :3000                                │        │
-│  │  - REST API (/api/auth, /api/users, /api/rooms)     │        │
+│  │  - REST API (/auth, /users, /rooms)                       │        │
 │  │  - Socket.io gateway (/sfu namespace)               │        │
-│  │  - mediasoup SFU engine (Workers × CPU cores)       │        │
+│  │  - mediasoup SFU engine (single Worker)              │        │
 │  └────────────────────────────┬────────────────────────┘        │
 │                               │ TCP :5432 (Prisma ORM)          │
 │                               ▼                                  │
@@ -95,11 +95,11 @@ C4Container
   (STUN/UDP)             ghcr.io/…/migrator
 
 Communication flow (client JS inside browser):
-  Browser JS → Caddy (HTTPS) → NestJS  REST /api/*
+  Browser JS → Caddy (HTTPS) → NestJS  REST /*
   Browser JS → Caddy (WSS)  → NestJS  Socket.io /sfu
   Browser JS → coturn        (TURN)   media relay fallback
   Browser JS → Google STUN  (STUN)   ICE candidate gathering
-  mediasoup  → RTP/SRTP/UDP           media between server workers
+  mediasoup  → RTP/SRTP/UDP           media via single Worker
 ```
 
 ## Container Responsibilities

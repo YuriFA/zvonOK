@@ -7,21 +7,17 @@ export interface RemoteVideoProps {
   username?: string;
   isVideoEnabled?: boolean;
   isAudioEnabled?: boolean;
-  onMediaElement?: (element: HTMLVideoElement | null) => void;
   className?: string;
 }
 
 export function RemoteVideo({
   stream,
   username,
-  isVideoEnabled = true,
-  isAudioEnabled = true,
-  onMediaElement,
+  isVideoEnabled,
+  isAudioEnabled,
   className,
 }: RemoteVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const onMediaElementRef = useRef(onMediaElement);
-  onMediaElementRef.current = onMediaElement;
 
   useEffect(() => {
     if (videoRef.current && stream) {
@@ -29,21 +25,23 @@ export function RemoteVideo({
     }
   }, [stream]);
 
-  useEffect(() => {
-    onMediaElementRef.current?.(videoRef.current);
-    return () => {
-      onMediaElementRef.current?.(null);
-    };
-  }, []);
-
   return (
-    <div className={cn('relative overflow-hidden rounded-lg bg-black', className)}>
+    <div className={cn('relative overflow-hidden rounded-lg bg-muted', className)}>
       <video
         ref={videoRef}
         autoPlay
         playsInline
+        muted
         className="h-full w-full object-cover"
       />
+
+      {!isVideoEnabled && (
+        <div className="absolute inset-0 flex items-center justify-center select-none bg-muted">
+          <div className="flex size-16 items-center justify-center rounded-full bg-gray-500 text-xl text-white">
+            {getInitials(username ?? '')}
+          </div>
+        </div>
+      )}
 
       {/* Username overlay */}
       {username && (
@@ -78,7 +76,7 @@ export function RemoteVideo({
 
       {/* No video fallback */}
       {!isVideoEnabled && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+        <div className="absolute inset-0 flex items-center justify-center">
           <div className="flex size-16 items-center justify-center rounded-full bg-gray-700 text-xl text-white">
             {getInitials(username ?? '')}
           </div>

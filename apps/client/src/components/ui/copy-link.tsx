@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Copy, Check, Link } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Check, Link } from 'lucide-react';
 
 interface CopyLinkProps {
   url: string;

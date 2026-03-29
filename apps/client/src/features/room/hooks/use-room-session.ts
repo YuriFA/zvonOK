@@ -1,9 +1,11 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useQualityStats } from '@/hooks/use-quality-stats';
 import { useActiveSpeaker } from '@/features/room/hooks/use-active-speaker';
-import { useRemoteMediaElements } from '@/features/room/hooks/use-remote-media-elements';
 import { useRoomParticipants } from '@/features/room/hooks/use-room-participants';
 import { useRoomSfu } from '@/features/room/hooks/use-room-sfu';
+import { useRemoteAudio } from '@/hooks/use-remote-audio';
+import { RemoteAudioMixer } from '@/lib/audio/remote-audio-mixer';
+import type { IRemoteAudioMixer } from '@/lib/audio/remote-audio-mixer';
 import type { RemotePeerMedia } from '@/hooks/use-mediasoup';
 import type { Participant } from '@/components/room/ParticipantsList';
 import type { Room } from '@/features/room/types/room.types';
@@ -18,8 +20,8 @@ export interface UseRoomSessionOptions {
 }
 
 export interface UseRoomSessionResult {
-  localStream: MediaStream | null;
-  mediaError: string | null;
+  localVideoStream: MediaStream | null;
+  localAudioStream: MediaStream | null;
   mediaControls: UseMediaControlsReturn;
   toggleVideo: () => Promise<void>;
   toggleAudio: () => Promise<void>;
@@ -27,17 +29,17 @@ export interface UseRoomSessionResult {
   remotePeers: RemotePeerMedia[];
   wasKicked: boolean;
   kickPeer: (userId: string) => void;
-  handleRemoteMediaElement: (peerId: string, element: HTMLVideoElement | null) => void;
-  primaryRemoteMediaElement: HTMLVideoElement | null;
   participants: Participant[];
   activeSpeakerId: string | null;
   localUserId: string;
+  mixer: IRemoteAudioMixer | null;
+  audioElement: HTMLAudioElement | null;
 }
 
-export function useRoomSession({ room, userId, displayName }: UseRoomSessionOptions): UseRoomSessionResult {
-  const { setElement: handleRemoteMediaElement, primaryElement: primaryRemoteMediaElement } = useRemoteMediaElements();
+const createMixer = () => new RemoteAudioMixer();
 
-  const { stream: localStream, error: mediaError, stop: stopMedia } = useMediaStreamContext();
+export function useRoomSession({ room, userId, displayName }: UseRoomSessionOptions): UseRoomSessionResult {
+  const { videoStream: localVideoStream, audioStream: localAudioStream, stop: stopMedia } = useMediaStreamContext();
 
   const localUserId = userId ?? 'local';
 
@@ -56,19 +58,33 @@ export function useRoomSession({ room, userId, displayName }: UseRoomSessionOpti
   } = useRoomSfu({
     roomId: room.id,
     roomOwnerId: room.ownerId,
-    localStream,
+    localVideoStream,
+    localAudioStream,
     onKicked: handleKicked,
     displayName,
   });
 
-  const { peerStats } = useQualityStats({ enabled: sfuState.connectionState === 'connected' });
+  const isConnected = sfuState.connectionState === 'connected';
+
+  const { mixer } = useRemoteAudio(createMixer, {
+    remotePeers,
+    enabled: isConnected,
+  });
+
+  const getRemoteAnalyser = useMemo(
+    () => (mixer ? (userId: string) => mixer.getAnalyser(userId) : undefined),
+    [mixer],
+  );
 
   const activeSpeakerId = useActiveSpeaker({
     remotePeers,
     localUserId,
-    localStream,
-    enabled: sfuState.connectionState === 'connected',
+    localAudioStream,
+    enabled: isConnected,
+    getRemoteAnalyser,
   });
+
+  const { peerStats } = useQualityStats({ enabled: isConnected });
 
   const { participants } = useRoomParticipants({
     userId,
@@ -80,9 +96,11 @@ export function useRoomSession({ room, userId, displayName }: UseRoomSessionOpti
     peerStats,
   });
 
+  const audioElement = mixer?.getAudioElement() ?? null;
+
   return {
-    localStream,
-    mediaError,
+    localVideoStream,
+    localAudioStream,
     mediaControls,
     toggleVideo,
     toggleAudio,
@@ -90,10 +108,10 @@ export function useRoomSession({ room, userId, displayName }: UseRoomSessionOpti
     remotePeers,
     wasKicked,
     kickPeer,
-    handleRemoteMediaElement,
-    primaryRemoteMediaElement,
     participants,
     activeSpeakerId,
     localUserId,
+    mixer,
+    audioElement,
   };
 }

@@ -1,144 +1,53 @@
-/**
- * Media module interfaces.
- * These interfaces define the contracts for media management components,
- * following SOLID principles with single-responsibility interfaces.
- */
+import type { CaptureState } from './capture-state';
+import type { StateCallback } from './types';
 
-import type {
-  UserMediaConstraints,
-  MediaPermissionStatus,
-  MediaStatus,
-  TrackAvailabilityCallback,
-  MediaStatusCallback,
-  MediaDeviceInfo,
-} from './types';
-
-/**
- * Responsible for acquiring and releasing media streams.
- * Single responsibility: getUserMedia orchestration.
- */
-export interface IMediaAcquisition {
-  /** Start the media stream with optional constraints */
-  startStream(constraints?: UserMediaConstraints): Promise<MediaStream>;
-  /** Stop the media stream and all tracks */
-  stopStream(): void;
-  /** Get the current media stream */
+export interface IMediaCapture {
   getStream(): MediaStream | null;
+  getState(): CaptureState;
+  getTrack(): MediaStreamTrack | null;
+  onStateChange(cb: StateCallback): () => void;
+  start(deviceId?: string): Promise<boolean>;
+  stop(): void;
+  switchDevice(deviceId: string): Promise<boolean>;
+  toggle(enabled: boolean): Promise<boolean>;
 }
 
-/**
- * Responsible for individual track lifecycle.
- * Single responsibility: track start/stop/replace operations.
- */
-export interface IMediaTrackController {
-  /** Start video track, returns the track or null on failure */
-  startVideoTrack(): Promise<MediaStreamTrack | null>;
-  /** Stop video track with optional reason */
-  stopVideoTrack(reason?: string): void;
-  /** Start audio track, returns the track or null on failure */
-  startAudioTrack(): Promise<MediaStreamTrack | null>;
-  /** Stop audio track with optional reason */
-  stopAudioTrack(reason?: string): void;
-  /** Check if video track exists */
-  hasVideoTrack(): boolean;
-  /** Check if audio track exists */
-  hasAudioTrack(): boolean;
-  /** Check if video track is enabled */
-  isVideoEnabled(): boolean;
-  /** Check if audio track is enabled */
-  isAudioEnabled(): boolean;
-  /** Get preferred video enabled state */
-  isPreferredVideoEnabled(): boolean;
-  /** Get preferred audio enabled state */
-  isPreferredAudioEnabled(): boolean;
-  /** Set preferred video enabled state */
-  setPreferredVideoEnabled(enabled: boolean): void;
-  /** Set preferred audio enabled state */
-  setPreferredAudioEnabled(enabled: boolean): void;
-}
-
-/**
- * Responsible for device selection and switching.
- * Single responsibility: device enumeration and selection.
- */
-export interface IMediaDeviceSelector {
-  /** Enumerate available media devices */
+export interface IMediaDeviceService {
+  getUserMedia(constraints: MediaStreamConstraints): Promise<MediaStream>;
   enumerateDevices(): Promise<MediaDeviceInfo[]>;
-  /** Switch to a specific video device */
-  switchVideoDevice(deviceId: string): Promise<MediaStreamTrack | null>;
-  /** Switch to a specific audio device */
-  switchAudioDevice(deviceId: string): Promise<MediaStreamTrack | null>;
-  /** Get current video device ID */
-  getVideoDeviceId(): string | null;
-  /** Get current audio device ID */
-  getAudioDeviceId(): string | null;
-  /** Set selected video device ID */
-  setSelectedVideoDeviceId(deviceId: string | null): void;
-  /** Set selected audio device ID */
-  setSelectedAudioDeviceId(deviceId: string | null): void;
+  queryPermission(kind: 'video' | 'audio'): Promise<PermissionStatus>;
 }
 
-/**
- * Responsible for permission checking.
- * Single responsibility: permission queries.
- */
-export interface IMediaPermissionChecker {
-  /** Check permission status for camera and microphone */
-  checkPermissions(): Promise<MediaPermissionStatus>;
+export interface IErrorClassifier {
+  classify(error: unknown, kind: 'video' | 'audio'): {
+    state: CaptureState;
+    recoverable: boolean;
+    reason: string;
+  };
 }
 
-/**
- * Observable media state.
- * Single responsibility: state broadcasting.
- */
-export interface IMediaStateNotifier {
-  /** Get current media status */
-  getStatus(): MediaStatus;
-  /** Subscribe to status changes */
-  onStatusChange(callback: MediaStatusCallback): () => void;
-  /** Subscribe to video availability changes */
-  onVideoAvailabilityChange(callback: TrackAvailabilityCallback): () => void;
-  /** Subscribe to audio availability changes */
-  onAudioAvailabilityChange(callback: TrackAvailabilityCallback): () => void;
+export interface ICaptureStateReader {
+  getState(): CaptureState;
+  onStateChange(cb: StateCallback): () => void;
 }
 
-/**
- * Internal state store abstraction.
- * Used by acquisition and track controller modules to decouple from the
- * concrete MediaStateStore implementation (DIP).
- */
-export interface IMediaStateStore extends IMediaStateNotifier {
-  /** Update the current media status and notify subscribers */
-  setStatus(status: MediaStatus): void;
-  /** Notify subscribers about video track availability changes */
-  notifyVideoAvailability(available: boolean, reason?: string): void;
-  /** Notify subscribers about audio track availability changes */
-  notifyAudioAvailability(available: boolean, reason?: string): void;
+export interface ICaptureController {
+  toggle(enabled: boolean): Promise<boolean>;
+  switchDevice(deviceId: string): Promise<boolean>;
+  stop(): void;
 }
 
-/**
- * Responsible for toggling video/audio on and off.
- * Single responsibility: orchestrating track start/stop as a high-level toggle.
- */
-export interface IMediaToggle {
-  /** Toggle video on/off, returns true if the operation succeeded */
-  toggleVideo(enabled: boolean): Promise<boolean>;
-  /** Toggle audio on/off, returns true if the operation succeeded */
-  toggleAudio(enabled: boolean): Promise<boolean>;
+export interface ICaptureTrackProvider {
+  getTrack(): MediaStreamTrack | null;
+  onStateChange(cb: StateCallback): () => void;
 }
 
-/**
- * Facade combining all media concerns.
- * Use this as the default injection token for components that need
- * full media management capabilities.
- *
- * Prefer narrow interfaces (IMediaAcquisition, IMediaTrackController, etc.)
- * when only a subset of functionality is needed (ISP).
- */
-export interface IMediaManager
-  extends IMediaAcquisition,
-  IMediaTrackController,
-  IMediaDeviceSelector,
-  IMediaPermissionChecker,
-  IMediaStateNotifier,
-  IMediaToggle {}
+export interface IMediaManager {
+  readonly videoCapture: IMediaCapture;
+  readonly audioCapture: IMediaCapture;
+  getDeviceService(): IMediaDeviceService;
+  start(options?: { video?: boolean; audio?: boolean; videoDeviceId?: string; audioDeviceId?: string }): Promise<void>;
+  stop(): void;
+  onVideoStateChange(cb: StateCallback): () => void;
+  onAudioStateChange(cb: StateCallback): () => void;
+}

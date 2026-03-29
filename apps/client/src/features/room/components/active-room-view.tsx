@@ -1,22 +1,20 @@
-import { useCallback } from 'react';
-import { VideoGrid } from '@/components/video-grid';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ParticipantsList } from '@/components/room/ParticipantsList';
-import { LocalVideoTile } from '@/features/room/components/local-video-tile';
-import { RemoteVideoTile } from '@/features/room/components/remote-video-tile';
-import { ConnectionStatus } from '@/features/room/components/connection-status';
-import { useMediaErrors } from '@/features/media/hooks/use-media-errors';
-import type { PermissionStateResult } from '@/features/media/hooks/use-permission-state';
+import { RemoteAudio } from '@/components/remote-audio';
 import type { UseRoomSessionResult } from '@/features/room/hooks/use-room-session';
 import type { Room } from '@/features/room/types/room.types';
+import { MediaControls } from '@/features/media/components/media-controls';
+import { cn } from '@/lib/utils';
+import { computeLayout } from '@zvonok/video-layout';
+import { VideoGrid, VideoTile } from '@/components/video-grid';
+import { LocalVideo } from '@/components/local-video';
+import { RemoteVideo } from '@/components/remote-video';
 
 interface ActiveRoomViewProps {
   session: UseRoomSessionResult;
   room: Room;
   currentUserId: string | undefined;
   currentUsername: string | undefined;
-  permissionState: PermissionStateResult;
-  permissionModalOpen: boolean;
-  onPermissionModalOpenChange: (open: boolean) => void;
 }
 
 export function ActiveRoomView({
@@ -24,98 +22,152 @@ export function ActiveRoomView({
   room,
   currentUserId,
   currentUsername,
-  permissionState,
-  onPermissionModalOpenChange,
 }: ActiveRoomViewProps) {
   const {
-    localStream,
-    mediaError,
+    localVideoStream,
     mediaControls,
     toggleVideo,
     toggleAudio,
-    sfuState,
     remotePeers,
     activeSpeakerId,
     localUserId,
-    handleRemoteMediaElement,
     participants,
     kickPeer,
+    mixer,
   } = session;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
-  const { videoError: rawVideoError, audioError: rawAudioError } = useMediaErrors({
-    streamError: mediaError,
-    isVideoAvailable: mediaControls.isVideoAvailable,
-    isAudioAvailable: mediaControls.isAudioAvailable,
-    isVideoEnabled: mediaControls.isVideoEnabled,
-    isAudioEnabled: mediaControls.isAudioEnabled,
-  });
+  const layout = useMemo(
+    () => computeLayout({
+      containerWidth: dimensions.width,
+      containerHeight: dimensions.height,
+      participantCount: remotePeers.length + 1,
+    }),
+    [dimensions.width, dimensions.height, remotePeers.length],
+  );
 
-  // Override error type when browser-level permission is denied.
-  // useMediaErrors returns null when the user has deliberately turned off
-  // the device (isVideoEnabled=false), but we still want to show the
-  // permission-denied warning on the toggle button so the user knows
-  // clicking it will require granting permission first.
-  const videoError = permissionState.isCameraDenied ? 'permission-denied' as const : rawVideoError;
-  const audioError = permissionState.isMicrophoneDenied ? 'permission-denied' as const : rawAudioError;
+  useEffect(() => {
+    const element = containerRef.current
+    if (!element) {
+      return
+    }
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { clientWidth: width, clientHeight: height } = entry.target
+        setDimensions((prev) => {
+          if (prev.width === width && prev.height === height) {
+            return prev
+          }
+          return { width, height }
+        })
+      }
+    })
+
+    observer.observe(element)
+
+    // Get initial dimensions
+    setDimensions({
+      width: element.clientWidth,
+      height: element.clientHeight,
+    })
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [])
 
   const handleToggleVideo = useCallback(async () => {
-    // When camera permission is denied at browser level, opening the modal
-    // is the only meaningful action — getUserMedia would fail silently.
-    if (permissionState.isCameraDenied) {
-      onPermissionModalOpenChange(true);
-      return;
-    }
     await toggleVideo();
-  }, [permissionState.isCameraDenied, toggleVideo, onPermissionModalOpenChange]);
+  }, [toggleVideo]);
 
   const handleToggleAudio = useCallback(async () => {
-    if (permissionState.isMicrophoneDenied) {
-      onPermissionModalOpenChange(true);
-      return;
-    }
     await toggleAudio();
-  }, [permissionState.isMicrophoneDenied, toggleAudio, onPermissionModalOpenChange]);
+  }, [toggleAudio]);
 
+  const [isParticipantsVisible, setIsParticipantsVisible] = useState(false);
+
+  console.log('ActiveRoomView render', {remotePeers })
   return (
-    <main className="flex flex-1 flex-col p-4">
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
-        <div className="min-w-0">
-          <VideoGrid className="mb-4">
-            <LocalVideoTile
-              stream={localStream}
-              username={currentUsername}
-              isVideoEnabled={mediaControls.isVideoEnabled}
-              isAudioEnabled={mediaControls.isAudioEnabled}
-              isActiveSpeaker={activeSpeakerId === localUserId}
-              videoError={videoError}
-              audioError={audioError}
-              onToggleVideo={handleToggleVideo}
-              onToggleAudio={handleToggleAudio}
-            />
+    <main className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-0 flex-1 p-4">
+        <VideoGrid ref={containerRef}>
+          {dimensions.width > 0 && dimensions.height > 0 && (
+            <>
+              <VideoTile isActiveSpeaker={activeSpeakerId === localUserId}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: layout.tileWidth,
+                  height: layout.tileHeight,
+                  transform: `translateX(${layout.tiles[0].x}px) translateY(${layout.tiles[0].y}px)`
+                }}
+              >
+                <LocalVideo
+                  stream={localVideoStream}
+                  username={currentUsername}
+                  isVideoEnabled={mediaControls.isVideoEnabled}
+                  className="h-full w-full"
+                />
+              </VideoTile>
 
-            {remotePeers.map((peer) => (
-              <RemoteVideoTile
-                key={peer.userId}
-                peer={peer}
-                isActiveSpeaker={activeSpeakerId === peer.userId}
-                connectionState={sfuState.connectionState}
-                onMediaElement={handleRemoteMediaElement}
-              />
-            ))}
-          </VideoGrid>
+              {remotePeers.length > 0 && remotePeers.map((peer, index) => (
+                <VideoTile
+                  key={peer.userId}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: layout.tileWidth,
+                    height: layout.tileHeight,
+                    transform: `translateX(${layout.tiles[index + 1].x}px) translateY(${layout.tiles[index + 1].y}px)`
+                  }}
+                  isActiveSpeaker={activeSpeakerId === peer.userId}
+                >
+                  <RemoteVideo
+                    stream={peer.stream}
+                    username={peer.username}
+                    isVideoEnabled={peer.isVideoEnabled}
+                    isAudioEnabled={peer.isAudioEnabled}
+                    className="h-full w-full"
+                  />
+                </VideoTile>
+              ))}
+            </>
+          )}
+        </VideoGrid>
 
-          <ConnectionStatus connectionState={sfuState.connectionState} />
-        </div>
+        <RemoteAudio mixer={mixer} />
 
-        <aside className="min-w-0">
+        <aside
+          className={cn(
+            'flex-1 transition-all duration-300 ease-in-out overflow-hidden',
+            isParticipantsVisible ? 'max-w-80 ml-4' : 'max-w-0 ml-0',
+          )}
+        >
           <ParticipantsList
+            className="size-full"
             participants={participants}
             currentUserId={currentUserId}
             roomOwnerId={room.ownerId}
             onKickParticipant={kickPeer}
-            className="lg:sticky lg:top-4"
           />
         </aside>
+      </div>
+
+      <div className="flex items-center justify-center border-t py-4">
+        <MediaControls
+          isVideoEnabled={mediaControls.isVideoEnabled}
+          isAudioEnabled={mediaControls.isAudioEnabled}
+          videoCaptureState={mediaControls.videoCaptureState}
+          audioCaptureState={mediaControls.audioCaptureState}
+          onToggleVideo={handleToggleVideo}
+          onToggleAudio={handleToggleAudio}
+          isParticipantsVisible={isParticipantsVisible}
+          onToggleParticipants={() => setIsParticipantsVisible((v) => !v)}
+        />
       </div>
     </main>
   );

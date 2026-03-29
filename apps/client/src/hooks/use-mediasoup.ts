@@ -11,7 +11,8 @@ import type { SfuPeerInfo, SfuState } from '@/lib/sfu/types';
 export interface UseMediasoupOptions {
   roomId?: string;
   roomOwnerId?: string;
-  localStream: MediaStream | null;
+  localVideoStream: MediaStream | null;
+  localAudioStream: MediaStream | null;
   enabled?: boolean;
   displayName?: string;
 }
@@ -59,7 +60,8 @@ function updateRemotePeer(
 export function useMediasoup({
   roomId,
   roomOwnerId,
-  localStream,
+  localVideoStream,
+  localAudioStream,
   enabled = true,
   displayName,
 }: UseMediasoupOptions): UseMediasoupResult {
@@ -124,6 +126,7 @@ export function useMediasoup({
       );
 
       track.onmute = () => {
+        console.log(`[SFU] Track muted: ${kind} from user ${userId}`);
         setRemotePeers((prev) =>
           updateRemotePeer(prev, userId, (current) => ({
             ...current,
@@ -136,6 +139,7 @@ export function useMediasoup({
       };
 
       track.onunmute = () => {
+        console.log(`[SFU] Track unmuted: ${kind} from user ${userId}`);
         setRemotePeers((prev) =>
           updateRemotePeer(prev, userId, (current) => ({
             ...current,
@@ -148,6 +152,7 @@ export function useMediasoup({
       };
 
       track.onended = () => {
+        console.log(`[SFU] Track ended: ${kind} from user ${userId}`);
         setRemotePeers((prev) => {
           const next = new Map(prev);
           const current = next.get(userId);
@@ -175,6 +180,19 @@ export function useMediasoup({
       };
     });
 
+    const unsubscribeProducerState = sfuManager.onProducerStateChange((payload) => {
+      const { userId, kind, paused } = payload;
+      setRemotePeers((prev) =>
+        updateRemotePeer(prev, userId, (current) => ({
+          ...current,
+          isVideoEnabled:
+            kind === 'video' ? !paused : current.isVideoEnabled,
+          isAudioEnabled:
+            kind === 'audio' ? !paused : current.isAudioEnabled,
+        }))
+      );
+    });
+
     const unsubscribePeerLeft = sfuManager.onPeerLeft((userId) => {
       setRemotePeers((prev) => {
         const next = new Map(prev);
@@ -195,6 +213,7 @@ export function useMediasoup({
       unsubscribeState();
       unsubscribePeerJoined();
       unsubscribeTrack();
+      unsubscribeProducerState();
       unsubscribePeerLeft();
       unsubscribeKicked();
       producedKinds.clear();
@@ -239,31 +258,36 @@ export function useMediasoup({
   ]);
 
   useEffect(() => {
-    if (!localStream || !state.isSendTransportCreated) {
+    if (!state.isSendTransportCreated) {
       return;
     }
 
-    localStream.getTracks().forEach((track) => {
-      if (
-        (track.kind === 'audio' || track.kind === 'video') &&
-        track.readyState !== 'ended' &&
-        !producedKindsRef.current.has(track.kind)
-      ) {
-        producedKindsRef.current.add(track.kind);
-        sfuManager
-          .produce(track)
-          .then((producer) => {
-            if (!producer) {
+    const streams = [localVideoStream, localAudioStream];
+
+    for (const stream of streams) {
+      if (!stream) continue;
+      stream.getTracks().forEach((track) => {
+        if (
+          (track.kind === 'audio' || track.kind === 'video') &&
+          track.readyState !== 'ended' &&
+          !producedKindsRef.current.has(track.kind)
+        ) {
+          producedKindsRef.current.add(track.kind);
+          sfuManager
+            .produce(track)
+            .then((producer) => {
+              if (!producer) {
+                producedKindsRef.current.delete(track.kind as 'audio' | 'video');
+              }
+            })
+            .catch((error) => {
+              console.error('[SFU] Failed to produce track:', track.kind, error);
               producedKindsRef.current.delete(track.kind as 'audio' | 'video');
-            }
-          })
-          .catch((error) => {
-            console.error('[SFU] Failed to produce track:', track.kind, error);
-            producedKindsRef.current.delete(track.kind as 'audio' | 'video');
-          });
-      }
-    });
-  }, [localStream, state.isSendTransportCreated, sfuManager]);
+            });
+        }
+      });
+    }
+  }, [localVideoStream, localAudioStream, state.isSendTransportCreated, sfuManager]);
 
   const kickPeer = useCallback(
     (userId: string) => {

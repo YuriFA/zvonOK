@@ -30,11 +30,13 @@ import type {
   SfuPeerInfo,
   SfuPeerJoinedPayload,
   SfuExistingPeersPayload,
+  SfuProducerStateChangedPayload,
   QualityStatsCallback,
   PeerQualityStats,
   SfuStateCallback,
   SfuTrackCallback,
   SfuPeerCallback,
+  SfuProducerStateCallback,
 } from './types';
 
 /**
@@ -71,6 +73,7 @@ export class SfuManager implements ISfuManager {
   private peerLeftCallbacks = new Set<(userId: string) => void>();
   private kickedCallbacks = new Set<(payload: SfuKickedPayload) => void>();
   private roomEndedCallbacks = new Set<(payload: SfuRoomEndedPayload) => void>();
+  private producerStateCallbacks = new Set<SfuProducerStateCallback>();
 
   // Event router
   private eventRouter = new SfuEventRouter(
@@ -98,6 +101,7 @@ export class SfuManager implements ISfuManager {
       onExistingPeers: (p) => this.handleExistingPeers(p),
       onNewProducer: (p) => this.handleNewProducer(p),
       onConsumerCreated: (p) => this.handleConsumerCreated(p),
+      onProducerStateChanged: (p) => this.handleProducerStateChanged(p),
       onPeerLeft: (p) => this.handlePeerLeft(p),
       onKicked: (p) => this.handleKicked(p),
       onRoomEnded: (p) => this.handleRoomEnded(p),
@@ -312,6 +316,11 @@ export class SfuManager implements ISfuManager {
   onTrack(callback: SfuTrackCallback): () => void {
     this.trackCallbacks.add(callback);
     return () => this.trackCallbacks.delete(callback);
+  }
+
+  onProducerStateChange(callback: SfuProducerStateCallback): () => void {
+    this.producerStateCallbacks.add(callback);
+    return () => this.producerStateCallbacks.delete(callback);
   }
 
   // Stats methods
@@ -567,6 +576,18 @@ export class SfuManager implements ISfuManager {
         callback(consumer.track, payload.kind, userId);
       });
 
+      const producerInfo = this.peers.get(userId)?.producers.get(payload.producerId);
+      if (producerInfo?.paused) {
+        this.producerStateCallbacks.forEach((callback) => {
+          callback({
+            producerId: payload.producerId,
+            kind: payload.kind,
+            userId,
+            paused: true,
+          });
+        });
+      }
+
       consumer.on('transportclose', () => {
         this.consumers.delete(consumer.id);
       });
@@ -578,6 +599,11 @@ export class SfuManager implements ISfuManager {
     } catch (error) {
       console.error('[SFU] Failed to create consumer:', error);
     }
+  }
+
+  private handleProducerStateChanged(payload: SfuProducerStateChangedPayload): void {
+    console.log('[SFU] Producer state changed:', payload.userId, payload.kind, payload.paused ? 'paused' : 'resumed');
+    this.producerStateCallbacks.forEach((callback) => callback(payload));
   }
 
   private handlePeerLeft(payload: { userId: string }): void {
@@ -655,7 +681,7 @@ export class SfuManager implements ISfuManager {
       this.peers.set(payload.userId, peer);
       this.peerJoinedCallbacks.forEach((callback) => callback(peer!));
     }
-    peer.producers.set(payload.producerId, { kind: payload.kind });
+    peer.producers.set(payload.producerId, { kind: payload.kind, paused: payload.paused });
 
     // Request to consume
     this.connection.getSocket()!.emit('sfu:consume', {

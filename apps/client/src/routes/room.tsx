@@ -1,14 +1,14 @@
 import { useParams } from 'react-router';
 import { useRoom } from '@/features/room/hooks/use-room';
 import { PrejoinView } from '@/features/room/components/prejoin-view';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { RoomView } from '@/features/room/components/room-view';
 import { CallEndedView } from '@/features/room/components/call-ended-view';
 import { MediaStreamProvider } from '@/features/media/contexts/media-stream.context';
 import { MediaManagerProvider } from '@/features/media/contexts/media-manager.context';
 import { SfuManagerProvider } from '@/features/sfu/contexts/sfu-manager.context';
 import { sfuManager } from '@/lib/sfu/manager';
-import { mediaManager } from '@/lib/media/manager';
+import { createMediaManager } from '@/lib/media/manager-factory';
 import { LinkButton } from '@/components/ui/link-button';
 import { useAuth } from '@/features/auth/contexts/auth.context';
 import { loadGuestDisplayName, saveGuestDisplayName } from '@/lib/utils/display-name';
@@ -24,20 +24,20 @@ export const RoomPage = () => {
 
   const [displayName, setDisplayName] = useState(() => user?.username ?? loadGuestDisplayName());
 
+  const mediaManager = useMemo(() => createMediaManager(), []);
+
   useEffect(() => {
     if (!user) {
       setDisplayName(loadGuestDisplayName());
     }
   }, [user]);
 
-  // Guard: if the room is ended on load (or after refetch), transition immediately
   useEffect(() => {
     if (room?.status === 'ended') {
       setViewState('ended');
     }
   }, [room?.status]);
 
-  // Listen for sfu:room-ended while in active call
   const handleRoomEnded = useCallback(() => {
     setViewState('ended');
   }, []);
@@ -52,6 +52,7 @@ export const RoomPage = () => {
     if (!user) {
       saveGuestDisplayName(displayName);
     }
+
     setViewState('active');
   };
 
@@ -74,7 +75,6 @@ export const RoomPage = () => {
     );
   }
 
-  // Ended rooms render outside media/SFU providers — no resource initialization
   if (viewState === 'ended') {
     return <CallEndedView room={room} />;
   }

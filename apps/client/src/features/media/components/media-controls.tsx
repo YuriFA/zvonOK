@@ -4,59 +4,60 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Video, VideoOff, Mic, MicOff, AlertTriangle } from 'lucide-react';
+import { Video, VideoOff, Mic, MicOff, AlertTriangle, Loader2, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { MediaErrorType } from '@/features/media/hooks/use-media-errors';
-
-function getVideoTooltipText(
-  isVideoEnabled: boolean,
-  videoError: MediaErrorType
-): string {
-  if (videoError === 'no-device') return 'No camera found';
-  if (videoError === 'permission-denied') return 'Camera permission denied';
-  if (videoError === 'error') return 'Camera unavailable';
-  return isVideoEnabled ? 'Turn off camera' : 'Turn on camera';
-}
-
-function getAudioTooltipText(
-  isAudioEnabled: boolean,
-  audioError: MediaErrorType
-): string {
-  if (audioError === 'no-device') return 'No microphone found';
-  if (audioError === 'permission-denied') return 'Microphone permission denied';
-  if (audioError === 'error') return 'Microphone unavailable';
-  return isAudioEnabled ? 'Mute microphone' : 'Unmute microphone';
-}
+import { CaptureState, getCaptureStateDisplay, isActive } from '@/lib/media/capture-state';
 
 export interface MediaControlsProps {
   isVideoEnabled: boolean;
   isAudioEnabled: boolean;
+  videoCaptureState: CaptureState;
+  audioCaptureState: CaptureState;
   onToggleVideo: () => void;
   onToggleAudio: () => void;
+  isParticipantsVisible?: boolean;
+  onToggleParticipants?: () => void;
   disabled?: boolean;
   className?: string;
   size?: 'default' | 'sm' | 'lg' | 'icon';
   variant?: 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost' | 'link';
-  videoError?: MediaErrorType;
-  audioError?: MediaErrorType;
 }
 
 export function MediaControls({
   isVideoEnabled,
   isAudioEnabled,
+  videoCaptureState,
+  audioCaptureState,
   onToggleVideo,
   onToggleAudio,
+  isParticipantsVisible,
+  onToggleParticipants,
   disabled = false,
   className,
   size = 'icon',
-  variant = 'secondary',
-  videoError = null,
-  audioError = null,
+  variant = 'outline',
 }: MediaControlsProps) {
-  const videoTooltipText = getVideoTooltipText(isVideoEnabled, videoError);
-  const audioTooltipText = getAudioTooltipText(isAudioEnabled, audioError);
-  const videoIsWarning = videoError === 'no-device';
-  const audioIsWarning = audioError === 'no-device';
+  const videoDisplay = getCaptureStateDisplay(videoCaptureState, 'video');
+  const audioDisplay = getCaptureStateDisplay(audioCaptureState, 'audio');
+
+  const renderVideoIcon = () => {
+    if (videoDisplay.icon === 'spinner') return <Loader2 className="size-4 animate-spin" />;
+    if (videoDisplay.icon === 'off-warning') return <AlertTriangle className="size-4 text-yellow-500" />;
+    if (videoDisplay.icon === 'off-error') return <AlertTriangle className="size-4 text-destructive" />;
+    return isVideoEnabled ? <Video className="size-4" /> : <VideoOff className="size-4" />;
+  };
+
+  const renderAudioIcon = () => {
+    if (audioDisplay.icon === 'spinner') return <Loader2 className="size-4 animate-spin" />;
+    if (audioDisplay.icon === 'off-warning') return <AlertTriangle className="size-4 text-yellow-500" />;
+    if (audioDisplay.icon === 'off-error') return <AlertTriangle className="size-4 text-destructive" />;
+    return isAudioEnabled ? <Mic className="size-4" /> : <MicOff className="size-4" />;
+  };
+
+  const videoHasError = videoDisplay.variant !== 'default' && !isActive(videoCaptureState);
+  const audioHasError = audioDisplay.variant !== 'default' && !isActive(audioCaptureState);
+  const videoIsWarning = videoDisplay.variant === 'warning';
+  const audioIsWarning = audioDisplay.variant === 'warning';
 
   return (
     <div className={cn('flex gap-2', className)}>
@@ -65,23 +66,17 @@ export function MediaControls({
           render={
             <Button
               type="button"
-              variant={videoError && !videoIsWarning ? 'destructive' : variant}
+              variant={videoHasError && !videoIsWarning ? 'destructive' : variant}
               size={size}
               onClick={onToggleVideo}
               disabled={disabled}
-              aria-label={videoTooltipText}
+              aria-label={videoDisplay.tooltip}
             />
           }
         >
-          {videoError ? (
-            <AlertTriangle className={cn('size-4', videoIsWarning && 'text-yellow-500')} />
-          ) : isVideoEnabled ? (
-            <Video className="size-4" />
-          ) : (
-            <VideoOff className="size-4" />
-          )}
+          {renderVideoIcon()}
         </TooltipTrigger>
-        <TooltipContent>{videoTooltipText}</TooltipContent>
+        <TooltipContent>{videoDisplay.tooltip}</TooltipContent>
       </Tooltip>
 
       <Tooltip>
@@ -89,24 +84,38 @@ export function MediaControls({
           render={
             <Button
               type="button"
-              variant={audioError && !audioIsWarning ? 'destructive' : variant}
+              variant={audioHasError && !audioIsWarning ? 'destructive' : variant}
               size={size}
               onClick={onToggleAudio}
               disabled={disabled}
-              aria-label={audioTooltipText}
+              aria-label={audioDisplay.tooltip}
             />
           }
         >
-          {audioError ? (
-            <AlertTriangle className={cn('size-4', audioIsWarning && 'text-yellow-500')} />
-          ) : isAudioEnabled ? (
-            <Mic className="size-4" />
-          ) : (
-            <MicOff className="size-4" />
-          )}
+          {renderAudioIcon()}
         </TooltipTrigger>
-        <TooltipContent>{audioTooltipText}</TooltipContent>
+        <TooltipContent>{audioDisplay.tooltip}</TooltipContent>
       </Tooltip>
+
+      {onToggleParticipants && (
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                type="button"
+                variant={isParticipantsVisible ? 'secondary' : variant}
+                size={size}
+                onClick={onToggleParticipants}
+                disabled={disabled}
+                aria-label="Toggle participants"
+              />
+            }
+          >
+            <Users className="size-4" />
+          </TooltipTrigger>
+          <TooltipContent>Participants</TooltipContent>
+        </Tooltip>
+      )}
     </div>
   );
 }

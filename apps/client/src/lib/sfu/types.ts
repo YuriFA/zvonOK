@@ -63,6 +63,7 @@ export interface SfuNewProducerPayload {
   userId: string;
   username: string;
   kind: 'audio' | 'video';
+  paused: boolean;
 }
 
 // Consume payload sent to server
@@ -93,6 +94,14 @@ export interface SfuResumeProducerPayload {
   producerId: string;
 }
 
+// Producer state changed notification from server (broadcast to other peers)
+export interface SfuProducerStateChangedPayload {
+  producerId: string;
+  kind: 'audio' | 'video';
+  userId: string;
+  paused: boolean;
+}
+
 export interface SfuKickPeerPayload {
   userId: string;
 }
@@ -109,7 +118,7 @@ export interface SfuRoomEndedPayload {
 export interface SfuPeerInfo {
   userId: string;
   username: string;
-  producers: Map<string, { kind: 'audio' | 'video' }>;
+  producers: Map<string, { kind: 'audio' | 'video'; paused?: boolean }>;
 }
 
 // Payload for sfu:peer-joined event (peer joins after you)
@@ -146,6 +155,7 @@ export interface SfuState {
 export type SfuTrackCallback = (track: MediaStreamTrack, kind: 'audio' | 'video', userId: string) => void;
 export type SfuPeerCallback = (peer: SfuPeerInfo) => void;
 export type SfuStateCallback = (state: SfuState) => void;
+export type SfuProducerStateCallback = (payload: SfuProducerStateChangedPayload) => void;
 
 // Quality stats types
 export interface QualityStats {

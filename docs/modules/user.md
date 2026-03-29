@@ -2,30 +2,17 @@
 
 ## Purpose
 
-Manages user CRUD operations and user data persistence through Prisma ORM.
+Manages user role updates (ADMIN-only operations). User creation is handled by AuthModule.
 
 ---
 
 ## Use Cases
 
-### 1. Get User by ID
-- Retrieve user by primary key
-- Return user without sensitive fields (passwordHash, refreshTokenHash)
-
-### 2. Get User by Email
-- Find user for authentication
-- Includes sensitive fields for password verification
-
-### 3. Get User by Username
-- Find user for profile display
-- No sensitive fields
-
-### 4. Update User
-- Update allowed fields (username, profile data)
-- Cannot modify email directly
-
-### 5. Delete User
-- Cascade to related records (rooms, messages)
+### 1. Update User Role
+- ADMIN can promote/demote users between `USER`, `HOST`, `ADMIN` roles
+- Admin cannot change their own role
+- Cannot demote the last admin
+- Bumps `tokenVersion` on role change to invalidate existing JWT tokens
 
 ---
 
@@ -39,19 +26,19 @@ Manages user CRUD operations and user data persistence through Prisma ORM.
 | email | String | Unique, indexed |
 | username | String | Unique, indexed |
 | passwordHash | String | bcrypt (10 rounds) |
+| createdAt | DateTime | `now()` |
+| updatedAt | DateTime | Auto-update |
 | refreshTokenHash | String? | SHA256 hash |
 | failedLoginAttempts | Int | Default: 0 |
 | lockedUntil | DateTime? | Account lockout |
 | tokenVersion | Int | Default: 0 |
-| createdAt | DateTime | `now()` |
-| updatedAt | DateTime | Auto-update |
+| role | Role | Default: `USER` (`USER`, `HOST`, `ADMIN`) |
 
 ### Relations
 
 ```prisma
 model User {
-  rooms      Room[]     @relation("RoomHost")
-  messages   Message[]
+  rooms  Room[]  @relation("RoomHost")
 }
 ```
 
@@ -61,64 +48,51 @@ model User {
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/api/users/me` | Protected | Get current user profile |
-| GET | `/api/users/:id` | Public | Get user by ID |
-| PATCH | `/api/users/me` | Protected | Update current user |
+| PATCH | `/users/:id/role` | ADMIN only (`@Roles(Role.ADMIN)`) | Update user role → 200 |
 
 ### Request/Response Examples
 
-**GET /api/users/me**
+**PATCH /users/:id/role**
 ```json
+// Request
+{
+  "role": "HOST"
+}
+
 // Response 200
 {
   "id": "clx...",
   "email": "user@example.com",
   "username": "johndoe",
-  "createdAt": "2024-01-01T00:00:00Z"
-}
-```
-
-**PATCH /api/users/me**
-```json
-// Request
-{
-  "username": "newusername"
-}
-
-// Response 200
-{
-  "id": "clx...",
-  "email": "user@example.com",
-  "username": "newusername",
+  "role": "HOST",
+  "tokenVersion": 1,
+  "createdAt": "2024-01-01T00:00:00Z",
   "updatedAt": "2024-01-02T00:00:00Z"
 }
 ```
+
+> **Note:** `GET /auth/me` (current user profile) is served by `AuthController`, not by this module. There is no public user lookup endpoint (`GET /users/:id`).
 
 ---
 
 ## Edge Cases
 
-### Duplicate Email
-- Return 409 Conflict on duplicate email during registration
-- Check uniqueness before insert
+### Cannot Change Own Role
+- Returns 403 Forbidden when admin tries to change their own role
 
-### Duplicate Username
-- Return 409 Conflict on duplicate username
-- Case-insensitive uniqueness check
+### Last Admin Protection
+- Returns 403 Forbidden when attempting to demote the last remaining admin
 
 ### User Not Found
-- Return 404 for non-existent user IDs
-- Don't leak existence info for public endpoints
-
-### Locked Account
-- AuthModule handles lockout logic
-- UserModule provides data access only
+- Returns 404 for non-existent user IDs
 
 ---
 
 ## Files
 
-- `apps/server/src/user/user.service.ts` — Business logic
-- `apps/server/src/user/user.controller.ts` — REST endpoints
+- `apps/server/src/user/user.service.ts` — CRUD via Prisma (user, updateUser, countUsers)
+- `apps/server/src/user/user.controller.ts` — PATCH /:id/role endpoint
 - `apps/server/src/user/user.module.ts` — Module definition
+- `apps/server/src/user/dto/update-role.dto.ts` — Role update validation
+- `apps/server/src/user/decorators/user.decorator.ts` — @User() param decorator
 - `apps/server/prisma/schema.prisma` — Prisma schema

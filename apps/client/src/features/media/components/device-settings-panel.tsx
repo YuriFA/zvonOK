@@ -8,26 +8,18 @@ import { ActiveDeviceDisplay } from './active-device-display';
 import { cn } from '@/lib/utils';
 
 export interface DeviceSettingsPanelProps {
-  /** Remote video element for speaker switching */
-  remoteVideoElement?: HTMLMediaElement | null;
-  /** Whether video is currently enabled (for ActiveDeviceDisplay) */
+  audioElement?: HTMLAudioElement | null;
   isVideoEnabled?: boolean;
-  /** Whether audio is currently enabled (for ActiveDeviceDisplay) */
   isAudioEnabled?: boolean;
-  /** Called when video device changes */
   onVideoDeviceChange?: (deviceId: string) => void;
-  /** Called when audio device changes */
   onAudioDeviceChange?: (deviceId: string) => void;
-  /** Called when speaker device changes */
   onSpeakerDeviceChange?: (deviceId: string) => void;
-  /** Additional class names */
   className?: string;
-  /** Whether to show as a button + popover or inline panel */
   variant?: 'popover' | 'inline';
 }
 
 export function DeviceSettingsPanel({
-  remoteVideoElement,
+  audioElement,
   isVideoEnabled = true,
   isAudioEnabled = true,
   onVideoDeviceChange,
@@ -54,8 +46,7 @@ export function DeviceSettingsPanel({
   const { switchVideoDevice, switchAudioDevice, switchSpeakerDevice, isSpeakerSwitchSupported } =
     useDeviceSwitching();
 
-  // Primary media element for speaker switching
-  const videoElementForSpeaker = remoteVideoElement ?? null;
+  const speakerElement = audioElement ?? null;
 
   const activeCamera =
     videoDevices.find((d) => d.deviceId === selectedDevices.videoDeviceId) ?? videoDevices[0];
@@ -67,12 +58,11 @@ export function DeviceSettingsPanel({
   // Apply the saved speaker selection when a remote media element becomes available.
   useEffect(() => {
     const speakerDeviceId = selectedDevices.speakerDeviceId;
-    if (!isSpeakerSwitchSupported || !videoElementForSpeaker || !speakerDeviceId) return;
+    if (!isSpeakerSwitchSupported || !speakerElement || !speakerDeviceId) return;
 
-    switchSpeakerDevice(videoElementForSpeaker, speakerDeviceId).catch(() => {
-      // best-effort
+    switchSpeakerDevice(speakerElement, speakerDeviceId).catch(() => {
     });
-  }, [isSpeakerSwitchSupported, selectedDevices.speakerDeviceId, switchSpeakerDevice, videoElementForSpeaker]);
+  }, [isSpeakerSwitchSupported, selectedDevices.speakerDeviceId, switchSpeakerDevice, speakerElement]);
 
   const handleVideoChange = useCallback(
     async (deviceId: string) => {
@@ -110,19 +100,17 @@ export function DeviceSettingsPanel({
     async (deviceId: string) => {
       setIsSwitching('speaker');
       try {
-        // Always persist selection (so it can be applied later when a remote element exists)
         setSelectedSpeakerDevice(deviceId);
         onSpeakerDeviceChange?.(deviceId);
 
-        // Best-effort immediate apply if we have a media element
-        if (videoElementForSpeaker) {
-          await switchSpeakerDevice(videoElementForSpeaker, deviceId);
+        if (speakerElement) {
+          await switchSpeakerDevice(speakerElement, deviceId);
         }
       } finally {
         setIsSwitching(null);
       }
     },
-    [switchSpeakerDevice, videoElementForSpeaker, setSelectedSpeakerDevice, onSpeakerDeviceChange]
+    [switchSpeakerDevice, speakerElement, setSelectedSpeakerDevice, onSpeakerDeviceChange]
   );
 
   const renderSelectors = () => (

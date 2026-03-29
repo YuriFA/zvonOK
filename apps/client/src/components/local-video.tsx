@@ -5,19 +5,15 @@ import { getInitials } from '@/lib/utils/display-name';
 export interface LocalVideoProps {
   stream: MediaStream | null;
   username?: string;
-  isVideoEnabled?: boolean;
-  isAudioEnabled?: boolean;
+  isVideoEnabled: boolean;
   className?: string;
-  showControls?: boolean;
 }
 
 export function LocalVideo({
   stream,
   username,
-  isVideoEnabled = true,
-  isAudioEnabled = true,
+  isVideoEnabled,
   className,
-  showControls = true,
 }: LocalVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -34,36 +30,12 @@ export function LocalVideo({
         autoPlay
         playsInline
         muted
+        style={{ backgroundColor: 'transparent' }}
         className="h-full w-full object-cover mirror"
       />
 
-      {showControls && (
-        <div className="absolute bottom-2 left-2 flex gap-1">
-          <div
-            className={cn(
-              'rounded px-1.5 py-0.5 text-xs font-medium',
-              isVideoEnabled
-                ? 'bg-green-500/80 text-white'
-                : 'bg-red-500/80 text-white'
-            )}
-          >
-            {isVideoEnabled ? 'Cam' : 'Cam Off'}
-          </div>
-          <div
-            className={cn(
-              'rounded px-1.5 py-0.5 text-xs font-medium',
-              isAudioEnabled
-                ? 'bg-green-500/80 text-white'
-                : 'bg-red-500/80 text-white'
-            )}
-          >
-            {isAudioEnabled ? 'Mic' : 'Muted'}
-          </div>
-        </div>
-      )}
-
       {!isVideoEnabled && (
-        <div className="absolute inset-0 flex items-center justify-center">
+        <div className="absolute inset-0 flex items-center justify-center select-none bg-muted">
           <div className="flex size-16 items-center justify-center rounded-full bg-gray-500 text-xl text-white">
             {getInitials(username ?? '')}
           </div>

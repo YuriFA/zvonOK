@@ -89,6 +89,7 @@ export class SfuService implements OnModuleDestroy {
       userId: peer.userId,
       username: peer.username,
       kind: producer.kind,
+      paused: producer.paused,
     });
   }
 
@@ -391,21 +392,25 @@ export class SfuService implements OnModuleDestroy {
   }
 
   async pauseProducer(socket: Socket, producerId: string): Promise<void> {
-    const producer = this.getPeer(socket.id)?.producers.get(producerId);
-    if (!producer) {
+    const peer = this.getPeer(socket.id);
+    const producer = peer?.producers.get(producerId);
+    if (!producer || !peer) {
       this.logger.error(`Producer ${producerId} not found`);
       return;
     }
     await producer.pause();
+    this.notifyProducerStateChanged(socket, producer, peer, true);
   }
 
   async resumeProducer(socket: Socket, producerId: string): Promise<void> {
-    const producer = this.getPeer(socket.id)?.producers.get(producerId);
-    if (!producer) {
+    const peer = this.getPeer(socket.id);
+    const producer = peer?.producers.get(producerId);
+    if (!producer || !peer) {
       this.logger.error(`Producer ${producerId} not found`);
       return;
     }
     await producer.resume();
+    this.notifyProducerStateChanged(socket, producer, peer, false);
   }
 
   async kickPeer(socket: Socket, targetUserId: string): Promise<void> {
@@ -467,6 +472,27 @@ export class SfuService implements OnModuleDestroy {
     this.roomOwners.delete(roomId);
     await this.workerManager.closeRouter(roomId);
     this.logger.log(`Room ${roomId} ended — all peers notified and cleaned up`);
+  }
+
+  private notifyProducerStateChanged(
+    socket: Socket,
+    producer: Producer,
+    peer: Peer,
+    paused: boolean,
+  ): void {
+    const roomId = this.getRoomId(socket);
+    if (!roomId) return;
+
+    for (const roomPeer of this.getRoomPeers(roomId)) {
+      if (roomPeer.id !== socket.id) {
+        roomPeer.socket.emit('sfu:producer-state-changed', {
+          producerId: producer.id,
+          kind: producer.kind,
+          userId: peer.userId,
+          paused,
+        });
+      }
+    }
   }
 
   private notifyPeersToConsume(socket: Socket, producer: Producer): void {

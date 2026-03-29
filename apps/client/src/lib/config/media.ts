@@ -10,13 +10,3 @@ export const DEFAULT_AUDIO_CONSTRAINTS: MediaTrackConstraints = {
   autoGainControl: true,
 };
 
-export const DEFAULT_CONSTRAINTS: MediaStreamConstraints = {
-  video: DEFAULT_VIDEO_CONSTRAINTS,
-  audio: DEFAULT_AUDIO_CONSTRAINTS,
-};
-
-export const VIDEO_RESOLUTIONS = {
-  VGA: { width: 640, height: 480 },
-  HD: { width: 1280, height: 720 },
-  FULL_HD: { width: 1920, height: 1080 },
-} as const;

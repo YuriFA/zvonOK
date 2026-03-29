@@ -1,25 +1,30 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { RemotePeerMedia } from '@/hooks/use-mediasoup';
 
-interface AudioAnalyser {
+interface OwnedAudioAnalyser {
+  type: 'owned';
   context: AudioContext;
   analyser: AnalyserNode;
   source: MediaStreamAudioSourceNode;
 }
 
+interface BorrowedAudioAnalyser {
+  type: 'borrowed';
+  analyser: AnalyserNode;
+}
+
+type PeerAnalyser = OwnedAudioAnalyser | BorrowedAudioAnalyser;
+
 interface UseActiveSpeakerOptions {
   remotePeers: RemotePeerMedia[];
   localUserId?: string;
-  localStream: MediaStream | null;
+  localAudioStream: MediaStream | null;
   enabled?: boolean;
-  /** Sample interval in ms (default: 200ms) */
   sampleInterval?: number;
-  /** Minimum RMS level to consider as speaking (0-1, default: 0.01) */
   speakingThreshold?: number;
-  /** Time in ms to hold speaker before switching (default: 800ms) */
   holdTime?: number;
-  /** How much louder next speaker must be to switch (default: 1.3x) */
   switchMargin?: number;
+  getRemoteAnalyser?: (userId: string) => AnalyserNode | undefined;
 }
 
 interface SpeakerState {
@@ -38,17 +43,17 @@ interface SpeakerState {
 export function useActiveSpeaker({
   remotePeers,
   localUserId,
-  localStream,
+  localAudioStream,
   enabled = true,
   sampleInterval = 200,
   speakingThreshold = 0.003,
   holdTime = 800,
   switchMargin = 1.3,
+  getRemoteAnalyser,
 }: UseActiveSpeakerOptions): string | null {
   const [activeSpeakerId, setActiveSpeakerId] = useState<string | null>(null);
 
-  // Store analysers for each participant
-  const analysersRef = useRef<Map<string, AudioAnalyser>>(new Map());
+  const analysersRef = useRef<Map<string, PeerAnalyser>>(new Map());
   const speakerStateRef = useRef<SpeakerState>({
     activeSpeakerId: null,
     speakerSince: 0,
@@ -72,8 +77,7 @@ export function useActiveSpeaker({
     return Math.sqrt(sum / dataArray.length);
   }, []);
 
-  // Create analyser for a stream
-  const createAnalyser = useCallback((stream: MediaStream): AudioAnalyser | null => {
+  const createAnalyser = useCallback((stream: MediaStream): OwnedAudioAnalyser | null => {
     const audioTracks = stream.getAudioTracks();
     if (audioTracks.length === 0) {
       return null;
@@ -81,7 +85,7 @@ export function useActiveSpeaker({
 
     try {
       const context = new AudioContext();
-      void context.resume(); // Ensure context is running (may start suspended without user gesture)
+      void context.resume();
       const analyser = context.createAnalyser();
       analyser.fftSize = 512;
       analyser.smoothingTimeConstant = 0.3;
@@ -89,35 +93,30 @@ export function useActiveSpeaker({
       const source = context.createMediaStreamSource(stream);
       source.connect(analyser);
 
-      // Route silent audio to destination to keep the graph active.
-      // Required when the same stream is also consumed by WebRTC (e.g. local getUserMedia),
-      // otherwise some browsers won't process the audio graph.
       const silentGain = context.createGain();
       silentGain.gain.value = 0;
       analyser.connect(silentGain);
       silentGain.connect(context.destination);
 
-      return { context, analyser, source };
+      return { type: 'owned', context, analyser, source };
     } catch (error) {
       console.error('[ActiveSpeaker] Failed to create analyser:', error);
       return null;
     }
   }, []);
 
-  // Cleanup analyser
-  const cleanupAnalyser = useCallback((analyser: AudioAnalyser) => {
+  const cleanupAnalyser = useCallback((entry: PeerAnalyser) => {
+    if (entry.type !== 'owned') return;
     try {
-      analyser.source.disconnect();
-      void analyser.context.close();
+      entry.source.disconnect();
+      void entry.context.close();
     } catch {
       // Ignore cleanup errors
     }
   }, []);
 
-  // Update analysers when peers change
   useEffect(() => {
     if (!enabled) {
-      // Clean up all analysers so they are recreated fresh on next enable
       for (const analyser of analysersRef.current.values()) {
         cleanupAnalyser(analyser);
       }
@@ -128,26 +127,36 @@ export function useActiveSpeaker({
 
     const currentIds = new Set<string>();
 
-    // Add local user analyser
-    if (localStream && localUserId) {
+    if (localAudioStream && localUserId) {
       currentIds.add(localUserId);
       if (!analysersRef.current.has(localUserId)) {
-        const analyser = createAnalyser(localStream);
+        const analyser = createAnalyser(localAudioStream);
         if (analyser) {
           analysersRef.current.set(localUserId, analyser);
         }
       }
     }
 
-    // Add remote peer analysers
     for (const peer of remotePeers) {
-      // Skip peers with muted audio
       if (!peer.isAudioEnabled) {
         continue;
       }
 
       currentIds.add(peer.userId);
-      if (!analysersRef.current.has(peer.userId)) {
+
+      if (getRemoteAnalyser) {
+        const existing = analysersRef.current.get(peer.userId);
+        if (!existing || existing.type !== 'borrowed') {
+          if (existing) {
+            cleanupAnalyser(existing);
+            analysersRef.current.delete(peer.userId);
+          }
+          const analyser = getRemoteAnalyser(peer.userId);
+          if (analyser) {
+            analysersRef.current.set(peer.userId, { type: 'borrowed', analyser });
+          }
+        }
+      } else if (!analysersRef.current.has(peer.userId)) {
         const analyser = createAnalyser(peer.stream);
         if (analyser) {
           analysersRef.current.set(peer.userId, analyser);
@@ -155,7 +164,6 @@ export function useActiveSpeaker({
       }
     }
 
-    // Remove analysers for peers that left or muted
     for (const [id, analyser] of analysersRef.current) {
       if (!currentIds.has(id)) {
         cleanupAnalyser(analyser);
@@ -163,7 +171,7 @@ export function useActiveSpeaker({
         smoothedLevelsRef.current.delete(id);
       }
     }
-  }, [enabled, localStream, localUserId, remotePeers, createAnalyser, cleanupAnalyser]);
+  }, [enabled, localAudioStream, localUserId, remotePeers, createAnalyser, cleanupAnalyser, getRemoteAnalyser]);
 
   // Main detection loop
   useEffect(() => {
@@ -185,8 +193,8 @@ export function useActiveSpeaker({
       const levels = new Map<string, number>();
 
       // Collect levels from all participants
-      for (const [id, { analyser }] of analysersRef.current) {
-        const rawLevel = calculateLevel(analyser);
+      for (const [id, entry] of analysersRef.current) {
+        const rawLevel = calculateLevel(entry.analyser);
 
         // Apply smoothing
         const prevSmoothed = smoothedLevelsRef.current.get(id) ?? 0;

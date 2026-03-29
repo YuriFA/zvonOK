@@ -9,7 +9,7 @@ Manages video conference rooms with slug-based invite codes, participant limits,
 ## Use Cases
 
 ### 1. Create Room
-- Authenticated user creates a new room
+- User with HOST or ADMIN role creates a new room
 - System generates unique 6-character slug (e.g., "abc123")
 - Sets creator as room owner
 - Returns room with invite code (slug)
@@ -21,14 +21,20 @@ Manages video conference rooms with slug-based invite codes, participant limits,
 
 ### 3. Update Room
 - Only room owner can update
-- Can modify: name, status, maxParticipants
+- Can modify: name, maxParticipants
 - Returns updated room data
 
 ### 4. End Room
 - Only room owner can end room
 - Soft delete: sets status to "ended", records endedAt timestamp
+- Triggers `SfuService.endRoom()` to notify all SFU peers and clean up mediasoup router
 - Returns 204 No Content
 - Room data preserved for audit/history
+
+### 5. Cleanup Old Rooms (RoomCleanupService)
+- Hourly interval job
+- Hard-deletes rooms with `status=ended` and `endedAt` older than 1 hour
+- Implements `OnModuleDestroy` to clear the interval on shutdown
 
 ---
 
@@ -54,18 +60,7 @@ Manages video conference rooms with slug-based invite codes, participant limits,
 
 ```prisma
 model Room {
-  id              String     @id @default(cuid())
-  name            String?
-  slug            String     @unique
-  ownerId         String
-  owner           User       @relation("RoomHost", fields: [ownerId], references: [id])
-  isPublic        Boolean    @default(true)
-  maxParticipants Int        @default(10)
-  status          RoomStatus @default(active)
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
-  endedAt         DateTime?
-  lastActivityAt  DateTime?
+  owner User @relation("RoomHost", fields: [ownerId], references: [id])
 
   @@index([ownerId])
   @@index([status])
@@ -84,15 +79,14 @@ enum RoomStatus {
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/api/rooms` | Protected | List user's rooms |
-| POST | `/api/rooms` | Protected | Create new room |
-| GET | `/api/rooms/:slug` | Public | Get room by slug |
-| PATCH | `/api/rooms/:id` | Protected | Update room (owner only) |
-| DELETE | `/api/rooms/:id` | Protected | End room (owner only) |
+| POST | `/rooms` | HOST or ADMIN role (`@Roles`) | Create new room → 201 |
+| GET | `/rooms/:slug` | Public (`@SkipAuthGuard`) | Get room by slug → 200 |
+| PATCH | `/rooms/:id` | Protected (owner check in controller) | Update room → 200 |
+| DELETE | `/rooms/:id` | Protected (owner check in controller) | End room + SFU shutdown → 204 |
 
 ### Request/Response Examples
 
-**POST /api/rooms**
+**POST /rooms**
 ```json
 // Request
 {
@@ -116,7 +110,7 @@ enum RoomStatus {
 }
 ```
 
-**GET /api/rooms/:slug**
+**GET /rooms/:slug**
 ```json
 // Response 200
 {
@@ -134,7 +128,7 @@ enum RoomStatus {
 }
 ```
 
-**PATCH /api/rooms/:id**
+**PATCH /rooms/:id**
 ```json
 // Request
 {
@@ -158,8 +152,8 @@ enum RoomStatus {
 }
 ```
 
-**DELETE /api/rooms/:id**
-```json
+**DELETE /rooms/:id**
+```
 // Response 204 No Content
 ```
 
@@ -179,7 +173,6 @@ enum RoomStatus {
 | Field | Type | Required | Constraints |
 |-------|------|----------|-------------|
 | name | string | No | max 100 characters |
-| status | 'active' \| 'ended' | No | Enum values |
 | maxParticipants | number | No | 2-50 |
 
 ---
@@ -203,13 +196,17 @@ enum RoomStatus {
 - Values outside 2-50 range rejected by validation
 - Default of 10 applied if not provided
 
+### Create Room Role Check
+- Users with `USER` role receive 403 Forbidden when attempting to create rooms
+- Only `HOST` or `ADMIN` roles can create rooms
+
 ---
 
 ## Business Rules
 
 ### Slug Generation
 - 6 characters: lowercase letters + numbers
-- 62^6 ≈ 56 billion possible combinations
+- 62^6 ~ 56 billion possible combinations
 - Generated randomly, no sequential patterns
 - Uniqueness enforced by database constraint
 
@@ -218,10 +215,10 @@ enum RoomStatus {
 - Ownership cannot be transferred
 - Only owner can update or end room
 
-### Soft Delete
+### Soft Delete + Hard Cleanup
 - DELETE sets status to "ended" and records endedAt
-- Room record preserved for history/audit
-- No hard delete implemented
+- Room record preserved for audit
+- `RoomCleanupService` hard-deletes ended rooms older than 1 hour (hourly interval)
 
 ### Public Rooms
 - `isPublic` flag reserved for future "room discovery" feature
@@ -232,10 +229,9 @@ enum RoomStatus {
 
 ## Files
 
-- `apps/server/src/room/room.service.ts` — Business logic
+- `apps/server/src/room/room.service.ts` — Room CRUD (create, findBySlug, findById, update, softDelete)
 - `apps/server/src/room/room.controller.ts` — REST endpoints
-- `apps/server/src/room/room.module.ts` — Module definition
+- `apps/server/src/room/room.module.ts` — Module definition (imports SfuModule)
+- `apps/server/src/room/cleanup.service.ts` — RoomCleanupService (hourly hard-delete job)
 - `apps/server/src/room/dto/create-room.dto.ts` — Create validation
 - `apps/server/src/room/dto/update-room.dto.ts` — Update validation
-- `apps/server/src/room/dto/room-response.dto.ts` — Response schema
-- `apps/server/src/room/cleanup.service.ts` — Cleanup jobs (future)

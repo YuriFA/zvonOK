@@ -1,8 +1,8 @@
 # Software Design Document: WebRTC Chat
 
-> **Version:** 2.0
+> **Version:** 2.3
 >
-> **Date:** 2025-02-07 / Updated: 2026-03-18
+> **Date:** 2025-02-07 / Updated: 2026-03-29
 >
 > **Status:** Living Document
 
@@ -57,10 +57,10 @@ The WebRTC Chat application provides:
 | ID | Requirement | Status |
 |----|-------------|--------------|
 | REQ-001 | Authentication via JWT access/refresh with rotation and HTTP-only cookies. | Completed |
-| REQ-002 | User profile access via `/api/users/me` and public lookup via `/api/users/:id` without sensitive fields. | Completed |
+| REQ-002 | User profile access via `/auth/me` (in AuthController). | Completed |
 | REQ-003 | Room management via REST with slug-based invite codes. | Completed |
 | REQ-004 | WebSocket signalling for join/leave and offer/answer/ICE exchange. | Completed |
-| REQ-005 | SFU signalling for group calls (mediasoup). | In Progress |
+| REQ-005 | SFU signalling for group calls (mediasoup). | Completed |
 | REQ-006 | Client UI with home/auth/room routes consuming REST + WebSocket APIs. | Completed |
 | REQ-007 | Security baseline: bcrypt hashing, env-based JWT secrets, timing-safe refresh validation. | Completed |
 | REQ-008 | Performance targets and monitoring for media and UI. | Planned |
@@ -97,7 +97,7 @@ The WebRTC Chat application provides:
 
 | Entity | Key Fields | Notes |
 |--------|-----------|-------|
-| **User** | id (PK), email (UK), username (UK), passwordHash, refreshTokenHash, tokenVersion | Owns rooms |
+| **User** | id (PK), email (UK), username (UK), passwordHash, refreshTokenHash, tokenVersion, role (USER\|HOST\|ADMIN) | Owns rooms |
 | **Room** | id (PK), slug (UK), ownerId (FK→User), status (active\|ended), maxParticipants | Soft-deleted via `status=ended` |
 | **Message** | id, content, userId (FK), roomId (FK) | *Planned — Stage 9* |
 
@@ -119,9 +119,10 @@ Clients exchange media directly with the SFU (RTP/SRTP); all signalling goes ove
 | Component | Description | Location |
 |-----------|-------------|----------|
 | **AuthModule** | JWT authentication with refresh token rotation | `apps/server/src/auth/` |
-| **UserModule** | User management via Prisma | `apps/server/src/user/` |
+| **UserModule** | User role management via Prisma | `apps/server/src/user/` |
+| **RoomModule** | Room lifecycle management with cleanup | `apps/server/src/room/` |
 | **PrismaModule** | Global database service | `apps/server/src/prisma/` |
-| **SFUModule** | mediasoup for group calls (WebSocket signalling) | `apps/server/src/sfu/` |
+| **SFUModule** | mediasoup for group calls (WebSocket signalling). Single Worker with per-room Routers. | `apps/server/src/sfu/` |
 | **Client App** | React 19 + Vite frontend | `apps/client/src/` |
 
 ### 2.4 Technology Stack
@@ -139,7 +140,7 @@ Clients exchange media directly with the SFU (RTP/SRTP); all signalling goes ove
 - **Build Tool:** Vite
 - **Routing:** React Router v7 (file-based)
 - **Styling:** Tailwind CSS v4
-- **UI Components:** Radix UI
+- **UI Components:** @base-ui/react
 - **Forms:** React Hook Form + Zod
 - **WebRTC:** Native RTCPeerConnection API
 
@@ -155,15 +156,14 @@ model User {
   email               String    @unique
   username            String    @unique
   passwordHash        String
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
   refreshTokenHash    String?
   failedLoginAttempts Int       @default(0)
   lockedUntil         DateTime?
   tokenVersion        Int       @default(0)
   role                Role      @default(USER)
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-
-  rooms      Room[]     @relation("RoomHost")
+  rooms               Room[]    @relation("RoomHost")
 }
 
 model Room {
@@ -210,7 +210,7 @@ enum RoomStatus {
 
 | Table | Columns | Indexes |
 |-------|---------|---------|
-| `User` | id, email, username, passwordHash, refreshTokenHash, failedLoginAttempts, lockedUntil, tokenVersion, role, createdAt, updatedAt | email (unique), username (unique) |
+| `User` | id, email, username, passwordHash, createdAt, updatedAt, refreshTokenHash, failedLoginAttempts, lockedUntil, tokenVersion, role | email (unique), username (unique) |
 | `Room` | id, slug, name, ownerId, isPublic, maxParticipants, status, createdAt, updatedAt, endedAt, lastActivityAt | slug (unique), ownerId (FK to User, indexed), status (indexed), isPublic (indexed) |
 | `Message` | id, content, userId, roomId, createdAt | userId (FK to User), roomId (FK to Room) — *To be added in Stage 9* |
 
@@ -224,35 +224,32 @@ enum RoomStatus {
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| POST | `/api/auth/register` | Public | Register new user |
-| POST | `/api/auth/login` | Public | Login with email/password |
-| POST | `/api/auth/refresh` | Public | Refresh access token |
-| POST | `/api/auth/logout` | Protected | Invalidate refresh token |
+| POST | `/auth/register` | Public (`@SkipAuthGuard`) | Register new user → 201 Created |
+| POST | `/auth/login` | Public (`@SkipAuthGuard`) | Login with email/password → 200 |
+| POST | `/auth/refresh-token` | JwtRefreshGuard | Refresh access token → 200 |
+| POST | `/auth/logout` | Protected (default) | Invalidate refresh token → 200 |
+| GET | `/auth/me` | Protected (default) | Get current user profile → 200 |
 
 #### User Endpoints
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/api/users/me` | Protected | Get current user profile |
-| GET | `/api/users/:id` | Public | Get user by ID |
-| PATCH | `/api/users/me` | Protected | Update current user |
-| PATCH | `/api/users/:id/role` | ADMIN only | Update user role |
+| PATCH | `/users/:id/role` | ADMIN only (`@Roles(Role.ADMIN)`) | Update user role → 200 |
 
 #### Room Endpoints
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/api/rooms` | Protected | List user's rooms |
-| POST | `/api/rooms` | HOST or ADMIN | Create new room |
-| GET | `/api/rooms/:slug` | Public | Get room by slug |
-| PATCH | `/api/rooms/:id` | Protected | Update room (owner only) |
-| DELETE | `/api/rooms/:id` | Protected | End room (owner only) |
+| POST | `/rooms` | HOST or ADMIN (`@Roles`) | Create new room → 201 Created |
+| GET | `/rooms/:slug` | Public (`@SkipAuthGuard`) | Get room by slug → 200 |
+| PATCH | `/rooms/:id` | Protected (owner check in controller) | Update room → 200 |
+| DELETE | `/rooms/:id` | Protected (owner check in controller) | End room (soft delete + SFU cleanup) → 204 No Content |
 
 #### Request/Response Examples
 
 **Register Request:**
 ```json
-POST /api/auth/register
+POST /auth/register
 {
   "email": "user@example.com",
   "username": "johndoe",
@@ -260,18 +257,42 @@ POST /api/auth/register
 }
 ```
 
-**Login Response:**
+**Register/Login Response:**
 ```json
-HTTP 200 OK
-Set-Cookie: access_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=900
-Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800
+HTTP 201 Created
+Set-Cookie: access_token=...; HttpOnly; Secure; SameSite=Lax
+Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Lax
 
 {
-  "user": {
-    "id": "clx...",
-    "email": "user@example.com",
-    "username": "johndoe"
+  "success": true,
+  "tokens": {
+    "accessToken": "...",
+    "refreshToken": "..."
   }
+}
+```
+
+**Refresh Token Response:**
+```json
+POST /auth/refresh-token
+HTTP 200 OK
+Set-Cookie: access_token=...; HttpOnly; Secure; SameSite=Lax
+Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Lax
+
+{
+  "accessToken": "..."
+}
+```
+
+**Get Current User (GET /auth/me):**
+```json
+HTTP 200 OK
+{
+  "id": "clx...",
+  "email": "user@example.com",
+  "username": "johndoe",
+  "createdAt": "2024-01-01T00:00:00Z",
+  "updatedAt": "2024-01-01T00:00:00Z"
 }
 ```
 
@@ -287,19 +308,26 @@ Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800
 |-------|-----------|---------|-------------|
 | `sfu:join` | Client → Server | `{ roomId, userId, username, roomOwnerId? }` | Join SFU room |
 | `sfu:joined` | Server → Client | `{ routerRtpCapabilities }` | SFU room joined |
+| `sfu:peer-joined` | Server → Client | `{ userId, username }` | Notify existing peers that a new participant joined |
+| `sfu:existing-peers` | Server → Client | `[{ userId, username }]` | Sent to newly joined peer listing participants already in room |
+| `sfu:leave` | Client → Server | `{}` | Leave SFU room voluntarily |
 | `sfu:create-send-transport` | Client → Server | `{}` | Create the peer send transport |
 | `sfu:create-recv-transport` | Client → Server | `{}` | Create the peer receive transport |
-| `sfu:transport-created` | Server → Client | `{ direction, transportId, iceParameters, iceCandidates, dtlsParameters }` | Transport parameters ready for the client |
+| `sfu:transport-created` | Server → Client | `{ direction, transportId, iceParameters, iceCandidates, dtlsParameters, iceServers }` | Transport parameters ready for the client |
 | `sfu:connect-transport` | Client → Server | `{ transportId, dtlsParameters }` | Complete DTLS handshake for a transport |
 | `sfu:transport-connected` | Server → Client | `{ transportId }` | Transport handshake completed |
 | `sfu:produce` | Client → Server | `{ transportId, kind, rtpParameters }` | Create producer |
 | `sfu:producer-created` | Server → Client | `{ producerId, userId, kind }` | New producer |
-| `sfu:new-producer` | Server → Client | `{ producerId, userId, username, kind }` | Notify peers that a consumable producer is available |
+| `sfu:new-producer` | Server → Client | `{ producerId, userId, username, kind, paused }` | Notify peers that a consumable producer is available |
+| `sfu:close-producer` | Client → Server | `{ producerId }` | Close and dispose a producer |
+| `sfu:producer-state-changed` | Server → Client | `{ producerId, kind, userId, paused }` | Broadcast when a producer is paused/resumed |
 | `sfu:consume` | Client → Server | `{ producerId, rtpCapabilities }` | Create consumer |
 | `sfu:consumer-created` | Server → Client | `{ consumerId, producerId, kind, rtpParameters }` | Consumer created in paused state |
 | `sfu:resume-consumer` | Client → Server | `{ consumerId }` | Resume a paused consumer after client setup |
+| `sfu:consumer-resumed` | Server → Client | `{ consumerId }` | Consumer is now active |
 | `sfu:pause-producer` | Client → Server | `{ producerId }` | Pause producer |
 | `sfu:resume-producer` | Client → Server | `{ producerId }` | Resume producer |
+| `sfu:producer-state-changed` | Server → Client | `{ producerId, kind, userId, paused }` | Notify peers that a producer was paused or resumed |
 | `sfu:peer-left` | Server → Client | `{ userId }` | Notify peers that a participant left or was removed |
 | `sfu:kick-peer` | Client → Server | `{ userId }` | Room owner removes a participant from the SFU room |
 | `sfu:kicked` | Server → Client | `{ roomId }` | Sent to the removed participant before disconnect |
@@ -325,6 +353,7 @@ Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800
 | `/login` | Login Page | No (redirect if authenticated) |
 | `/register` | Register Page | No (redirect if authenticated) |
 | `/room/:slug` | Room Page with pre-join, active call, and ended states | Optional |
+| `/auth/me` | API endpoint (GET) | Protected |
 
 **Room Creation Flow:**
 1. User creates room via dialog on home page
@@ -351,16 +380,19 @@ Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800
 
 **Key Classes:**
 - `AuthService` — Core auth logic
-- `LocalStrategy` — Passport strategy for email/password
 - `JwtStrategy` — Passport strategy for access token validation
-- `JwtRefreshStrategy` — Passport strategy for refresh token validation
+- `JwtRefreshTokenStrategy` — Passport strategy for refresh token validation
+- `TokenHelper` — JWT token generation (access + refresh)
+- `PasswordHelper` — bcrypt hashing and verification
+- `RefreshTokenHelper` — SHA256 hashing and timing-safe comparison
 
 **Security Features:**
 - Passwords hashed with bcrypt (10 rounds)
-- Access tokens expire in 15 minutes
-- Refresh tokens expire in 7 days
-- Tokens stored in HTTP-only cookies
+- Access tokens expire in `JWT_ACCESS_EXPIRES_IN_MINUTES` (default 15 min)
+- Refresh tokens expire in `JWT_REFRESH_EXPIRES_IN_DAYS` (default 7 days)
+- Tokens stored in HTTP-only cookies (SameSite=Lax, Secure in production) or passed via Authorization: Bearer header
 - Refresh tokens hashed in database (SHA256)
+- Rate limiting: register 5/min, login 10/min, global tiers (10/60s, 20/5min, 100/1hr)
 
 #### UserModule
 
@@ -378,11 +410,11 @@ Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800
 #### SFUModule
 
 **Responsibilities:**
-- mediasoup Worker and Router lifecycle management
+- mediasoup Worker and Router lifecycle management (single Worker, per-room Routers)
 - Transport creation (send/receive) per peer
 - Producer/Consumer coordination for group calls
 - WebSocket signalling via `/sfu` namespace
-- Scaling across multiple Workers (one per CPU core)
+- WebSocket signalling via `/sfu` namespace
 
 **Status:** Completed (Stage 5)
 
@@ -397,16 +429,38 @@ Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800
 - `RoomPage` (`/room/:slug`) — Canonical room experience with three states: pre-join, active call, ended
 
 **Features:**
-- `AuthContext` — Global auth state with `useAuth()` hook
-- `authApi` — API client with automatic token refresh on 401
-- `ProfileDropdown` — User menu with logout
-- `Room media setup state` — Client-side room entry state that preserves selected input devices and mic/camera enabled intent from pre-join into the active call lifecycle. The `MediaStreamProvider` seeds the `MediaTrackController` with device IDs from `localStorage` on mount so the initial `getUserMedia` call targets saved devices. Device selections and toggle preferences in the track controller singleton survive the prejoin-to-active transition without re-mount. Device availability is validated at join time; missing devices surface recoverable UI errors in the pre-join view.
+- `features/auth/` — AuthContext with `useAuth()` hook, login/register forms, profile dropdown, auth API service
+- `features/room/` — RoomPage with PreJoinView, ActiveRoomView, CallEndedView; room API, TanStack Query hooks
+- `features/media/` — MediaStreamProvider/MediaManagerProvider, device selector, media controls, device settings
+- `features/sfu/` — SfuProvider with `useSfu()` hook wrapping SfuManager
 
-**UI Components (Radix UI):**
-- `Button` — Primary/secondary/outline/ghost variants
+**Libraries:**
+- `lib/api/` — ApiClient (fetch wrapper with 401-auto-refresh), typed errors (ApiError, AuthError, ValidationError, NetworkError)
+- `lib/sfu/` — SfuManager, SfuConnection (socket.io), EventRouter, StatsCollector, qualityScore
+- `lib/media/` — MediaManager, MediaAcquisition, DeviceService, error classifier
+- `lib/audio/` — RemoteAudioMixer (Web Audio API)
+- `lib/react-query/` — QueryClient, query keys
+- `lib/config/` — app, media, routes, themes configuration
+
+**UI Components (components/ui/ — @base-ui/react + Tailwind v4):**
+- `Button`, `ButtonGroup` — Primary/secondary/outline/ghost variants
 - `Input` — Text input with label integration
 - `Card` — Container component
 - `Label` — Form label with accessibility
+- `Dialog` — Modal dialog (@base-ui/react)
+- `DropdownMenu` — Dropdown menu (@base-ui/react)
+- `Alert` — Alert/notification component
+- `Separator` — Visual divider
+- `Tooltip` — Tooltip (@base-ui/react)
+- `CopyLink` — Copy-to-clipboard with visual feedback
+- `LinkButton` — Styled link that looks like a button
+- `ThemeSwitcher` — Dark/light mode toggle
+- `Sonner` — Toast notifications (sonner library)
+
+**Room Components (components/room/):**
+- `ParticipantItem` — Single participant row with status indicators
+- `ParticipantsList` — List of all room participants
+- `QualityIndicator` — Network quality display
 
 **Build Optimization:**
 - Route-based code splitting via `React.lazy()` — room page (mediasoup-client, socket.io-client) loaded on demand
@@ -422,7 +476,7 @@ Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800
 ### 6.1 Authentication
 
 **Flow:**
-1. User submits email/password to `/api/auth/login`
+1. User submits email/password to `/auth/login`
 2. Server validates credentials
 3. Server generates JWT access token (15min) + refresh token (7days)
 4. Tokens set as HTTP-only cookies
@@ -432,9 +486,9 @@ Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800
 ```typescript
 // Access Token Payload
 {
-  sub: string,      // User ID
+  id: string,         // User ID
   email: string,
-  username: string,
+  role: Role,         // USER | HOST | ADMIN
   tokenVersion: number,
   iat: number,
   exp: number
@@ -442,8 +496,11 @@ Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800
 
 // Refresh Token Payload
 {
-  sub: string,      // User ID
-  jti: string,      // JWT ID (unique token identifier)
+  id: string,         // User ID
+  email: string,
+  role: Role,
+  tokenVersion: number,
+  jti: string,        // JWT ID (unique token identifier)
   iat: number,
   exp: number
 }
@@ -452,8 +509,10 @@ Set-Cookie: refresh_token=...; HttpOnly; Secure; SameSite=Strict; Max-Age=604800
 ### 6.2 Authorization
 
 **Guards:**
-- `JwtAuthGuard` — Protects endpoints requiring authentication
-- `SkipAuthGuard` — Marks public endpoints (default behavior)
+- `JwtAuthGuard` — Global APP_GUARD, default global, skips if `@SkipAuthGuard()` metadata set
+- `JwtRefreshAuthGuard` — Validates refresh token on `/auth/refresh-token`
+- `SkipAuthGuard` — Decorator that sets metadata to skip JwtAuthGuard (marks public endpoints)
+- `RolesGuard` — Global APP_GUARD, allows all if no `@Roles()` decorator, checks role if present
 
 **Usage:**
 ```typescript
@@ -482,6 +541,16 @@ The server builds an ICE server list from environment variables and sends it to 
   { urls: ['turn:host:3478', 'turns:host:5349'], username: '…', credential: '…' },
 ]
 ```
+
+**Codecs (Router mediaCodecs):**
+- Audio: `audio/opus` (48kHz, 2 channels)
+- Video: `video/VP8` (90kHz, x-google-start-bitrate: 1000)
+- Video: `video/VP9` (90kHz, profile-id: 2, x-google-start-bitrate: 1000)
+- Video: `video/h264` (90kHz, packetization-mode: 1, profile-level-id: `4d0032`, level-asymmetry-allowed: 1, x-google-start-bitrate: 1000)
+
+**Transport Config:**
+- `listenIps`: from `MEDIASOUP_LISTEN_IP` / `MEDIASOUP_ANNOUNCED_IP` env vars
+- `enableUdp: true`, `enableTcp: true`, `preferUdp: true`
 
 **TURN (Production):**
 - coturn server for relay candidates
@@ -523,19 +592,19 @@ const stats = await peerConnection.getStats();
 
 ## 8. Scalability
 
-### 8.1 SFU Architecture (planned)
+### 8.1 SFU Architecture
 
 **mediasoup Components:**
-- **Worker** — OS process with media capabilities
-- **Router** — Routes media for a room
+- **Worker** — OS process with media capabilities (single Worker currently)
+- **Router** — Routes media for a room (one per room)
 - **Transport** — RTP stream (send/receive)
 - **Producer** — Incoming media track
 - **Consumer** — Outgoing media track
 
-**Scaling Strategy:**
+**Current Implementation:**
 - 1 Router per room
-- Multiple Workers per server (CPU cores)
-- Horizontal scaling via load balancer
+- Single Worker per server (crash recovery with auto-restart after 2s delay)
+- Horizontal scaling via load balancer (planned)
 
 ### 8.2 Horizontal Scaling
 
@@ -576,20 +645,18 @@ const stats = await peerConnection.getStats();
 
 **Database:**
 ```bash
-docker compose up -d  # PostgreSQL + pgAdmin
-pnpm migrate:dev      # Run Prisma migrations
+pnpm -C apps/server bd:dev    # PostgreSQL + pgAdmin (docker)
+pnpm -C apps/server migrate:dev  # Prisma migrations
 ```
 
 **Server:**
 ```bash
-cd apps/server
-pnpm start:dev       # Watch mode with hot reload
+pnpm -C apps/server dev       # Watch mode with hot reload
 ```
 
 **Client:**
 ```bash
-cd apps/client
-pnpm dev             # Vite dev server on port 5173
+pnpm -C apps/client dev       # Vite dev server on port 5173
 ```
 
 ### 9.2 Production Deployment
@@ -772,9 +839,10 @@ Push to main / PR
 | `DATABASE_URL` | Yes | — | PostgreSQL connection string |
 | `JWT_ACCESS_SECRET` | Yes | — | Secret for signing access tokens |
 | `JWT_REFRESH_SECRET` | Yes | — | Secret for signing refresh tokens |
-| `JWT_ACCESS_EXPIRES_IN_MINUTES` | No | 15 | Access token lifetime in minutes |
-| `JWT_REFRESH_EXPIRES_IN_DAYS` | No | 7 | Refresh token lifetime in days |
+| `JWT_ACCESS_EXPIRES_IN_MINUTES` | Yes | 15 | Access token lifetime in minutes |
+| `JWT_REFRESH_EXPIRES_IN_DAYS` | Yes | 7 | Refresh token lifetime in days |
 | `CLIENT_URL` | No | http://localhost:5173 | Allowed CORS origin for REST API and WebSocket |
+| `NODE_ENV` | No | — | Set to `production` to enable Secure cookie flag |
 | `MEDIASOUP_LISTEN_IP` | No | 127.0.0.1 | IP for mediasoup WebRtcTransport to listen on |
 | `MEDIASOUP_ANNOUNCED_IP` | No | — | Public IP announced to clients for media connectivity |
 | `RTC_MIN_PORT` | No | 40000 | Lower bound of mediasoup worker RTC port range |
@@ -852,7 +920,7 @@ High-level steps: `sfu:join` → `sfu:joined` → create transports → `sfu:pro
 
 > See full diagram: [architecture/sequence-auth.md](./architecture/sequence-auth.md)
 
-High-level steps: `POST /api/auth/login` → bcrypt verify → generate access + refresh tokens → set HTTP-only cookies → on expiry: `POST /api/auth/refresh` → rotate refresh token → new cookies.
+High-level steps: `POST /auth/login` → bcrypt verify → generate access + refresh tokens → set HTTP-only cookies → on expiry: `POST /auth/refresh-token` → rotate refresh token → new cookies.
 
 ---
 
@@ -870,4 +938,5 @@ High-level steps: `POST /api/auth/login` → bcrypt verify → generate access +
 | 1.8 | 2026-03-18 | — | Added coturn TURN/STUN server to Docker Compose stack (Sec 9.2). TURN env vars in Sec 9.5. |
 | 1.9 | 2026-03-18 | — | TASK-072: Configurable ICE servers. Server reads TURN env vars and sends iceServers to client via sfu:transport-created payload. Removed hard-coded STUN from client. |
 | 2.0 | 2026-03-18 | — | TASK-074: Client build optimization. Route-based code splitting for room page, vendor chunk splitting, Caddy compression and cache headers. |
-| 2.1 | 2026-03-18 | — | Stage 12: CI/CD pipeline. GitHub Actions CI (lint, typecheck, tests, Docker build check), deploy workflow (GHCR + SSH), docker-compose.prod.yml, VPS setup script. |
+| 2.2 | 2026-03-29 | — | Full docs sync with codebase. Fixed REST API paths (refresh-token, auth/me), token payloads (id+role not sub+username), cookie SameSite=lax, added missing WS events (peer-joined, existing-peers, leave, close-producer, consumer-resumed, producer-state-changed), updated mediasoup config (single worker, VP9 codec, h264 params), removed non-existent endpoints, added RoomModule to component overview. |
+| 2.3 | 2026-03-29 | — | Removed `/api/` prefix from all REST endpoints (code has no global prefix). Fixed UI primitives to @base-ui/react (not Radix UI), removed non-existent Select component. Fixed token extraction (Bearer header + cookies). Added throttling/Swagger docs. Fixed JWT env vars to required. Added NODE_ENV. Fixed register status 201, room DELETE 204. Fixed REQ-002 (removed non-existent /users/me and /users/:id). Updated architecture diagrams (c4-l3-backend, c4-l3-frontend, sequence-auth). Updated all module docs. |

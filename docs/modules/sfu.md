@@ -2,58 +2,73 @@
 
 ## Purpose
 
-Selective Forwarding Unit for scalable group video calls using mediasoup. Routes media streams between 3+ participants when P2P becomes inefficient.
+Selective Forwarding Unit for scalable group video calls using mediasoup. Routes media streams between 3+ participants via a single Worker process with per-room Routers.
 
 ---
 
 ## Use Cases
 
 ### 1. Create Room Router
-- On room creation, get or create Worker
-- Create Router for the room
-- Store Router ID for peer connections
+- On first peer join, create Router for the room via `WorkerManager`
+- Subsequent peers reuse the same Router
+- Router closed when last peer leaves or room is ended
 
 ### 2. Join SFU Room
-- Create receive Transport for client
-- Create send Transport for client
-- Exchange DTLS parameters
-- Return Transport IDs to client
+- Register peer in room (independent of media tracks)
+- Notify existing peers via `sfu:peer-joined`
+- Send existing peer list via `sfu:existing-peers`
+- Return Router RTP capabilities via `sfu:joined`
 
-### 3. Produce Track
+### 3. Create Transports
+- Send and receive WebRTC Transports created per peer
+- ICE servers list from `getIceServers()` included in `sfu:transport-created`
+- Client completes DTLS handshake via `sfu:connect-transport`
+
+### 4. Produce Track
 - Client creates Producer on send Transport
-- Server adds Producer to Router
-- Notify other peers about new Producer
+- Server notifies other peers via `sfu:new-producer` (includes `paused` state)
 
-### 4. Consume Track
-- Client requests to consume a Producer
-- Server creates Consumer on receive Transport
-- Return Consumer parameters to client
+### 5. Consume Track
+- Client requests Consumer for a Producer
+- Server creates Consumer in paused state
+- Client resumes after local setup
 
-### 5. Handle Transports
-- Manage ICE state changes
-- Handle DTLS handshake
-- Close Transports on disconnect
+### 6. Pause/Resume Producer
+- Client pauses/resumes its own producers
+- Server broadcasts `sfu:producer-state-changed` to room peers
 
-### 6. Remove Participant
-- Room owner requests participant removal
-- Server verifies the requester against the room owner id shared during SFU join
-- Target peer receives `sfu:kicked` and is disconnected from SFU namespace
+### 7. Leave Room
+- Client emits `sfu:leave` or disconnects
+- Server closes transports, removes peer, notifies others via `sfu:peer-left`
+- If last peer, closes Router
+
+### 8. Kick Participant
+- Room owner requests participant removal via `sfu:kick-peer`
+- Target peer receives `sfu:kicked` and is disconnected
 - Remaining peers receive `sfu:peer-left`
+
+### 9. End Room
+- Called by `RoomController` on `DELETE /rooms/:id`
+- Broadcasts `sfu:room-ended` to all peers
+- Closes all transports and Router
 
 ---
 
 ## mediasoup Hierarchy
 
 ```
-Worker (OS process)
-  └── Router (per room)
-      ├── Transport (send)
-      │   ├── Producer (incoming track)
-      │   └── Consumer (outgoing track)
-      └── Transport (receive)
-          ├── Producer (incoming track)
-          └── Consumer (outgoing track)
+WorkerManager (singleton)
+  └── Worker (single OS process)
+      ├── Router (per room)
+      │   ├── WebRtcTransport (send, per peer)
+      │   │   └── Producer (incoming track)
+      │   └── WebRtcTransport (recv, per peer)
+      │       └── Consumer (outgoing track)
+      └── Router (per room)
+          └── ...
 ```
+
+> **Note:** Current implementation uses a single Worker. Multi-worker scaling is planned for horizontal scaling.
 
 ---
 
@@ -63,24 +78,29 @@ Worker (OS process)
 |-------|-----------|---------|-------------|
 | `sfu:join` | Client → Server | `{ roomId, userId, username, roomOwnerId? }` | Join SFU room |
 | `sfu:joined` | Server → Client | `{ routerRtpCapabilities }` | SFU room joined |
+| `sfu:peer-joined` | Server → Client | `{ userId, username }` | Notify existing peers about new participant |
+| `sfu:existing-peers` | Server → Client | `[{ userId, username }]` | Sent to new peer with list of existing participants |
+| `sfu:leave` | Client → Server | `{}` | Leave SFU room voluntarily |
 | `sfu:create-send-transport` | Client → Server | `{}` | Create the peer send transport |
 | `sfu:create-recv-transport` | Client → Server | `{}` | Create the peer receive transport |
-| `sfu:transport-created` | Server → Client | `{ direction, transportId, iceParameters, iceCandidates, dtlsParameters }` | Transport parameters ready for the client |
-| `sfu:connect-transport` | Client → Server | `{ transportId, dtlsParameters }` | Complete DTLS handshake for a transport |
+| `sfu:transport-created` | Server → Client | `{ direction, transportId, iceParameters, iceCandidates, dtlsParameters, iceServers }` | Transport parameters ready |
+| `sfu:connect-transport` | Client → Server | `{ transportId, dtlsParameters }` | Complete DTLS handshake |
 | `sfu:transport-connected` | Server → Client | `{ transportId }` | Transport handshake completed |
 | `sfu:produce` | Client → Server | `{ transportId, kind, rtpParameters }` | Create producer |
-| `sfu:producer-created` | Server → Client | `{ producerId, userId, kind }` | New producer |
-| `sfu:new-producer` | Server → Client | `{ producerId, userId, username, kind }` | Notify peers that a consumable producer is available |
+| `sfu:producer-created` | Server → Client | `{ producerId, userId, kind }` | Producer created |
+| `sfu:new-producer` | Server → Client | `{ producerId, userId, username, kind, paused }` | Notify peers about consumable producer |
+| `sfu:close-producer` | Client → Server | `{ producerId }` | Close and dispose a producer |
 | `sfu:consume` | Client → Server | `{ producerId, rtpCapabilities }` | Create consumer |
-| `sfu:consumer-created` | Server → Client | `{ consumerId, producerId, kind, rtpParameters }` | Consumer created in paused state |
-| `sfu:resume-consumer` | Client → Server | `{ consumerId }` | Resume a paused consumer after client setup |
+| `sfu:consumer-created` | Server → Client | `{ consumerId, producerId, kind, rtpParameters }` | Consumer created (paused state) |
+| `sfu:resume-consumer` | Client → Server | `{ consumerId }` | Resume a paused consumer |
+| `sfu:consumer-resumed` | Server → Client | `{ consumerId }` | Consumer is now active |
 | `sfu:pause-producer` | Client → Server | `{ producerId }` | Pause producer |
 | `sfu:resume-producer` | Client → Server | `{ producerId }` | Resume producer |
-| `sfu:peer-left` | Server → Client | `{ userId }` | Notify peers that a participant left or was removed |
-| `sfu:peer-joined` | Server → Client | `{ userId, username }` | Notify existing peers that a new participant joined the room (fired regardless of media) |
-| `sfu:existing-peers` | Server → Client | `[{ userId, username }]` | Sent to a newly joined peer listing participants already in the room |
-| `sfu:kick-peer` | Client → Server | `{ userId }` | Room owner removes a participant |
-| `sfu:kicked` | Server → Client | `{ roomId }` | Sent to the removed participant before disconnect |
+| `sfu:producer-state-changed` | Server → Client | `{ producerId, kind, userId, paused }` | Broadcast producer pause/resume |
+| `sfu:peer-left` | Server → Client | `{ userId }` | Participant left or was removed |
+| `sfu:kick-peer` | Client → Server | `{ userId }` | Room owner removes participant |
+| `sfu:kicked` | Server → Client | `{ roomId }` | Sent to removed participant |
+| `sfu:room-ended` | Server → Client | `{ roomId }` | Room ended by owner |
 
 ---
 
@@ -106,51 +126,38 @@ Peer visibility is **independent of media track production**. A peer appears for
 ## Configuration
 
 ```typescript
-// mediasoup Worker
+// Worker
 {
   logLevel: 'warn',
   logTags: ['info', 'ice', 'dtls', 'rtp', 'srtp', 'rtcp'],
-  rtcMinPort: 40000,
-  rtcMaxPort: 49999,
+  rtcMinPort: 40000,  // RTC_MIN_PORT env
+  rtcMaxPort: 40099,  // RTC_MAX_PORT env
 }
 
 // Router codecs
 {
   mediaCodecs: [
-    {
-      kind: 'audio',
-      mimeType: 'audio/opus',
-      clockRate: 48000,
-      channels: 2,
-    },
-    {
-      kind: 'video',
-      mimeType: 'video/VP8',
-      clockRate: 90000,
+    { kind: 'audio', mimeType: 'audio/opus', clockRate: 48000, channels: 2 },
+    { kind: 'video', mimeType: 'video/VP8', clockRate: 90000,
+      parameters: { 'x-google-start-bitrate': 1000 } },
+    { kind: 'video', mimeType: 'video/VP9', clockRate: 90000,
+      parameters: { 'profile-id': 2, 'x-google-start-bitrate': 1000 } },
+    { kind: 'video', mimeType: 'video/h264', clockRate: 90000,
       parameters: {
-        'x-google-start-bitrate': 1000,
-      },
-    },
-    {
-      kind: 'video',
-      mimeType: 'video/h264',
-      clockRate: 90000,
-      parameters: {
-        'profile-level-id': '42e01f',
         'packetization-mode': 1,
-      },
-    },
+        'profile-level-id': '4d0032',
+        'level-asymmetry-allowed': 1,
+        'x-google-start-bitrate': 1000,
+      } },
   ],
 }
 
 // WebRTC Transport
 {
-  listenIps: [
-    { ip: '0.0.0.0', announcedIp: null }, // Set announcedIp to public IP in production
-  ],
-  initialAvailableOutgoingBitrate: 1000000,
-  minimumAvailableOutgoingBitrate: 600000,
-  maxSctpMessageSize: 262144,
+  listenIps: [{ ip: '127.0.0.1', announcedIp: undefined }],
+  enableUdp: true,
+  enableTcp: true,
+  preferUdp: true,
 }
 ```
 
@@ -158,9 +165,10 @@ Peer visibility is **independent of media track production**. A peer appears for
 
 ## Edge Cases
 
-### Worker Exceeded
-- Create new Worker if max routers per worker reached
-- Distribute routers across workers
+### Worker Death
+- `WorkerManager` detects worker death via `died` event
+- Attempts restart after 2-second delay
+- Clears all router references
 
 ### Producer Not Found
 - Return error when consuming non-existent producer
@@ -179,16 +187,17 @@ Peer visibility is **independent of media track production**. A peer appears for
 ## Scaling Strategy
 
 1. **Per-Room Routers**: Each room gets its own Router
-2. **Multiple Workers**: Distribute rooms across workers (CPU cores)
-3. **Horizontal Scaling**: Load balancer + Redis for WebSocket state sync
-4. **Geographic Distribution**: Regional SFUs for reduced latency
+2. **Single Worker**: Current implementation uses one mediasoup Worker
+3. **Future — Multiple Workers**: Distribute rooms across workers (CPU cores), round-robin assignment
+4. **Future — Horizontal Scaling**: Load balancer + Redis for WebSocket state sync
 
 ---
 
 ## Files
 
-- `apps/server/src/sfu/sfu.service.ts` — SFU business logic
-- `apps/server/src/sfu/sfu.gateway.ts` — WebSocket handler
+- `apps/server/src/sfu/sfu.service.ts` — SFU orchestration (rooms, peers, transports, producers, consumers)
+- `apps/server/src/sfu/sfu.gateway.ts` — Socket.io gateway (`/sfu` namespace)
 - `apps/server/src/sfu/sfu.module.ts` — Module definition
-- `apps/server/src/sfu/interfaces/` — Type definitions
-- `apps/server/src/sfu/config/mediasoup.config.ts` — mediasoup configuration
+- `apps/server/src/sfu/worker-manager.ts` — Single Worker lifecycle, Router creation, crash recovery
+- `apps/server/src/sfu/config/mediasoup.config.ts` — Worker, Router, Transport config + `getIceServers()`
+- `apps/server/src/sfu/interfaces/sfu.interface.ts` — TypeScript interfaces

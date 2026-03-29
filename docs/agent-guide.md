@@ -44,7 +44,7 @@ apps/server/src/
 apps/client/src/
 ├── routes/        # File-based routing
 ├── components/
-│   └── ui/        # Radix UI primitives
+│   └── ui/        # @base-ui/react primitives
 ├── contexts/      # React Context providers
 └── lib/           # Utilities and config
     ├── api/       # API client
@@ -53,7 +53,7 @@ apps/client/src/
 ```
 
 ### 5. API Conventions
-- REST endpoints follow `/api/resource` pattern
+- REST endpoints follow `/resource` pattern (no global `/api/` prefix)
 - WebSocket events follow `namespace:action` pattern (e.g., `sfu:join`, `sfu:produce`)
 - Use HTTP-only cookies for JWT tokens
 - Return consistent error responses

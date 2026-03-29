@@ -178,9 +178,10 @@ describe('useMediasoup', () => {
   it('connects, joins the room, and produces local tracks after send transport is ready', async () => {
     const videoTrack = createTrack('video-1', 'video');
     const audioTrack = createTrack('audio-1', 'audio');
-    const localStream = new MockMediaStream([videoTrack, audioTrack]) as unknown as MediaStream;
+    const localVideoStream = new MockMediaStream([videoTrack]) as unknown as MediaStream;
+    const localAudioStream = new MockMediaStream([audioTrack]) as unknown as MediaStream;
 
-    renderHook(() => useMediasoup({ roomId: 'room-1', localStream, enabled: true }));
+    renderHook(() => useMediasoup({ roomId: 'room-1', localVideoStream, localAudioStream, enabled: true, displayName: 'alice' }));
 
     expect(sfuMock.connect).toHaveBeenCalled();
 
@@ -217,7 +218,7 @@ describe('useMediasoup', () => {
 
   it('collects remote peer media and removes it when the peer leaves', async () => {
     const { result } = renderHook(() =>
-      useMediasoup({ roomId: 'room-1', localStream: null, enabled: true })
+      useMediasoup({ roomId: 'room-1', localVideoStream: null, localAudioStream: null, enabled: true })
     );
 
     act(() => {
@@ -254,7 +255,7 @@ describe('useMediasoup', () => {
 
   it('sets wasKicked and clears remote peers when kicked event fires', async () => {
     const { result } = renderHook(() =>
-      useMediasoup({ roomId: 'room-1', localStream: null, enabled: true })
+      useMediasoup({ roomId: 'room-1', localVideoStream: null, localAudioStream: null, enabled: true })
     );
 
     act(() => {
@@ -279,7 +280,7 @@ describe('useMediasoup', () => {
     sfuMock.getProducerByKind.mockReturnValue({ id: 'video-producer' });
 
     const { result } = renderHook(() =>
-      useMediasoup({ roomId: 'room-1', localStream: null, enabled: true })
+      useMediasoup({ roomId: 'room-1', localVideoStream: null, localAudioStream: null, enabled: true })
     );
 
     act(() => {
@@ -299,7 +300,7 @@ describe('useMediasoup', () => {
     const newTrack = createTrack('video-2', 'video');
 
     const { result } = renderHook(() =>
-      useMediasoup({ roomId: 'room-1', localStream: null, enabled: true })
+      useMediasoup({ roomId: 'room-1', localVideoStream: null, localAudioStream: null, enabled: true })
     );
 
     let success = false;
@@ -315,7 +316,7 @@ describe('useMediasoup', () => {
     sfuMock.getProducerByKind.mockReturnValue({ id: 'audio-producer' });
 
     const { result } = renderHook(() =>
-      useMediasoup({ roomId: 'room-1', localStream: null, enabled: true })
+      useMediasoup({ roomId: 'room-1', localVideoStream: null, localAudioStream: null, enabled: true })
     );
 
     expect(result.current.hasProducer('audio')).toBe(true);
