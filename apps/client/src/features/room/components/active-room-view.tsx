@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ParticipantsList } from '@/components/room/ParticipantsList';
-import { RemoteAudio } from '@/components/remote-audio';
 import type { UseRoomSessionResult } from '@/features/room/hooks/use-room-session';
 import type { Room } from '@/features/room/types/room.types';
 import { MediaControls } from '@/features/media/components/media-controls';
 import { cn } from '@/lib/utils';
 import { computeLayout } from '@zvonok/video-layout';
-import { VideoGrid, VideoTile } from '@/components/video-grid';
-import { RemoteVideo } from '@/components/remote-video';
+import { VideoGrid } from '@/components/video-grid';
+import { RoomVideo } from '@/features/room/components/room-video';
+import { RoomRemoteAudio } from './room-remote-audio';
 
 interface ActiveRoomViewProps {
   session: UseRoomSessionResult;
@@ -28,12 +28,9 @@ export function ActiveRoomView({
     toggleVideo,
     toggleAudio,
     remotePeers,
-    activeSpeakerId,
-    audioLevels,
     localUserId,
     participants,
     kickPeer,
-    mixer,
   } = session;
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -95,7 +92,8 @@ export function ActiveRoomView({
         <VideoGrid ref={containerRef}>
           {dimensions.width > 0 && dimensions.height > 0 && (
             <>
-              <VideoTile isActiveSpeaker={activeSpeakerId === localUserId}
+              <RoomVideo
+                userId={localUserId}
                 style={{
                   position: 'absolute',
                   top: 0,
@@ -104,20 +102,16 @@ export function ActiveRoomView({
                   height: layout.tileHeight,
                   transform: `translateX(${layout.tiles[0].x}px) translateY(${layout.tiles[0].y}px)`
                 }}
-              >
-                <RemoteVideo
-                  stream={localVideoStream}
-                  username={currentUsername}
-                  isVideoEnabled={mediaControls.isVideoEnabled}
-                  isAudioEnabled={mediaControls.isAudioEnabled}
-                  audioLevel={audioLevels.get(localUserId) ?? 0}
-                  className="h-full w-full"
-                />
-              </VideoTile>
+                stream={localVideoStream}
+                username={currentUsername}
+                isVideoEnabled={mediaControls.isVideoEnabled}
+                isAudioEnabled={mediaControls.isAudioEnabled}
+              />
 
               {remotePeers.length > 0 && remotePeers.map((peer, index) => (
-                <VideoTile
+                <RoomVideo
                   key={peer.userId}
+                  userId={peer.userId}
                   style={{
                     position: 'absolute',
                     top: 0,
@@ -126,23 +120,17 @@ export function ActiveRoomView({
                     height: layout.tileHeight,
                     transform: `translateX(${layout.tiles[index + 1].x}px) translateY(${layout.tiles[index + 1].y}px)`
                   }}
-                  isActiveSpeaker={activeSpeakerId === peer.userId}
-                >
-                  <RemoteVideo
-                    stream={peer.stream}
-                    username={peer.username}
-                    isVideoEnabled={peer.isVideoEnabled}
-                    isAudioEnabled={peer.isAudioEnabled}
-                    audioLevel={audioLevels.get(peer.userId) ?? 0}
-                    className="h-full w-full"
-                  />
-                </VideoTile>
+                  stream={peer.stream}
+                  username={peer.username}
+                  isVideoEnabled={peer.isVideoEnabled}
+                  isAudioEnabled={peer.isAudioEnabled}
+                />
               ))}
             </>
           )}
         </VideoGrid>
 
-        <RemoteAudio mixer={mixer} />
+        <RoomRemoteAudio />
 
         <aside
           className={cn(

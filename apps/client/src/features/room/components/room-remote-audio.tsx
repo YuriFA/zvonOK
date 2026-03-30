@@ -1,11 +1,8 @@
 import { useEffect, useRef } from 'react';
-import type { IRemoteAudioMixer } from '@/lib/audio/remote-audio-mixer';
+import { useRoomAudioContext } from '../contexts/room-audio.context';
 
-interface RemoteAudioProps {
-  mixer: IRemoteAudioMixer | null;
-}
-
-export function RemoteAudio({ mixer }: RemoteAudioProps) {
+export function RoomRemoteAudio() {
+  const { mixer } = useRoomAudioContext()
   const containerRef = useRef<HTMLDivElement>(null);
   const appendedRef = useRef(false);
 

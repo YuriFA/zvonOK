@@ -113,10 +113,18 @@ vi.mock('@/components/local-video', () => ({
   ),
 }));
 
-vi.mock('@/components/remote-video', () => ({
-  RemoteVideo: ({ username }: { username?: string }) => (
-    <div data-testid="remote-video">{username ?? 'remote-video'}</div>
-  ),
+vi.mock('@/features/room/contexts/room-audio.context', () => ({
+  useRoomAudioContext: () => ({
+    mixer: null,
+    audioElement: null,
+    store: {
+      getLevel: () => 0,
+      getActiveSpeakerId: () => null,
+      subscribeLevel: () => () => {},
+      subscribeGlobal: () => () => {},
+    },
+  }),
+  RoomAudioContextProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 vi.mock('@/features/media/components/device-selector', () => ({
@@ -234,11 +242,7 @@ describe('RoomPage', () => {
         { id: 'user-1', userId: 'user-1', username: 'alice', isMuted: false, isVideoOff: false, isConnected: true },
         { id: 'user-2', userId: 'user-2', username: 'bob', isMuted: false, isVideoOff: false, isConnected: true },
       ],
-      activeSpeakerId: null,
-      audioLevels: new Map(),
       localUserId: 'user-1',
-      mixer: null,
-      audioElement: null,
     });
     mockToggleVideo.mockResolvedValue(undefined);
     mockToggleAudio.mockResolvedValue(undefined);
