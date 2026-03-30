@@ -155,6 +155,7 @@ export class MediaCapture implements IMediaCapture {
         ? { video: { ...DEFAULT_VIDEO_CONSTRAINTS, deviceId: { exact: deviceId } }, audio: false }
         : { video: DEFAULT_VIDEO_CONSTRAINTS, audio: false };
     }
+
     return deviceId
       ? { audio: { ...DEFAULT_AUDIO_CONSTRAINTS, deviceId: { exact: deviceId } } }
       : { audio: DEFAULT_AUDIO_CONSTRAINTS };
