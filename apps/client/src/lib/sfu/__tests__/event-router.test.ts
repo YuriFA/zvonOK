@@ -23,6 +23,7 @@ describe('SfuEventRouter', () => {
       onExistingPeers: vi.fn(),
       onNewProducer: vi.fn(),
       onConsumerCreated: vi.fn().mockResolvedValue(undefined),
+      onProducerStateChanged: vi.fn(),
       onPeerLeft: vi.fn(),
       onKicked: vi.fn(),
       onRoomEnded: vi.fn(),
@@ -59,9 +60,10 @@ describe('SfuEventRouter', () => {
     expect(events).toContain('sfu:new-producer');
     expect(events).toContain('sfu:consumer-created');
     expect(events).toContain('sfu:peer-left');
+    expect(events).toContain('sfu:producer-state-changed');
     expect(events).toContain('sfu:kicked');
     expect(events).toContain('sfu:room-ended');
-    expect(events).toHaveLength(13);
+    expect(events).toHaveLength(14);
   });
 
   it('routes connect event to onConnected', () => {

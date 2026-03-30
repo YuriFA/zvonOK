@@ -48,6 +48,7 @@ const sfuMock = vi.hoisted(() => {
   const peerJoinedListeners = new Set<(peer: { userId: string; username: string; producers: Map<string, { kind: 'audio' | 'video' }> }) => void>();
   const peerLeftListeners = new Set<(userId: string) => void>();
   const kickedListeners = new Set<(payload: { roomId: string }) => void>();
+  const producerStateChangeListeners = new Set<(payload: { userId: string; kind: 'audio' | 'video'; paused: boolean }) => void>();
 
   return {
     connect: vi.fn(),
@@ -85,6 +86,10 @@ const sfuMock = vi.hoisted(() => {
       kickedListeners.add(callback);
       return () => kickedListeners.delete(callback);
     }),
+    onProducerStateChange: vi.fn((callback: (payload: { userId: string; kind: 'audio' | 'video'; paused: boolean }) => void) => {
+      producerStateChangeListeners.add(callback);
+      return () => producerStateChangeListeners.delete(callback);
+    }),
     emitState(state: typeof baseState) {
       currentState = state;
       stateListeners.forEach((callback) => {
@@ -111,6 +116,11 @@ const sfuMock = vi.hoisted(() => {
         callback(payload);
       });
     },
+    emitProducerStateChange(payload: { userId: string; kind: 'audio' | 'video'; paused: boolean }) {
+      producerStateChangeListeners.forEach((callback) => {
+        callback(payload);
+      });
+    },
     reset() {
       currentState = { ...baseState };
       stateListeners.clear();
@@ -118,6 +128,7 @@ const sfuMock = vi.hoisted(() => {
       peerJoinedListeners.clear();
       peerLeftListeners.clear();
       kickedListeners.clear();
+      producerStateChangeListeners.clear();
       this.connect.mockClear();
       this.disconnect.mockClear();
       this.leaveRoom.mockClear();
@@ -135,6 +146,7 @@ const sfuMock = vi.hoisted(() => {
       this.onPeerJoined.mockClear();
       this.onPeerLeft.mockClear();
       this.onKicked.mockClear();
+      this.onProducerStateChange.mockClear();
     },
   };
 });
