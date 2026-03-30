@@ -87,7 +87,6 @@ export const RoomPage = () => {
         <MediaStreamProvider>
           {viewState === 'prejoin' ? (
             <PrejoinView
-              room={room}
               roomUrl={roomUrl}
               displayName={displayName}
               onDisplayNameChange={setDisplayName}

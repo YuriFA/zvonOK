@@ -3,9 +3,10 @@ import { useEndRoom } from "../hooks/use-end-room";
 import { useRoomSession } from "../hooks/use-room-session";
 import { ActiveRoomView } from "./active-room-view"
 import { RoomAlerts } from "./room-alerts"
-import { RoomHeader } from "./room-header"
+import { ActiveRoomHeader } from "./active-room-header"
 import type { Room } from "../types/room.types";
 import { useAuth } from "@/features/auth/contexts/auth.context";
+import { RoomAudioContextProvider } from "../contexts/room-audio.context";
 
 interface Props {
   room: Room;
@@ -22,29 +23,28 @@ export const RoomView = ({ room, displayName }: Props) => {
   const session = useRoomSession({ room, userId: user?.id, displayName });
 
   return (
-    <div className="h-screen flex flex-col">
-      <RoomHeader
-        variant="active"
-        room={room}
-        audioElement={session.audioElement}
-        isVideoEnabled={session.mediaControls.isVideoEnabled}
-        isAudioEnabled={session.mediaControls.isAudioEnabled}
-        isOwner={isOwner}
-        onEndRoom={() => endRoom.mutate(room.id)}
-        isEndingRoom={endRoom.isPending}
-      />
+    <RoomAudioContextProvider session={session}>
+      <div className="h-screen flex flex-col">
+        <ActiveRoomHeader
+          isVideoEnabled={session.mediaControls.isVideoEnabled}
+          isAudioEnabled={session.mediaControls.isAudioEnabled}
+          isOwner={isOwner}
+          onEndRoom={() => endRoom.mutate(room.id)}
+          isEndingRoom={endRoom.isPending}
+        />
 
-      <RoomAlerts
-        endRoomError={!!endRoom.error}
-        wasKicked={session.wasKicked}
-      />
+        <RoomAlerts
+          endRoomError={!!endRoom.error}
+          wasKicked={session.wasKicked}
+        />
 
-      <ActiveRoomView
-        session={session}
-        room={room}
-        currentUserId={user?.id}
-        currentUsername={displayName}
-      />
-    </div>
+        <ActiveRoomView
+          session={session}
+          room={room}
+          currentUserId={user?.id}
+          currentUsername={displayName}
+        />
+      </div>
+    </RoomAudioContextProvider>
   )
 }
