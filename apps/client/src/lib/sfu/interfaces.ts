@@ -17,6 +17,7 @@ import type {
   SfuJoinPayload,
   QualityStatsCallback,
   PeerQualityStats,
+  SfuProducerStateCallback,
 } from './types';
 
 /**
@@ -83,6 +84,8 @@ interface ISfuPeerRegistry {
   onPeerJoined(callback: SfuPeerCallback): () => void;
   /** Subscribe to peer left events */
   onPeerLeft(callback: (userId: string) => void): () => void;
+  /** Subscribe to remote producer state change events */
+  onProducerStateChange(callback: SfuProducerStateCallback): () => void;
 }
 
 /**

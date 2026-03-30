@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { CaptureState } from '../capture-state';
 import { createMediaManager } from '../manager-factory';
 
 describe('createMediaManager', () => {
@@ -22,7 +23,7 @@ describe('createMediaManager', () => {
   it('creates a manager with custom errorClassifier', () => {
     const customClassifier = {
       classify: vi.fn(() => ({
-        state: 0,
+        state: CaptureState.DEVICE_ERROR,
         recoverable: false,
         reason: 'test',
       })),

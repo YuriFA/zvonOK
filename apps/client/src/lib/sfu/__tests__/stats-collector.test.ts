@@ -13,7 +13,7 @@ function createMockConsumer(
     getStats: vi.fn().mockResolvedValue(new Map()),
     on: vi.fn(),
     close: vi.fn(),
-  } as unknown;
+  };
 }
 
 function createMockTransport() {

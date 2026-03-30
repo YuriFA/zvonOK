@@ -4,10 +4,8 @@ import { SfuEventRouter } from '../event-router';
 
 describe('SfuEventRouter', () => {
   let handlers: SfuEventHandlers;
-  let socket: {
-    on: ReturnType<typeof vi.fn>;
-    removeAllListeners: ReturnType<typeof vi.fn>;
-  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let socket: any;
   let getSocket: () => typeof socket | null;
   let router: SfuEventRouter;
 
@@ -48,7 +46,7 @@ describe('SfuEventRouter', () => {
   it('registers all event listeners on setup', () => {
     router.setup();
 
-    const events = socket.on.mock.calls.map((call: [string]) => call[0]);
+    const events = socket.on.mock.calls.map((call: [string, ...unknown[]]) => call[0]);
     expect(events).toContain('connect');
     expect(events).toContain('disconnect');
     expect(events).toContain('sfu:joined');
@@ -69,7 +67,7 @@ describe('SfuEventRouter', () => {
   it('routes connect event to onConnected', () => {
     router.setup();
     const connectHandler = socket.on.mock.calls.find(
-      (call: [string]) => call[0] === 'connect',
+      (call: [string, ...unknown[]]) => call[0] === 'connect',
     )?.[1] as () => void;
     connectHandler();
     expect(handlers.onConnected).toHaveBeenCalled();
@@ -78,7 +76,7 @@ describe('SfuEventRouter', () => {
   it('routes disconnect event to onDisconnected', () => {
     router.setup();
     const disconnectHandler = socket.on.mock.calls.find(
-      (call: [string]) => call[0] === 'disconnect',
+      (call: [string, ...unknown[]]) => call[0] === 'disconnect',
     )?.[1] as () => void;
     disconnectHandler();
     expect(handlers.onDisconnected).toHaveBeenCalled();
@@ -88,7 +86,7 @@ describe('SfuEventRouter', () => {
     router.setup();
     const payload = { routerRtpCapabilities: { codecs: [] } };
     const handler = socket.on.mock.calls.find(
-      (call: [string]) => call[0] === 'sfu:joined',
+      (call: [string, ...unknown[]]) => call[0] === 'sfu:joined',
     )?.[1] as (p: unknown) => void;
     handler(payload);
     expect(handlers.onJoined).toHaveBeenCalledWith(payload);
@@ -97,7 +95,7 @@ describe('SfuEventRouter', () => {
   it('routes sfu:peer-left event to onPeerLeft', () => {
     router.setup();
     const handler = socket.on.mock.calls.find(
-      (call: [string]) => call[0] === 'sfu:peer-left',
+      (call: [string, ...unknown[]]) => call[0] === 'sfu:peer-left',
     )?.[1] as (p: unknown) => void;
     handler({ userId: 'user-1' });
     expect(handlers.onPeerLeft).toHaveBeenCalledWith({ userId: 'user-1' });

@@ -16,6 +16,7 @@ import type {
   QualityStatsCallback,
   PeerQualityStats,
   QualityScore,
+  SfuProducerStateCallback,
 } from '../types';
 import type { Producer } from 'mediasoup-client/types';
 
@@ -63,6 +64,7 @@ export function createMockSfuManager(
   const kickedCallbacks = new Set<(payload: SfuKickedPayload) => void>();
   const roomEndedCallbacks = new Set<(payload: SfuRoomEndedPayload) => void>();
   const qualityStatsCallbacks = new Set<QualityStatsCallback>();
+  const producerStateCallbacks = new Set<SfuProducerStateCallback>();
 
   const joinRoomCalls: SfuJoinPayload[] = [];
   const produceCalls: MediaStreamTrack[] = [];
@@ -266,6 +268,11 @@ export function createMockSfuManager(
     onTrack(callback: SfuTrackCallback): () => void {
       trackCallbacks.add(callback);
       return () => trackCallbacks.delete(callback);
+    },
+
+    onProducerStateChange(callback: SfuProducerStateCallback): () => void {
+      producerStateCallbacks.add(callback);
+      return () => producerStateCallbacks.delete(callback);
     },
 
     // Test utilities
