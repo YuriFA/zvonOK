@@ -10,7 +10,7 @@ describe('VideoGrid', () => {
       </VideoGrid>
     );
 
-    expect(container.firstChild).toHaveClass('grid', 'grid-cols-2', 'gap-4');
+    expect(container.firstChild).toHaveClass('flex-1', 'relative', 'size-full');
   });
 
   it('applies custom className', () => {
@@ -20,7 +20,7 @@ describe('VideoGrid', () => {
       </VideoGrid>
     );
 
-    expect(container.firstChild).toHaveClass('grid-cols-2', 'max-w-5xl', 'mx-auto');
+    expect(container.firstChild).toHaveClass('flex-1', 'max-w-5xl', 'mx-auto');
   });
 
   it('renders all children in the grid', () => {
@@ -34,7 +34,7 @@ describe('VideoGrid', () => {
       </VideoGrid>
     );
 
-    expect(container.firstChild).toHaveClass('grid-cols-2');
+    expect(container.firstChild).toHaveClass('flex-1');
     expect((container.firstChild as HTMLElement).querySelectorAll(':scope > div')).toHaveLength(10);
   });
 });
@@ -47,6 +47,6 @@ describe('VideoTile', () => {
       </VideoTile>
     );
 
-    expect(screen.getByText('content').parentElement).toHaveClass('aspect-video', 'overflow-hidden');
+    expect(screen.getByText('content').parentElement).toHaveClass('aspect-video', 'overflow-hidden', 'rounded-lg');
   });
 });

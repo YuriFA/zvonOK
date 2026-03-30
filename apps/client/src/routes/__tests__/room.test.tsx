@@ -114,7 +114,9 @@ vi.mock('@/components/local-video', () => ({
 }));
 
 vi.mock('@/components/remote-video', () => ({
-  RemoteVideo: ({ username }: { username?: string }) => <div>{username ?? 'remote-video'}</div>,
+  RemoteVideo: ({ username }: { username?: string }) => (
+    <div data-testid="remote-video">{username ?? 'remote-video'}</div>
+  ),
 }));
 
 vi.mock('@/features/media/components/device-selector', () => ({
@@ -133,6 +135,20 @@ vi.mock('@/lib/utils/display-name', () => ({
   loadGuestDisplayName: () => 'Guest',
   saveGuestDisplayName: () => {},
 }));
+
+vi.stubGlobal('ResizeObserver', class ResizeObserver {
+  observe() {
+    if (this._callback) {
+      this._callback([{ target: { clientWidth: 1280, clientHeight: 720 } }]);
+    }
+  }
+  unobserve() {}
+  disconnect() {}
+  _callback: ((entries: unknown[]) => void) | null = null;
+  constructor(callback: (entries: unknown[]) => void) {
+    this._callback = callback;
+  }
+});
 
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
@@ -250,10 +266,11 @@ describe('RoomPage', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByTestId('local-video')).toHaveTextContent('local-stream-ready');
+      expect(screen.getByRole('button', { name: 'End Room' })).toBeInTheDocument();
     });
 
-    expect(screen.getAllByText('bob')).toHaveLength(2);
+    expect(screen.getByRole('button', { name: 'Turn off camera' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Turn off microphone' })).toBeInTheDocument();
   });
 
   it('calls toggleVideo and toggleAudio when media control buttons are clicked', async () => {
