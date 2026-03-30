@@ -219,6 +219,7 @@ describe('RoomPage', () => {
         { id: 'user-2', userId: 'user-2', username: 'bob', isMuted: false, isVideoOff: false, isConnected: true },
       ],
       activeSpeakerId: null,
+      audioLevels: new Map(),
       localUserId: 'user-1',
       mixer: null,
       audioElement: null,
