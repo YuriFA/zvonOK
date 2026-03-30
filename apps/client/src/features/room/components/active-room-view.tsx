@@ -29,11 +29,13 @@ export function ActiveRoomView({
     toggleAudio,
     remotePeers,
     activeSpeakerId,
+    audioLevels,
     localUserId,
     participants,
     kickPeer,
     mixer,
   } = session;
+
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
@@ -87,7 +89,6 @@ export function ActiveRoomView({
 
   const [isParticipantsVisible, setIsParticipantsVisible] = useState(false);
 
-  console.log('ActiveRoomView render', { remotePeers })
   return (
     <main className="flex flex-1 flex-col overflow-hidden">
       <div className="flex min-h-0 flex-1 p-4">
@@ -109,6 +110,7 @@ export function ActiveRoomView({
                   username={currentUsername}
                   isVideoEnabled={mediaControls.isVideoEnabled}
                   isAudioEnabled={mediaControls.isAudioEnabled}
+                  audioLevel={audioLevels.get(localUserId) ?? 0}
                   className="h-full w-full"
                 />
               </VideoTile>
@@ -131,6 +133,7 @@ export function ActiveRoomView({
                     username={peer.username}
                     isVideoEnabled={peer.isVideoEnabled}
                     isAudioEnabled={peer.isAudioEnabled}
+                    audioLevel={audioLevels.get(peer.userId) ?? 0}
                     className="h-full w-full"
                   />
                 </VideoTile>

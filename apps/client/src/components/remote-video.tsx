@@ -1,13 +1,15 @@
 import { useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { getInitials, getAvatarColor } from '@/lib/utils/display-name';
+import { AudioLevelRings } from '@/components/audio-level-rings';
 import { Mic, MicOff } from 'lucide-react';
 
-export interface RemoteVideoProps {
+interface Props {
   stream: MediaStream | null;
   username?: string;
   isVideoEnabled?: boolean;
   isAudioEnabled?: boolean;
+  audioLevel?: number;
   className?: string;
 }
 
@@ -16,8 +18,9 @@ export function RemoteVideo({
   username,
   isVideoEnabled,
   isAudioEnabled,
+  audioLevel = 0,
   className,
-}: RemoteVideoProps) {
+}: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -38,7 +41,12 @@ export function RemoteVideo({
 
       {!isVideoEnabled && (
         <div className="absolute inset-0 flex items-center justify-center select-none bg-muted">
-          <div className="flex size-16 items-center justify-center rounded-full text-xl text-black dark:text-white" style={{ backgroundColor: getAvatarColor(username ?? '') }}>
+          <AudioLevelRings
+            level={audioLevel}
+            color={getAvatarColor(username ?? '')}
+            className="z-0"
+          />
+          <div className="relative z-10 flex size-16 items-center justify-center rounded-full text-xl text-black dark:text-white" style={{ backgroundColor: getAvatarColor(username ?? '') }}>
             {getInitials(username ?? '')}
           </div>
         </div>
