@@ -63,17 +63,20 @@ export function useDeviceSwitching(): UseDeviceSwitchingReturn {
   const switchSpeakerDevice = useCallback(
     async (element: HTMLMediaElement | null, deviceId: string): Promise<boolean> => {
       if (!element) {
+        console.error('[DeviceSwitching] Failed to switch speaker device: element is null');
         return false;
       }
 
       if (!('setSinkId' in HTMLMediaElement.prototype)) {
+        console.error('[DeviceSwitching] Failed to switch speaker device: setSinkId not supported');
         return false;
       }
 
       try {
         await (element as HTMLMediaElement & { setSinkId: (id: string) => Promise<void> }).setSinkId(deviceId);
         return true;
-      } catch {
+      } catch (error) {
+        console.error('[DeviceSwitching] Failed to switch speaker device:', error);
         return false;
       }
     },
