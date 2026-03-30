@@ -9,24 +9,16 @@ import { cn } from '@/lib/utils';
 
 export interface DeviceSettingsPanelProps {
   audioElement?: HTMLAudioElement | null;
-  isVideoEnabled?: boolean;
-  isAudioEnabled?: boolean;
-  onVideoDeviceChange?: (deviceId: string) => void;
-  onAudioDeviceChange?: (deviceId: string) => void;
-  onSpeakerDeviceChange?: (deviceId: string) => void;
+  isVideoEnabled: boolean;
+  isAudioEnabled: boolean;
   className?: string;
-  variant?: 'popover' | 'inline';
 }
 
 export function DeviceSettingsPanel({
   audioElement,
-  isVideoEnabled = true,
-  isAudioEnabled = true,
-  onVideoDeviceChange,
-  onAudioDeviceChange,
-  onSpeakerDeviceChange,
+  isVideoEnabled,
+  isAudioEnabled,
   className,
-  variant = 'popover',
 }: DeviceSettingsPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isSwitching, setIsSwitching] = useState<'video' | 'audio' | 'speaker' | null>(null);
@@ -71,13 +63,12 @@ export function DeviceSettingsPanel({
         const success = await switchVideoDevice(deviceId);
         if (success) {
           setSelectedVideoDevice(deviceId);
-          onVideoDeviceChange?.(deviceId);
         }
       } finally {
         setIsSwitching(null);
       }
     },
-    [switchVideoDevice, setSelectedVideoDevice, onVideoDeviceChange]
+    [switchVideoDevice, setSelectedVideoDevice]
   );
 
   const handleAudioChange = useCallback(
@@ -87,13 +78,12 @@ export function DeviceSettingsPanel({
         const success = await switchAudioDevice(deviceId);
         if (success) {
           setSelectedAudioDevice(deviceId);
-          onAudioDeviceChange?.(deviceId);
         }
       } finally {
         setIsSwitching(null);
       }
     },
-    [switchAudioDevice, setSelectedAudioDevice, onAudioDeviceChange]
+    [switchAudioDevice, setSelectedAudioDevice]
   );
 
   const handleSpeakerChange = useCallback(
@@ -101,7 +91,6 @@ export function DeviceSettingsPanel({
       setIsSwitching('speaker');
       try {
         setSelectedSpeakerDevice(deviceId);
-        onSpeakerDeviceChange?.(deviceId);
 
         if (speakerElement) {
           await switchSpeakerDevice(speakerElement, deviceId);
@@ -110,7 +99,7 @@ export function DeviceSettingsPanel({
         setIsSwitching(null);
       }
     },
-    [switchSpeakerDevice, speakerElement, setSelectedSpeakerDevice, onSpeakerDeviceChange]
+    [switchSpeakerDevice, speakerElement, setSelectedSpeakerDevice]
   );
 
   const renderSelectors = () => (
@@ -164,15 +153,6 @@ export function DeviceSettingsPanel({
       )}
     </div>
   );
-
-  if (variant === 'inline') {
-    return (
-      <div className={cn('rounded-lg border p-4', className)}>
-        <h3 className="mb-4 font-medium">Device Settings</h3>
-        {renderSelectors()}
-      </div>
-    );
-  }
 
   return (
     <div ref={containerRef} className={cn('relative', className)}>

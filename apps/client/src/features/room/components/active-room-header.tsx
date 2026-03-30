@@ -30,7 +30,6 @@ export function ActiveRoomHeader({ isVideoEnabled, isAudioEnabled, isOwner, onEn
 
         <div className="flex items-center gap-2">
           <DeviceSettingsPanel
-            variant="popover"
             audioElement={audioElement}
             isVideoEnabled={isVideoEnabled}
             isAudioEnabled={isAudioEnabled}
