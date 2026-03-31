@@ -55,6 +55,8 @@ COPY apps/server/tsconfig.json ./apps/server/tsconfig.json
 
 WORKDIR /app/apps/server
 
+COPY --from=mediasoup-builder /app/apps/server/src/generated ./src/generated
+
 COPY apps/server/prisma/entrypoint.sh ./prisma/entrypoint.sh
 RUN chmod +x ./prisma/entrypoint.sh
 
