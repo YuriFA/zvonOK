@@ -1,6 +1,6 @@
 import { Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { ParticipantItem } from './ParticipantItem';
+import { ParticipantItem } from './participant-item';
 import type { QualityScore, QualityStats } from '@/lib/sfu/types';
 
 export interface Participant {

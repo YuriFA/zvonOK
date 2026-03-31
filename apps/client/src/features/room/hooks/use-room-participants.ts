@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { Participant } from '@/components/room/ParticipantsList';
+import type { Participant } from '@/components/room/participants-list';
 import type { RemotePeerMedia } from '@/hooks/use-mediasoup';
 import type { PeerQualityStats } from '@/lib/sfu/types';
 

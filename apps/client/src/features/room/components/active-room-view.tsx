@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ParticipantsList } from '@/components/room/ParticipantsList';
+import { ParticipantsList } from '@/components/room/participants-list';
 import type { UseRoomSessionResult } from '@/features/room/hooks/use-room-session';
 import type { Room } from '@/features/room/types/room.types';
-import { MediaControls } from '@/features/media/components/media-controls';
+import { RoomCenterControls } from '@/features/room/components/room-center-controls';
 import { cn } from '@/lib/utils';
 import { computeLayout } from '@zvonok/video-layout';
 import { VideoGrid } from '@/components/video-grid';
 import { RoomVideo } from '@/features/room/components/room-video';
 import { RoomRemoteAudio } from './room-remote-audio';
+import { RoomRightControls } from './room-right-controls';
 
 interface ActiveRoomViewProps {
   session: UseRoomSessionResult;
@@ -148,14 +149,18 @@ export function ActiveRoomView({
         </aside>
       </div>
 
-      <div className="flex items-center justify-center border-t py-4">
-        <MediaControls
+      <div className="flex items-center justify-between border-t p-4">
+        <RoomCenterControls
+          className="mx-auto"
           isVideoEnabled={mediaControls.isVideoEnabled}
           isAudioEnabled={mediaControls.isAudioEnabled}
           videoCaptureState={mediaControls.videoCaptureState}
           audioCaptureState={mediaControls.audioCaptureState}
           onToggleVideo={handleToggleVideo}
           onToggleAudio={handleToggleAudio}
+        />
+
+        <RoomRightControls
           isParticipantsVisible={isParticipantsVisible}
           onToggleParticipants={() => setIsParticipantsVisible((v) => !v)}
         />

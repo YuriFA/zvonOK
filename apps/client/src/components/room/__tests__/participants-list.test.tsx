@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { ParticipantsList } from '../ParticipantsList';
+import { ParticipantsList } from '../participants-list';
 
 describe('ParticipantsList', () => {
   it('renders participants, count badge, and owner kick controls', () => {

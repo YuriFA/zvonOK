@@ -1,7 +1,7 @@
 import { Mic, MicOff, Video, VideoOff, UserX, Circle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { QualityIndicator } from './QualityIndicator';
+import { QualityIndicator } from './quality-indicator';
 import type { QualityScore, QualityStats } from '@/lib/sfu/types';
 
 export interface ParticipantItemProps {
@@ -95,7 +95,7 @@ export function ParticipantItem({
       </div>
 
       {/* Quality indicator - only show for remote users with quality data */}
-      {!isLocalUser && qualityScore && (
+      {qualityScore && (
         <QualityIndicator
           score={qualityScore}
           stats={qualityStats}

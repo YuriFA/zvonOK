@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { QualityIndicator } from '../QualityIndicator';
+import { QualityIndicator } from '../quality-indicator';
 import type { QualityScore, QualityStats } from '@/lib/sfu/types';
 
 describe('QualityIndicator', () => {

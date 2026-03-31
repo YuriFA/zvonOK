@@ -4,39 +4,34 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Video, VideoOff, Mic, MicOff, AlertTriangle, Loader2, Users } from 'lucide-react';
+import { Video, VideoOff, Mic, MicOff, AlertTriangle, Loader2, PhoneOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CaptureState, getCaptureStateDisplay, isActive } from '@/lib/media/capture-state';
+import { LinkButton } from '@/components/ui/link-button';
 
-export interface MediaControlsProps {
+interface Props {
   isVideoEnabled: boolean;
   isAudioEnabled: boolean;
   videoCaptureState: CaptureState;
   audioCaptureState: CaptureState;
   onToggleVideo: () => void;
   onToggleAudio: () => void;
-  isParticipantsVisible?: boolean;
-  onToggleParticipants?: () => void;
-  disabled?: boolean;
   className?: string;
   size?: 'default' | 'sm' | 'lg' | 'icon';
   variant?: 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost' | 'link';
 }
 
-export function MediaControls({
+export function RoomCenterControls({
   isVideoEnabled,
   isAudioEnabled,
   videoCaptureState,
   audioCaptureState,
   onToggleVideo,
   onToggleAudio,
-  isParticipantsVisible,
-  onToggleParticipants,
-  disabled = false,
   className,
   size = 'icon',
   variant = 'outline',
-}: MediaControlsProps) {
+}: Props) {
   const videoDisplay = getCaptureStateDisplay(videoCaptureState, 'video');
   const audioDisplay = getCaptureStateDisplay(audioCaptureState, 'audio');
 
@@ -69,7 +64,6 @@ export function MediaControls({
               variant={videoHasError && !videoIsWarning ? 'destructive' : variant}
               size={size}
               onClick={onToggleVideo}
-              disabled={disabled}
               aria-label={videoDisplay.tooltip}
             />
           }
@@ -87,7 +81,6 @@ export function MediaControls({
               variant={audioHasError && !audioIsWarning ? 'destructive' : variant}
               size={size}
               onClick={onToggleAudio}
-              disabled={disabled}
               aria-label={audioDisplay.tooltip}
             />
           }
@@ -97,25 +90,9 @@ export function MediaControls({
         <TooltipContent>{audioDisplay.tooltip}</TooltipContent>
       </Tooltip>
 
-      {onToggleParticipants && (
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                type="button"
-                variant={isParticipantsVisible ? 'secondary' : variant}
-                size={size}
-                onClick={onToggleParticipants}
-                disabled={disabled}
-                aria-label="Toggle participants"
-              />
-            }
-          >
-            <Users className="size-4" />
-          </TooltipTrigger>
-          <TooltipContent>Participants</TooltipContent>
-        </Tooltip>
-      )}
+      <LinkButton to="/" variant="destructive" size={size} className="ml-2" aria-label="Leave room">
+        <PhoneOff className="size-4" />
+      </LinkButton>
     </div>
   );
 }

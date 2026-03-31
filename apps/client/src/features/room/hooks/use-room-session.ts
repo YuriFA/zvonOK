@@ -3,7 +3,7 @@ import { useQualityStats } from '@/hooks/use-quality-stats';
 import { useRoomParticipants } from '@/features/room/hooks/use-room-participants';
 import { useRoomSfu } from '@/features/room/hooks/use-room-sfu';
 import type { RemotePeerMedia } from '@/hooks/use-mediasoup';
-import type { Participant } from '@/components/room/ParticipantsList';
+import type { Participant } from '@/components/room/participants-list';
 import type { Room } from '@/features/room/types/room.types';
 import type { SfuState } from '@/lib/sfu/types';
 import type { UseMediaControlsReturn } from '@/features/media/hooks/use-media-controls';

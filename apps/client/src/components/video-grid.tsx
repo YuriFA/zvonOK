@@ -17,7 +17,7 @@ export function VideoTile({ children, className, isActiveSpeaker = false, ...res
   return (
     <div
       className={cn(
-        'relative aspect-video max-h-full overflow-hidden rounded-lg transition-all duration-100',
+        'relative aspect-video max-h-full overflow-hidden rounded-lg',
         isActiveSpeaker && 'ring-4 ring-green-500 ring-offset-2 ring-offset-background',
         className
       )}
