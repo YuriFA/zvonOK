@@ -1,6 +1,9 @@
 # Stage 1: Build mediasoup worker + NestJS application
 FROM node:22-alpine AS mediasoup-builder
 
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+
 # Install build dependencies for mediasoup worker
 # Required: Python 3, make, g++, py3-pip
 RUN apk add --no-cache \
@@ -10,19 +13,19 @@ RUN apk add --no-cache \
     g++ \
     linux-headers
 
+RUN corepack enable
+
 WORKDIR /app
 
 # Copy workspace config
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
 # Copy server package.json
 COPY apps/server/package.json ./apps/server/
 
 # Install dependencies (this will build mediasoup worker from source)
-RUN pnpm install --frozen-lockfile
+# pnpm store is cached across builds via BuildKit mount
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 # Copy server source files
 COPY apps/server ./apps/server
@@ -34,19 +37,20 @@ RUN pnpm -C apps/server exec prisma generate && \
 # Stage 2: Migrations runner (has prisma CLI + ts-node for prisma.config.ts)
 FROM node:22-alpine AS migrator
 
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
+
 WORKDIR /app
 
 # Copy workspace config
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
 # Copy server package.json
 COPY apps/server/package.json ./apps/server/
 
 # Install all dependencies (prisma CLI is a devDep, bcrypt/pg needed for seed)
-RUN pnpm install --frozen-lockfile --ignore-scripts
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --ignore-scripts
 
 # Copy Prisma schema, config, migrations, and seed
 COPY apps/server/prisma ./apps/server/prisma
@@ -65,22 +69,24 @@ CMD ["./prisma/entrypoint.sh"]
 # Stage 3: Production image
 FROM node:22-alpine AS production
 
-WORKDIR /app
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
 
 # Install runtime dependencies
 RUN apk add --no-cache dumb-init
 
+RUN corepack enable
+
+WORKDIR /app
+
 # Copy workspace config
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
-
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
 
 # Copy server package.json
 COPY apps/server/package.json ./apps/server/
 
 # Install production dependencies only (skip scripts to avoid rebuilding)
-RUN pnpm install --frozen-lockfile --prod --ignore-scripts
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --prod --ignore-scripts
 
 # Copy built mediasoup worker from builder stage
 COPY --from=mediasoup-builder /app/node_modules/.pnpm/mediasoup@*/node_modules/mediasoup/worker/out/Release/mediasoup-worker /app/mediasoup-worker
@@ -107,10 +113,11 @@ EXPOSE 40000-40099/tcp
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "dist/src/main.js"]
 
-# Stage 3: Development image (for local dev with hot reload)
+# Stage 4: Development image (for local dev with hot reload)
 FROM node:22-alpine AS development
 
-WORKDIR /app
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
 
 # Install build dependencies for mediasoup worker
 RUN apk add --no-cache \
@@ -118,17 +125,18 @@ RUN apk add --no-cache \
     make \
     g++
 
+RUN corepack enable
+
+WORKDIR /app
+
 # Copy workspace config
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
-
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
 
 # Copy package.json files
 COPY apps/server/package.json ./apps/server/
 
 # Install all dependencies (dev + prod)
-RUN pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 # Copy source files
 COPY apps/server ./apps/server
