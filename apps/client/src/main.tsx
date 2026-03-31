@@ -19,7 +19,7 @@ import "./index.css";
 const LazyRoomPage = lazy(() => import("./routes/room.tsx").then((m) => ({ default: m.RoomPage })));
 
 const roomPageFallback = (
-  <div className="flex min-h-screen items-center justify-center">
+  <div className="flex h-dscreen items-center justify-center">
     <p className="text-muted-foreground">Loading room...</p>
   </div>
 );

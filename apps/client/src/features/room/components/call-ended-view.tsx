@@ -8,7 +8,7 @@ interface CallEndedViewProps {
 
 export function CallEndedView({ room }: CallEndedViewProps) {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6 p-4">
+    <div className="flex min-h-dscreen flex-col items-center justify-center gap-6 p-4">
       <div className="text-center">
         <h1 className="text-2xl font-bold">Call Ended</h1>
         <p className="mt-2 text-muted-foreground">

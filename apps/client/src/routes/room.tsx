@@ -59,7 +59,7 @@ export const RoomPage = () => {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-dscreen items-center justify-center">
         <p className="text-muted-foreground">Loading room...</p>
       </div>
     );
@@ -67,7 +67,7 @@ export const RoomPage = () => {
 
   if (error || !room) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4">
+      <div className="flex min-h-dscreen flex-col items-center justify-center gap-4">
         <p className="text-destructive">{error?.message || "Room not found"}</p>
         <LinkButton to="/">Back to Home</LinkButton>
       </div>

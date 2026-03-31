@@ -28,7 +28,7 @@ export const RoomView = ({ room, displayName }: Props) => {
   return (
     <PeerQualityProvider enabled={session.sfuState.connectionState === "connected"}>
       <RoomAudioContextProvider session={session}>
-        <div className="flex h-screen flex-col">
+        <div className="flex h-dscreen flex-col">
           <ActiveRoomHeader
             isVideoEnabled={session.mediaControls.isVideoEnabled}
             isAudioEnabled={session.mediaControls.isAudioEnabled}

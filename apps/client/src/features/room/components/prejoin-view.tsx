@@ -18,7 +18,7 @@ export function PrejoinView({
   onJoin,
 }: PrejoinViewProps) {
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-dscreen flex-col">
       <PrejoinRoomHeader roomUrl={roomUrl} />
 
       <main className="flex flex-1 flex-col items-center justify-center p-4">
