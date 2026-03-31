@@ -83,8 +83,7 @@ describe("CaptureState", () => {
     it("returns correct display for ACTIVE video", () => {
       const display = getCaptureStateDisplay(CaptureState.ACTIVE, "video");
       expect(display).toEqual({
-        variant: "default",
-        icon: "on",
+        status: "on",
         tooltip: "Turn off camera",
         statusText: null,
       });
@@ -95,33 +94,33 @@ describe("CaptureState", () => {
       expect(display.tooltip).toBe("Turn off microphone");
     });
 
-    it("returns spinner for STARTING", () => {
+    it("returns loading for STARTING", () => {
       const display = getCaptureStateDisplay(CaptureState.STARTING, "video");
-      expect(display.icon).toBe("spinner");
+      expect(display.status).toBe("loading");
       expect(display.statusText).toBe("Starting...");
     });
 
-    it("returns destructive for SYSTEM_DENIED", () => {
+    it("returns error for SYSTEM_DENIED", () => {
       const display = getCaptureStateDisplay(CaptureState.SYSTEM_DENIED, "video");
-      expect(display.variant).toBe("destructive");
-      expect(display.icon).toBe("off-error");
+      expect(display.status).toBe("error");
+      expect(display.statusText).toBe("Blocked in system settings");
     });
 
-    it("returns warning for DEVICE_NOT_FOUND", () => {
+    it("returns error for DEVICE_NOT_FOUND", () => {
       const display = getCaptureStateDisplay(CaptureState.DEVICE_NOT_FOUND, "audio");
-      expect(display.variant).toBe("warning");
-      expect(display.icon).toBe("off-warning");
+      expect(display.status).toBe("error");
+      expect(display.statusText).toBe("Blocked");
     });
 
     it("returns correct display for STOPPED", () => {
       const display = getCaptureStateDisplay(CaptureState.STOPPED, "video");
-      expect(display.icon).toBe("off");
+      expect(display.status).toBe("off");
       expect(display.tooltip).toBe("Turn on camera");
     });
 
     it("returns correct display for MUTED", () => {
       const display = getCaptureStateDisplay(CaptureState.MUTED, "audio");
-      expect(display.icon).toBe("off");
+      expect(display.status).toBe("off");
       expect(display.tooltip).toBe("Turn on microphone");
     });
   });

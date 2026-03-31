@@ -23,7 +23,7 @@ describe("QualityIndicator", () => {
 
   it("renders excellent quality badge", () => {
     const score = createScore("excellent", 95);
-    render(<QualityIndicator score={score} />);
+    render(<QualityIndicator score={score} showDetails />);
 
     expect(screen.getByText("Excellent")).toBeInTheDocument();
     expect(screen.getByLabelText("Connection quality: excellent")).toBeInTheDocument();
@@ -31,21 +31,21 @@ describe("QualityIndicator", () => {
 
   it("renders good quality badge", () => {
     const score = createScore("good", 75);
-    render(<QualityIndicator score={score} />);
+    render(<QualityIndicator score={score} showDetails />);
 
     expect(screen.getByText("Good")).toBeInTheDocument();
   });
 
   it("renders fair quality badge", () => {
     const score = createScore("fair", 50);
-    render(<QualityIndicator score={score} />);
+    render(<QualityIndicator score={score} showDetails />);
 
     expect(screen.getByText("Fair")).toBeInTheDocument();
   });
 
   it("renders poor quality badge", () => {
     const score = createScore("poor", 25);
-    render(<QualityIndicator score={score} />);
+    render(<QualityIndicator score={score} showDetails />);
 
     expect(screen.getByText("Poor")).toBeInTheDocument();
   });
@@ -66,11 +66,11 @@ describe("QualityIndicator", () => {
     expect(title).toContain("Resolution: 1280x720");
   });
 
-  it("shows bitrate in compact mode with showDetails", () => {
+  it("shows bitrate with showDetails", () => {
     const score = createScore("good", 70);
     const stats = createStats({ bitrate: 2500 });
 
-    render(<QualityIndicator score={score} stats={stats} showDetails compact />);
+    render(<QualityIndicator score={score} stats={stats} showDetails />);
 
     expect(screen.getByText("Good")).toBeInTheDocument();
     expect(screen.getByText("2.5 Mbps")).toBeInTheDocument();
@@ -80,7 +80,7 @@ describe("QualityIndicator", () => {
     const score = createScore("fair", 45);
     const stats = createStats({ bitrate: 500 });
 
-    render(<QualityIndicator score={score} stats={stats} showDetails compact />);
+    render(<QualityIndicator score={score} stats={stats} showDetails />);
 
     expect(screen.getByText("500 kbps")).toBeInTheDocument();
   });
@@ -89,7 +89,7 @@ describe("QualityIndicator", () => {
     const score = createScore("good", 70);
     const stats = createStats({ bitrate: 2500 });
 
-    render(<QualityIndicator score={score} stats={stats} compact />);
+    render(<QualityIndicator score={score} stats={stats} />);
 
     expect(screen.queryByText("2.5 Mbps")).not.toBeInTheDocument();
   });
