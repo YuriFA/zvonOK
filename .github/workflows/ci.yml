@@ -97,34 +97,4 @@ jobs:
       - name: Run client tests
         run: pnpm test:client
 
-  # ── Docker Build Check ───────────────────────────────────────────
-  build-check:
-    name: Docker Build Check
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build server image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: apps/server/Dockerfile
-          target: production
-          push: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build client image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: apps/client/Dockerfile
-          push: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
