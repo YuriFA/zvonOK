@@ -15,6 +15,21 @@ import { RegisterPage } from "./routes/register.tsx";
 
 import "./index.css";
 
+const API_BASE_URL =
+  (import.meta.env as { VITE_API_BASE_URL?: string }).VITE_API_BASE_URL ?? "http://localhost:3000";
+
+console.log(`%c[zvonok] client v${__CLIENT_VERSION__}`, "color: #6366f1; font-weight: bold");
+
+fetch(`${API_BASE_URL}/version`)
+  .then((res) => res.json())
+  .then((data: { version?: string; name?: string }) => {
+    console.log(
+      `%c[zvonok] server v${data.version} (${data.name})`,
+      "color: #10b981; font-weight: bold",
+    );
+  })
+  .catch(() => {});
+
 // Lazy-loaded routes — heavy deps (mediasoup-client, socket.io-client) split into separate chunk
 const LazyRoomPage = lazy(() => import("./routes/room.tsx").then((m) => ({ default: m.RoomPage })));
 

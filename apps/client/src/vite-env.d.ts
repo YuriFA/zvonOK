@@ -6,3 +6,5 @@ declare module "*.svg?react" {
   const ReactComponent: React.FC<SVGProps<SVGSVGElement>>;
   export default ReactComponent;
 }
+
+declare const __CLIENT_VERSION__: string;

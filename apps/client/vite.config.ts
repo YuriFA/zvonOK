@@ -5,6 +5,8 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import svgr from "vite-plugin-svgr";
 
+import pkg from "./package.json";
+
 // https://vite.dev/config/
 export default defineConfig(async () => {
   const plugins = [react(), tailwindcss(), svgr()];
@@ -23,6 +25,9 @@ export default defineConfig(async () => {
 
   return {
     plugins,
+    define: {
+      __CLIENT_VERSION__: JSON.stringify(pkg.version),
+    },
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),

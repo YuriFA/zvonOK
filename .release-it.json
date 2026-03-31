@@ -1,0 +1,22 @@
+{
+  "plugins": {
+    "@release-it/conventional-changelog": {
+      "preset": { "name": "conventionalcommits" },
+      "header": "# Changelog",
+      "infile": "CHANGELOG.md"
+    }
+  },
+  "git": {
+    "commitMessage": "chore: release v${version}",
+    "tagName": "v${version}",
+    "commit": true,
+    "tag": true,
+    "push": false
+  },
+  "hooks": {
+    "after:bump": "node scripts/sync-version.mjs ${version}"
+  },
+  "npm": {
+    "publish": false
+  }
+}

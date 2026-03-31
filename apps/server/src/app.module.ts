@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RoomModule } from './room/room.module';
 import { SfuModule } from './sfu/sfu.module';
+import { VersionController } from './version.controller';
 
 @Module({
   imports: [
@@ -47,7 +48,7 @@ import { SfuModule } from './sfu/sfu.module';
     RoomModule,
     SfuModule,
   ],
-  controllers: [],
+  controllers: [VersionController],
   providers: [],
 })
 export class AppModule {}
