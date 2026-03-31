@@ -8,7 +8,7 @@ FROM base AS build
 COPY . /app
 WORKDIR /app
 
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --filter client...
 
 # Build args for Vite env vars (baked at build time)
 ARG VITE_API_BASE_URL=""

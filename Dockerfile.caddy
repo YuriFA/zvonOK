@@ -13,7 +13,7 @@ FROM base AS build
 COPY . /app
 WORKDIR /app
 
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --filter client...
 
 ARG VITE_API_BASE_URL=""
 ARG VITE_SOCKET_URL=""
