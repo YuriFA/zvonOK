@@ -3,20 +3,20 @@
  * Pure functions for calculating stream quality based on WebRTC stats.
  */
 
-import type { QualityStats, QualityScore, QualityLevel } from './types';
+import type { QualityStats, QualityScore, QualityLevel } from "./types";
 
 /**
  * Get quality level from score.
  */
 function getQualityLevel(score: number): QualityLevel {
   if (score >= 80) {
-    return 'excellent';
+    return "excellent";
   } else if (score >= 60) {
-    return 'good';
+    return "good";
   } else if (score >= 40) {
-    return 'fair';
+    return "fair";
   } else {
-    return 'poor';
+    return "poor";
   }
 }
 

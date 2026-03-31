@@ -1,7 +1,7 @@
-import { calculateRmsLevel } from './audio-utils';
+import { calculateRmsLevel } from "./audio-utils";
 
 interface OwnedEntry {
-  type: 'owned';
+  type: "owned";
   context: AudioContext;
   analyser: AnalyserNode;
   source: MediaStreamAudioSourceNode;
@@ -9,7 +9,7 @@ interface OwnedEntry {
 }
 
 interface BorrowedEntry {
-  type: 'borrowed';
+  type: "borrowed";
   analyser: AnalyserNode;
 }
 
@@ -42,7 +42,7 @@ export class AudioLevelSampler {
       analyser.connect(silentGain);
       silentGain.connect(context.destination);
 
-      this.entries.set(id, { type: 'owned', context, analyser, source, silentGain });
+      this.entries.set(id, { type: "owned", context, analyser, source, silentGain });
     } catch {
       // ignore
     }
@@ -50,19 +50,19 @@ export class AudioLevelSampler {
 
   addBorrowed(id: string, analyser: AnalyserNode): void {
     const existing = this.entries.get(id);
-    if (existing && existing.type === 'borrowed' && existing.analyser === analyser) {
+    if (existing && existing.type === "borrowed" && existing.analyser === analyser) {
       return;
     }
 
     this.remove(id);
-    this.entries.set(id, { type: 'borrowed', analyser });
+    this.entries.set(id, { type: "borrowed", analyser });
   }
 
   remove(id: string): void {
     const entry = this.entries.get(id);
     if (!entry) return;
 
-    if (entry.type === 'owned') {
+    if (entry.type === "owned") {
       try {
         entry.source.disconnect();
         entry.analyser.disconnect();

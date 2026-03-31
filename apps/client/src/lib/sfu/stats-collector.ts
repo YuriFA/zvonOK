@@ -3,13 +3,10 @@
  * Collects and reports quality statistics for consumers.
  */
 
-import type { Consumer, Transport } from 'mediasoup-client/types';
-import type {
-  QualityStatsCallback,
-  PeerQualityStats,
-  QualityStats,
-} from './types';
-import { calculateQualityScore } from './quality-score';
+import type { Consumer, Transport } from "mediasoup-client/types";
+
+import { calculateQualityScore } from "./quality-score";
+import type { QualityStatsCallback, PeerQualityStats, QualityStats } from "./types";
 
 /**
  * Collects quality statistics for SFU consumers.
@@ -24,7 +21,7 @@ export class SfuStatsCollector {
   constructor(
     getRecvTransport: () => Transport | null,
     getConsumers: () => Iterable<[string, Consumer]>,
-    getPeerForProducer: (producerId: string) => string | undefined
+    getPeerForProducer: (producerId: string) => string | undefined,
   ) {
     this.getRecvTransport = getRecvTransport;
     this.getConsumers = getConsumers;
@@ -75,7 +72,7 @@ export class SfuStatsCollector {
         const existing = statsMap.get(userId);
         if (existing) {
           // Prefer video stats for quality display, merge with existing
-          if (consumer.kind === 'video') {
+          if (consumer.kind === "video") {
             existing.stats = {
               ...existing.stats,
               bitrate: stats.bitrate || existing.stats.bitrate,
@@ -92,7 +89,7 @@ export class SfuStatsCollector {
           statsMap.set(userId, { userId, stats, score });
         }
       } catch (error) {
-        console.error('[SFU] Failed to get stats for consumer:', error);
+        console.error("[SFU] Failed to get stats for consumer:", error);
       }
     }
 
@@ -103,7 +100,7 @@ export class SfuStatsCollector {
 
   private async getConsumerStats(
     transport: Transport,
-    consumer: Consumer
+    consumer: Consumer,
   ): Promise<QualityStats | null> {
     try {
       const transportStats = await transport.getStats();
@@ -111,7 +108,7 @@ export class SfuStatsCollector {
       let packetLoss = 0;
 
       for (const stat of transportStats.values()) {
-        if (stat.type === 'candidate-pair' && stat.state === 'succeeded') {
+        if (stat.type === "candidate-pair" && stat.state === "succeeded") {
           rtt = stat.currentRoundTripTime ? stat.currentRoundTripTime * 1000 : 0;
           if (stat.packetsReceived !== undefined && stat.packetsLost !== undefined) {
             const total = stat.packetsReceived + stat.packetsLost;
@@ -127,10 +124,10 @@ export class SfuStatsCollector {
       let height = 0;
       let fps = 0;
 
-      if (consumer.kind === 'video') {
+      if (consumer.kind === "video") {
         const consumerStats = await consumer.getStats();
         for (const stat of consumerStats.values()) {
-          if (stat.type === 'inbound-rtp' && stat.kind === 'video') {
+          if (stat.type === "inbound-rtp" && stat.kind === "video") {
             bitrate = stat.bitrate ? stat.bitrate / 1000 : 0; // Convert to kbps
             width = stat.frameWidth || 0;
             height = stat.frameHeight || 0;
@@ -142,7 +139,7 @@ export class SfuStatsCollector {
         // For audio, just get bitrate
         const consumerStats = await consumer.getStats();
         for (const stat of consumerStats.values()) {
-          if (stat.type === 'inbound-rtp' && stat.kind === 'audio') {
+          if (stat.type === "inbound-rtp" && stat.kind === "audio") {
             bitrate = stat.bitrate ? stat.bitrate / 1000 : 0;
             break;
           }
@@ -151,7 +148,7 @@ export class SfuStatsCollector {
 
       return { bitrate, packetLoss, rtt, width, height, fps };
     } catch (error) {
-      console.error('[SFU] Error getting consumer stats:', error);
+      console.error("[SFU] Error getting consumer stats:", error);
       return null;
     }
   }

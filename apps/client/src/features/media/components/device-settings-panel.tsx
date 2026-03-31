@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Settings, X, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useMediaDevices } from '../hooks/use-media-devices';
-import { useDeviceSwitching } from '../hooks/use-device-switching';
-import { SingleDeviceSelector } from './single-device-selector';
-import { ActiveDeviceDisplay } from './active-device-display';
-import { cn } from '@/lib/utils';
+import { Settings, X, Loader2 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+import { useDeviceSwitching } from "../hooks/use-device-switching";
+import { useMediaDevices } from "../hooks/use-media-devices";
+import { ActiveDeviceDisplay } from "./active-device-display";
+import { SingleDeviceSelector } from "./single-device-selector";
 
 export interface DeviceSettingsPanelProps {
   audioElement?: HTMLAudioElement | null;
@@ -21,7 +23,7 @@ export function DeviceSettingsPanel({
   className,
 }: DeviceSettingsPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isSwitching, setIsSwitching] = useState<'video' | 'audio' | 'speaker' | null>(null);
+  const [isSwitching, setIsSwitching] = useState<"video" | "audio" | "speaker" | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -52,13 +54,17 @@ export function DeviceSettingsPanel({
     const speakerDeviceId = selectedDevices.speakerDeviceId;
     if (!isSpeakerSwitchSupported || !speakerElement || !speakerDeviceId) return;
 
-    switchSpeakerDevice(speakerElement, speakerDeviceId).catch(() => {
-    });
-  }, [isSpeakerSwitchSupported, selectedDevices.speakerDeviceId, switchSpeakerDevice, speakerElement]);
+    switchSpeakerDevice(speakerElement, speakerDeviceId).catch(() => {});
+  }, [
+    isSpeakerSwitchSupported,
+    selectedDevices.speakerDeviceId,
+    switchSpeakerDevice,
+    speakerElement,
+  ]);
 
   const handleVideoChange = useCallback(
     async (deviceId: string) => {
-      setIsSwitching('video');
+      setIsSwitching("video");
       try {
         const success = await switchVideoDevice(deviceId);
         if (success) {
@@ -68,12 +74,12 @@ export function DeviceSettingsPanel({
         setIsSwitching(null);
       }
     },
-    [switchVideoDevice, setSelectedVideoDevice]
+    [switchVideoDevice, setSelectedVideoDevice],
   );
 
   const handleAudioChange = useCallback(
     async (deviceId: string) => {
-      setIsSwitching('audio');
+      setIsSwitching("audio");
       try {
         const success = await switchAudioDevice(deviceId);
         if (success) {
@@ -83,12 +89,12 @@ export function DeviceSettingsPanel({
         setIsSwitching(null);
       }
     },
-    [switchAudioDevice, setSelectedAudioDevice]
+    [switchAudioDevice, setSelectedAudioDevice],
   );
 
   const handleSpeakerChange = useCallback(
     async (deviceId: string) => {
-      setIsSwitching('speaker');
+      setIsSwitching("speaker");
       try {
         setSelectedSpeakerDevice(deviceId);
 
@@ -99,7 +105,7 @@ export function DeviceSettingsPanel({
         setIsSwitching(null);
       }
     },
-    [switchSpeakerDevice, speakerElement, setSelectedSpeakerDevice]
+    [switchSpeakerDevice, speakerElement, setSelectedSpeakerDevice],
   );
 
   const renderSelectors = () => (
@@ -155,7 +161,7 @@ export function DeviceSettingsPanel({
   );
 
   return (
-    <div ref={containerRef} className={cn('relative', className)}>
+    <div ref={containerRef} className={cn("relative", className)}>
       <Button
         variant="ghost"
         size="icon"
@@ -176,7 +182,7 @@ export function DeviceSettingsPanel({
           />
 
           {/* Panel */}
-          <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-lg border bg-background p-4 shadow-lg">
+          <div className="absolute top-full right-0 z-50 mt-2 w-72 rounded-lg border bg-background p-4 shadow-lg">
             <h3 className="mb-4 font-medium">Device Settings</h3>
             {renderSelectors()}
           </div>

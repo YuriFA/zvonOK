@@ -1,6 +1,8 @@
-import { Video, Mic, Volume2, VideoOff, MicOff, VolumeX } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import type { MediaDevice } from '../hooks/use-media-devices';
+import { Video, Mic, Volume2, VideoOff, MicOff, VolumeX } from "lucide-react";
+
+import { cn } from "@/lib/utils";
+
+import type { MediaDevice } from "../hooks/use-media-devices";
 
 export interface ActiveDeviceDisplayProps {
   /** Camera device info */
@@ -39,17 +41,12 @@ function DeviceIndicator({
 
   return (
     <div
-      className={cn(
-        'flex items-center gap-1.5',
-        !isEnabled && 'text-muted-foreground opacity-60'
-      )}
+      className={cn("flex items-center gap-1.5", !isEnabled && "text-muted-foreground opacity-60")}
       title={displayText}
     >
       <Icon className="size-4" aria-hidden="true" />
       <span className="sr-only">{displayText}</span>
-      {showLabel && (
-        <span className="text-sm">{displayText}</span>
-      )}
+      {showLabel && <span className="text-sm">{displayText}</span>}
     </div>
   );
 }
@@ -65,7 +62,7 @@ export function ActiveDeviceDisplay({
 }: ActiveDeviceDisplayProps) {
   if (compact) {
     return (
-      <fieldset className={cn('flex items-center gap-2', className)}>
+      <fieldset className={cn("flex items-center gap-2", className)}>
         <legend className="sr-only">Active devices</legend>
         {isVideoEnabled ? (
           <DeviceIndicator
@@ -116,7 +113,7 @@ export function ActiveDeviceDisplay({
   }
 
   return (
-    <fieldset className={cn('space-y-2', className)}>
+    <fieldset className={cn("space-y-2", className)}>
       <legend className="sr-only">Active devices</legend>
       <DeviceIndicator
         icon={isVideoEnabled ? Video : VideoOff}

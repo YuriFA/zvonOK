@@ -3,9 +3,9 @@
  * Provides type-safe, hierarchical query keys
  */
 export const roomKeys = {
-  all: ['rooms'] as const,
+  all: ["rooms"] as const,
 
-  details: () => [...roomKeys.all, 'detail'] as const,
+  details: () => [...roomKeys.all, "detail"] as const,
 
   detail: (slug: string) => [...roomKeys.details(), slug] as const,
 } as const;

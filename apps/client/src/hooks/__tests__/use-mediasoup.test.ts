@@ -1,6 +1,7 @@
-import { act, renderHook, waitFor } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { SfuState } from '@/lib/sfu/types';
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import type { SfuState } from "@/lib/sfu/types";
 
 class MockMediaStream {
   private tracks: MediaStreamTrack[];
@@ -18,19 +19,19 @@ class MockMediaStream {
   }
 
   getVideoTracks(): MediaStreamTrack[] {
-    return this.tracks.filter((track) => track.kind === 'video');
+    return this.tracks.filter((track) => track.kind === "video");
   }
 
   getAudioTracks(): MediaStreamTrack[] {
-    return this.tracks.filter((track) => track.kind === 'audio');
+    return this.tracks.filter((track) => track.kind === "audio");
   }
 }
 
-vi.stubGlobal('MediaStream', MockMediaStream);
+vi.stubGlobal("MediaStream", MockMediaStream);
 
 const testContext = vi.hoisted(() => ({
   baseState: {
-    connectionState: 'disconnected',
+    connectionState: "disconnected",
     isDeviceLoaded: false,
     sendTransportConnected: false,
     recvTransportConnected: false,
@@ -44,11 +45,21 @@ const sfuMock = vi.hoisted(() => {
   const { baseState } = testContext;
   let currentState = { ...baseState };
   const stateListeners = new Set<(state: typeof baseState) => void>();
-  const trackListeners = new Set<(track: MediaStreamTrack, kind: 'audio' | 'video', userId: string) => void>();
-  const peerJoinedListeners = new Set<(peer: { userId: string; username: string; producers: Map<string, { kind: 'audio' | 'video' }> }) => void>();
+  const trackListeners = new Set<
+    (track: MediaStreamTrack, kind: "audio" | "video", userId: string) => void
+  >();
+  const peerJoinedListeners = new Set<
+    (peer: {
+      userId: string;
+      username: string;
+      producers: Map<string, { kind: "audio" | "video" }>;
+    }) => void
+  >();
   const peerLeftListeners = new Set<(userId: string) => void>();
   const kickedListeners = new Set<(payload: { roomId: string }) => void>();
-  const producerStateChangeListeners = new Set<(payload: { userId: string; kind: 'audio' | 'video'; paused: boolean }) => void>();
+  const producerStateChangeListeners = new Set<
+    (payload: { userId: string; kind: "audio" | "video"; paused: boolean }) => void
+  >();
 
   return {
     connect: vi.fn(),
@@ -70,14 +81,24 @@ const sfuMock = vi.hoisted(() => {
       callback(currentState);
       return () => stateListeners.delete(callback);
     }),
-    onTrack: vi.fn((callback: (track: MediaStreamTrack, kind: 'audio' | 'video', userId: string) => void) => {
-      trackListeners.add(callback);
-      return () => trackListeners.delete(callback);
-    }),
-    onPeerJoined: vi.fn((callback: (peer: { userId: string; username: string; producers: Map<string, { kind: 'audio' | 'video' }> }) => void) => {
-      peerJoinedListeners.add(callback);
-      return () => peerJoinedListeners.delete(callback);
-    }),
+    onTrack: vi.fn(
+      (callback: (track: MediaStreamTrack, kind: "audio" | "video", userId: string) => void) => {
+        trackListeners.add(callback);
+        return () => trackListeners.delete(callback);
+      },
+    ),
+    onPeerJoined: vi.fn(
+      (
+        callback: (peer: {
+          userId: string;
+          username: string;
+          producers: Map<string, { kind: "audio" | "video" }>;
+        }) => void,
+      ) => {
+        peerJoinedListeners.add(callback);
+        return () => peerJoinedListeners.delete(callback);
+      },
+    ),
     onPeerLeft: vi.fn((callback: (userId: string) => void) => {
       peerLeftListeners.add(callback);
       return () => peerLeftListeners.delete(callback);
@@ -86,22 +107,30 @@ const sfuMock = vi.hoisted(() => {
       kickedListeners.add(callback);
       return () => kickedListeners.delete(callback);
     }),
-    onProducerStateChange: vi.fn((callback: (payload: { userId: string; kind: 'audio' | 'video'; paused: boolean }) => void) => {
-      producerStateChangeListeners.add(callback);
-      return () => producerStateChangeListeners.delete(callback);
-    }),
+    onProducerStateChange: vi.fn(
+      (
+        callback: (payload: { userId: string; kind: "audio" | "video"; paused: boolean }) => void,
+      ) => {
+        producerStateChangeListeners.add(callback);
+        return () => producerStateChangeListeners.delete(callback);
+      },
+    ),
     emitState(state: typeof baseState) {
       currentState = state;
       stateListeners.forEach((callback) => {
         callback(state);
       });
     },
-    emitTrack(track: MediaStreamTrack, kind: 'audio' | 'video', userId: string) {
+    emitTrack(track: MediaStreamTrack, kind: "audio" | "video", userId: string) {
       trackListeners.forEach((callback) => {
         callback(track, kind, userId);
       });
     },
-    emitPeerJoined(peer: { userId: string; username: string; producers: Map<string, { kind: 'audio' | 'video' }> }) {
+    emitPeerJoined(peer: {
+      userId: string;
+      username: string;
+      producers: Map<string, { kind: "audio" | "video" }>;
+    }) {
       peerJoinedListeners.forEach((callback) => {
         callback(peer);
       });
@@ -116,7 +145,7 @@ const sfuMock = vi.hoisted(() => {
         callback(payload);
       });
     },
-    emitProducerStateChange(payload: { userId: string; kind: 'audio' | 'video'; paused: boolean }) {
+    emitProducerStateChange(payload: { userId: string; kind: "audio" | "video"; paused: boolean }) {
       producerStateChangeListeners.forEach((callback) => {
         callback(payload);
       });
@@ -151,34 +180,35 @@ const sfuMock = vi.hoisted(() => {
   };
 });
 
-vi.mock('@/features/auth/contexts/auth.context', () => ({
+vi.mock("@/features/auth/contexts/auth.context", () => ({
   useAuth: mockUseAuth,
 }));
 
-vi.mock('@/features/sfu/contexts/sfu-manager.context', () => ({
+vi.mock("@/features/sfu/contexts/sfu-manager.context", () => ({
   useSfuManager: () => sfuMock,
 }));
 
-import { useMediasoup } from '../use-mediasoup';
+import { useMediasoup } from "../use-mediasoup";
 
-const createTrack = (id: string, kind: 'audio' | 'video') => ({
-  id,
-  kind,
-  enabled: true,
-  onmute: null,
-  onunmute: null,
-  onended: null,
-}) as unknown as MediaStreamTrack;
+const createTrack = (id: string, kind: "audio" | "video") =>
+  ({
+    id,
+    kind,
+    enabled: true,
+    onmute: null,
+    onunmute: null,
+    onended: null,
+  }) as unknown as MediaStreamTrack;
 
-describe('useMediasoup', () => {
+describe("useMediasoup", () => {
   const { baseState } = testContext;
 
   beforeEach(() => {
     sfuMock.reset();
     mockUseAuth.mockReturnValue({
       user: {
-        id: 'user-1',
-        username: 'alice',
+        id: "user-1",
+        username: "alice",
       },
     });
   });
@@ -187,35 +217,43 @@ describe('useMediasoup', () => {
     vi.clearAllMocks();
   });
 
-  it('connects, joins the room, and produces local tracks after send transport is ready', async () => {
-    const videoTrack = createTrack('video-1', 'video');
-    const audioTrack = createTrack('audio-1', 'audio');
+  it("connects, joins the room, and produces local tracks after send transport is ready", async () => {
+    const videoTrack = createTrack("video-1", "video");
+    const audioTrack = createTrack("audio-1", "audio");
     const localVideoStream = new MockMediaStream([videoTrack]) as unknown as MediaStream;
     const localAudioStream = new MockMediaStream([audioTrack]) as unknown as MediaStream;
 
-    renderHook(() => useMediasoup({ roomId: 'room-1', localVideoStream, localAudioStream, enabled: true, displayName: 'alice' }));
+    renderHook(() =>
+      useMediasoup({
+        roomId: "room-1",
+        localVideoStream,
+        localAudioStream,
+        enabled: true,
+        displayName: "alice",
+      }),
+    );
 
     expect(sfuMock.connect).toHaveBeenCalled();
 
     act(() => {
       sfuMock.emitState({
         ...baseState,
-        connectionState: 'connected',
+        connectionState: "connected",
       });
     });
 
     await waitFor(() => {
       expect(sfuMock.joinRoom).toHaveBeenCalledWith({
-        roomId: 'room-1',
-        userId: 'user-1',
-        username: 'alice',
+        roomId: "room-1",
+        userId: "user-1",
+        username: "alice",
       });
     });
 
     act(() => {
       sfuMock.emitState({
         ...baseState,
-        connectionState: 'connected',
+        connectionState: "connected",
         isSendTransportCreated: true,
       });
     });
@@ -228,36 +266,41 @@ describe('useMediasoup', () => {
     expect(sfuMock.produce).toHaveBeenCalledWith(audioTrack);
   });
 
-  it('collects remote peer media and removes it when the peer leaves', async () => {
+  it("collects remote peer media and removes it when the peer leaves", async () => {
     const { result } = renderHook(() =>
-      useMediasoup({ roomId: 'room-1', localVideoStream: null, localAudioStream: null, enabled: true })
+      useMediasoup({
+        roomId: "room-1",
+        localVideoStream: null,
+        localAudioStream: null,
+        enabled: true,
+      }),
     );
 
     act(() => {
       sfuMock.emitPeerJoined({
-        userId: 'user-2',
-        username: 'bob',
+        userId: "user-2",
+        username: "bob",
         producers: new Map(),
       });
     });
 
-    const videoTrack = createTrack('remote-video', 'video');
-    const audioTrack = createTrack('remote-audio', 'audio');
+    const videoTrack = createTrack("remote-video", "video");
+    const audioTrack = createTrack("remote-audio", "audio");
 
     act(() => {
-      sfuMock.emitTrack(videoTrack, 'video', 'user-2');
-      sfuMock.emitTrack(audioTrack, 'audio', 'user-2');
+      sfuMock.emitTrack(videoTrack, "video", "user-2");
+      sfuMock.emitTrack(audioTrack, "audio", "user-2");
     });
 
     await waitFor(() => {
       expect(result.current.remotePeers).toHaveLength(1);
     });
 
-    expect(result.current.remotePeers[0]?.username).toBe('bob');
+    expect(result.current.remotePeers[0]?.username).toBe("bob");
     expect(result.current.remotePeers[0]?.stream.getTracks()).toHaveLength(2);
 
     act(() => {
-      sfuMock.emitPeerLeft('user-2');
+      sfuMock.emitPeerLeft("user-2");
     });
 
     await waitFor(() => {
@@ -265,13 +308,18 @@ describe('useMediasoup', () => {
     });
   });
 
-  it('sets wasKicked and clears remote peers when kicked event fires', async () => {
+  it("sets wasKicked and clears remote peers when kicked event fires", async () => {
     const { result } = renderHook(() =>
-      useMediasoup({ roomId: 'room-1', localVideoStream: null, localAudioStream: null, enabled: true })
+      useMediasoup({
+        roomId: "room-1",
+        localVideoStream: null,
+        localAudioStream: null,
+        enabled: true,
+      }),
     );
 
     act(() => {
-      sfuMock.emitPeerJoined({ userId: 'user-2', username: 'bob', producers: new Map() });
+      sfuMock.emitPeerJoined({ userId: "user-2", username: "bob", producers: new Map() });
     });
 
     await waitFor(() => {
@@ -279,7 +327,7 @@ describe('useMediasoup', () => {
     });
 
     act(() => {
-      sfuMock.emitKicked({ roomId: 'room-1' });
+      sfuMock.emitKicked({ roomId: "room-1" });
     });
 
     await waitFor(() => {
@@ -288,52 +336,67 @@ describe('useMediasoup', () => {
     });
   });
 
-  it('exposes pauseProducer and resumeProducer that delegate to sfuManager', async () => {
-    sfuMock.getProducerByKind.mockReturnValue({ id: 'video-producer' });
+  it("exposes pauseProducer and resumeProducer that delegate to sfuManager", async () => {
+    sfuMock.getProducerByKind.mockReturnValue({ id: "video-producer" });
 
     const { result } = renderHook(() =>
-      useMediasoup({ roomId: 'room-1', localVideoStream: null, localAudioStream: null, enabled: true })
+      useMediasoup({
+        roomId: "room-1",
+        localVideoStream: null,
+        localAudioStream: null,
+        enabled: true,
+      }),
     );
 
     act(() => {
-      result.current.pauseProducer('video');
+      result.current.pauseProducer("video");
     });
 
-    expect(sfuMock.pauseProducer).toHaveBeenCalledWith('video-producer');
+    expect(sfuMock.pauseProducer).toHaveBeenCalledWith("video-producer");
 
     act(() => {
-      result.current.resumeProducer('video');
+      result.current.resumeProducer("video");
     });
 
-    expect(sfuMock.resumeProducer).toHaveBeenCalledWith('video-producer');
+    expect(sfuMock.resumeProducer).toHaveBeenCalledWith("video-producer");
   });
 
-  it('exposes replaceTrack that delegates to sfuManager', async () => {
-    const newTrack = createTrack('video-2', 'video');
+  it("exposes replaceTrack that delegates to sfuManager", async () => {
+    const newTrack = createTrack("video-2", "video");
 
     const { result } = renderHook(() =>
-      useMediasoup({ roomId: 'room-1', localVideoStream: null, localAudioStream: null, enabled: true })
+      useMediasoup({
+        roomId: "room-1",
+        localVideoStream: null,
+        localAudioStream: null,
+        enabled: true,
+      }),
     );
 
     let success = false;
     await act(async () => {
-      success = await result.current.replaceTrack('video', newTrack);
+      success = await result.current.replaceTrack("video", newTrack);
     });
 
     expect(success).toBe(true);
-    expect(sfuMock.replaceTrack).toHaveBeenCalledWith('video', newTrack);
+    expect(sfuMock.replaceTrack).toHaveBeenCalledWith("video", newTrack);
   });
 
-  it('exposes hasProducer that reflects sfuManager.getProducerByKind', () => {
-    sfuMock.getProducerByKind.mockReturnValue({ id: 'audio-producer' });
+  it("exposes hasProducer that reflects sfuManager.getProducerByKind", () => {
+    sfuMock.getProducerByKind.mockReturnValue({ id: "audio-producer" });
 
     const { result } = renderHook(() =>
-      useMediasoup({ roomId: 'room-1', localVideoStream: null, localAudioStream: null, enabled: true })
+      useMediasoup({
+        roomId: "room-1",
+        localVideoStream: null,
+        localAudioStream: null,
+        enabled: true,
+      }),
     );
 
-    expect(result.current.hasProducer('audio')).toBe(true);
+    expect(result.current.hasProducer("audio")).toBe(true);
 
     sfuMock.getProducerByKind.mockReturnValue(undefined);
-    expect(result.current.hasProducer('video')).toBe(false);
+    expect(result.current.hasProducer("video")).toBe(false);
   });
 });

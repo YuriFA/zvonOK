@@ -11,7 +11,7 @@ export function calculateRmsLevel(analyser: AnalyserNode): number {
   // return Math.sqrt(sum / dataArray.length);
   const rms = Math.sqrt(sum / dataArray.length);
   if (rms < 1e-10) return 0;
-  const db = 20 * Math.log10(rms);           // ~-40..-5 dB для речи
-  const normalized = (db + 60) / 60;         // маппим -60..0 dB → 0..1
+  const db = 20 * Math.log10(rms); // ~-40..-5 dB для речи
+  const normalized = (db + 60) / 60; // маппим -60..0 dB → 0..1
   return Math.max(0, Math.min(1, normalized));
 }

@@ -4,7 +4,7 @@ import type {
   DtlsParameters,
   IceParameters,
   IceCandidate,
-} from 'mediasoup-client/types';
+} from "mediasoup-client/types";
 
 // Join payload sent to server
 export interface SfuJoinPayload {
@@ -20,7 +20,7 @@ export interface SfuJoinedPayload {
 }
 
 // Transport direction
-export type SfuTransportDirection = 'send' | 'recv';
+export type SfuTransportDirection = "send" | "recv";
 
 // Transport created response from server
 export interface SfuTransportCreatedPayload {
@@ -46,7 +46,7 @@ export interface SfuTransportConnectedPayload {
 // Produce payload sent to server
 export interface SfuProducePayload {
   transportId: string;
-  kind: 'audio' | 'video';
+  kind: "audio" | "video";
   rtpParameters: RtpParameters;
 }
 
@@ -54,7 +54,7 @@ export interface SfuProducePayload {
 export interface SfuProducerCreatedPayload {
   producerId: string;
   userId: string;
-  kind: 'audio' | 'video';
+  kind: "audio" | "video";
 }
 
 // New producer notification from server
@@ -62,7 +62,7 @@ export interface SfuNewProducerPayload {
   producerId: string;
   userId: string;
   username: string;
-  kind: 'audio' | 'video';
+  kind: "audio" | "video";
   paused: boolean;
 }
 
@@ -76,7 +76,7 @@ export interface SfuConsumePayload {
 export interface SfuConsumerCreatedPayload {
   consumerId: string;
   producerId: string;
-  kind: 'audio' | 'video';
+  kind: "audio" | "video";
   rtpParameters: RtpParameters;
 }
 
@@ -97,7 +97,7 @@ export interface SfuResumeProducerPayload {
 // Producer state changed notification from server (broadcast to other peers)
 export interface SfuProducerStateChangedPayload {
   producerId: string;
-  kind: 'audio' | 'video';
+  kind: "audio" | "video";
   userId: string;
   paused: boolean;
 }
@@ -118,7 +118,7 @@ export interface SfuRoomEndedPayload {
 export interface SfuPeerInfo {
   userId: string;
   username: string;
-  producers: Map<string, { kind: 'audio' | 'video'; paused?: boolean }>;
+  producers: Map<string, { kind: "audio" | "video"; paused?: boolean }>;
 }
 
 // Payload for sfu:peer-joined event (peer joins after you)
@@ -134,11 +134,7 @@ export interface SfuExistingPeersPayload {
 }
 
 // SFU connection state
-export type SfuConnectionState =
-  | 'disconnected'
-  | 'connecting'
-  | 'connected'
-  | 'failed';
+export type SfuConnectionState = "disconnected" | "connecting" | "connected" | "failed";
 
 // SFU manager state
 export interface SfuState {
@@ -152,26 +148,30 @@ export interface SfuState {
 }
 
 // Callback types
-export type SfuTrackCallback = (track: MediaStreamTrack, kind: 'audio' | 'video', userId: string) => void;
+export type SfuTrackCallback = (
+  track: MediaStreamTrack,
+  kind: "audio" | "video",
+  userId: string,
+) => void;
 export type SfuPeerCallback = (peer: SfuPeerInfo) => void;
 export type SfuStateCallback = (state: SfuState) => void;
 export type SfuProducerStateCallback = (payload: SfuProducerStateChangedPayload) => void;
 
 // Quality stats types
 export interface QualityStats {
-  bitrate: number;        // kbps
-  packetLoss: number;     // percentage
-  rtt: number;            // ms
+  bitrate: number; // kbps
+  packetLoss: number; // percentage
+  rtt: number; // ms
   width: number;
   height: number;
   fps: number;
 }
 
-export type QualityLevel = 'excellent' | 'good' | 'fair' | 'poor';
+export type QualityLevel = "excellent" | "good" | "fair" | "poor";
 
 export interface QualityScore {
   level: QualityLevel;
-  score: number;          // 0-100
+  score: number; // 0-100
 }
 
 export interface PeerQualityStats {

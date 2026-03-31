@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/rules-of-hooks */
-import { test as base, type Page } from '@playwright/test';
-import { API_BASE_URL, generateTestUser } from '../utils/test-data';
+import { test as base, type Page } from "@playwright/test";
+
+import { API_BASE_URL, generateTestUser } from "../utils/test-data";
 
 type TestUser = ReturnType<typeof generateTestUser>;
 
@@ -75,4 +76,4 @@ export const test = base.extend<AuthFixtures>({
   },
 });
 
-export { expect } from '@playwright/test';
+export { expect } from "@playwright/test";

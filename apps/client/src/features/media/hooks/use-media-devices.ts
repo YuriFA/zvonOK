@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
-import { STORAGE_KEYS } from '@/lib/constants/storage-keys';
-import { useDeviceService } from '@/features/media/contexts/media-manager.context';
+import { useState, useEffect, useCallback } from "react";
 
-export type DeviceType = 'videoinput' | 'audioinput' | 'audiooutput';
+import { useDeviceService } from "@/features/media/contexts/media-manager.context";
+import { STORAGE_KEYS } from "@/lib/constants/storage-keys";
+
+export type DeviceType = "videoinput" | "audioinput" | "audiooutput";
 
 export interface MediaDevice {
   deviceId: string;
@@ -71,16 +72,16 @@ export function useMediaDevices(): UseMediaDevicesReturn {
 
         setDevices(rawDevices);
       } catch (error) {
-        console.warn('Failed to enumerate devices', error);
+        console.warn("Failed to enumerate devices", error);
       } finally {
         setIsLoading(false);
       }
     };
 
     handleDeviceChange();
-    navigator.mediaDevices.addEventListener('devicechange', handleDeviceChange);
+    navigator.mediaDevices.addEventListener("devicechange", handleDeviceChange);
     return () => {
-      navigator.mediaDevices.removeEventListener('devicechange', handleDeviceChange);
+      navigator.mediaDevices.removeEventListener("devicechange", handleDeviceChange);
     };
   }, [deviceService]);
 
@@ -100,9 +101,9 @@ export function useMediaDevices(): UseMediaDevicesReturn {
     setSelectedDevices((prev) => ({ ...prev, speakerDeviceId: deviceId }));
   }, []);
 
-  const videoDevices = devices.filter((d) => d.kind === 'videoinput');
-  const audioDevices = devices.filter((d) => d.kind === 'audioinput');
-  const speakerDevices = devices.filter((d) => d.kind === 'audiooutput');
+  const videoDevices = devices.filter((d) => d.kind === "videoinput");
+  const audioDevices = devices.filter((d) => d.kind === "audioinput");
+  const speakerDevices = devices.filter((d) => d.kind === "audiooutput");
 
   return {
     videoDevices,

@@ -1,4 +1,4 @@
-import { type Page, type Locator, expect } from '@playwright/test';
+import { type Page, type Locator, expect } from "@playwright/test";
 
 export class RegisterPage {
   readonly page: Page;
@@ -12,24 +12,24 @@ export class RegisterPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.usernameInput = page.locator('#username');
-    this.emailInput = page.locator('#email');
-    this.passwordInput = page.locator('#password');
-    this.confirmPasswordInput = page.locator('#confirmPassword');
-    this.submitButton = page.getByRole('button', { name: /register/i });
-    this.loginLink = page.getByRole('link', { name: /login/i });
-    this.errorAlert = page.locator('.bg-destructive\\/15');
+    this.usernameInput = page.locator("#username");
+    this.emailInput = page.locator("#email");
+    this.passwordInput = page.locator("#password");
+    this.confirmPasswordInput = page.locator("#confirmPassword");
+    this.submitButton = page.getByRole("button", { name: /register/i });
+    this.loginLink = page.getByRole("link", { name: /login/i });
+    this.errorAlert = page.locator(".bg-destructive\\/15");
   }
 
   async goto() {
-    await this.page.goto('/register');
+    await this.page.goto("/register");
   }
 
   async fillCredentials(
     username: string,
     email: string,
     password: string,
-    confirmPassword?: string
+    confirmPassword?: string,
   ) {
     await this.usernameInput.fill(username);
     await this.emailInput.fill(email);
@@ -55,6 +55,6 @@ export class RegisterPage {
   }
 
   async expectRedirectToHome() {
-    await expect(this.page).toHaveURL('/');
+    await expect(this.page).toHaveURL("/");
   }
 }

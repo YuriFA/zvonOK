@@ -1,11 +1,7 @@
-import {
-  ApiError,
-  AuthError,
-  NetworkError,
-  ValidationError,
-} from './api.errors';
+import { ApiError, AuthError, NetworkError, ValidationError } from "./api.errors";
 
-const API_BASE_URL = (import.meta.env as { VITE_API_BASE_URL?: string }).VITE_API_BASE_URL ?? 'http://localhost:3000';
+const API_BASE_URL =
+  (import.meta.env as { VITE_API_BASE_URL?: string }).VITE_API_BASE_URL ?? "http://localhost:3000";
 
 export class ApiClient {
   private baseURL: string;
@@ -16,17 +12,14 @@ export class ApiClient {
     this.baseURL = baseURL;
   }
 
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {},
-  ): Promise<T> {
+  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
 
     const config: RequestInit = {
       ...options,
-      credentials: 'include',
+      credentials: "include",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         ...options.headers,
       },
     };
@@ -35,14 +28,14 @@ export class ApiClient {
       let response = await fetch(url, config);
 
       // Handle 401 - try refreshing token
-      if (response.status === 401 && !endpoint.includes('/auth/refresh-token')) {
+      if (response.status === 401 && !endpoint.includes("/auth/refresh-token")) {
         const refreshed = await this.refreshAccessToken();
         if (refreshed) {
           // Retry original request after successful refresh
           response = await fetch(url, config);
         } else {
           // Refresh failed - clear auth state and let the error propagate
-          throw new AuthError('Session expired. Please login again.', 401);
+          throw new AuthError("Session expired. Please login again.", 401);
         }
       }
 
@@ -60,9 +53,7 @@ export class ApiClient {
       if (error instanceof ApiError || error instanceof AuthError) {
         throw error;
       }
-      throw new NetworkError(
-        error instanceof Error ? error.message : 'Network error occurred',
-      );
+      throw new NetworkError(error instanceof Error ? error.message : "Network error occurred");
     }
   }
 
@@ -91,26 +82,26 @@ export class ApiClient {
       case 422:
         throw new ValidationError(message, details);
       case 500:
-        throw new ApiError('Internal server error', 500, details);
+        throw new ApiError("Internal server error", 500, details);
       default:
         throw new ApiError(message, response.status, details);
     }
   }
 
   private extractErrorMessage(details: unknown): string {
-    if (typeof details === 'string') {
+    if (typeof details === "string") {
       return details;
     }
 
-    if (details && typeof details === 'object' && 'message' in details) {
+    if (details && typeof details === "object" && "message" in details) {
       return String(details.message);
     }
 
-    if (details && typeof details === 'object' && 'error' in details) {
+    if (details && typeof details === "object" && "error" in details) {
       return String(details.error);
     }
 
-    return 'An error occurred';
+    return "An error occurred";
   }
 
   private async refreshAccessToken(): Promise<boolean> {
@@ -135,28 +126,28 @@ export class ApiClient {
 
   private async performRefresh(): Promise<boolean> {
     const response = await fetch(`${this.baseURL}/auth/refresh-token`, {
-      method: 'POST',
-      credentials: 'include',
+      method: "POST",
+      credentials: "include",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
     });
 
     if (!response.ok) {
-      throw new AuthError('Failed to refresh token', response.status);
+      throw new AuthError("Failed to refresh token", response.status);
     }
 
     return true;
   }
 
   async get<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    return this.request<T>(endpoint, { ...options, method: 'GET' });
+    return this.request<T>(endpoint, { ...options, method: "GET" });
   }
 
   async post<T>(endpoint: string, data?: unknown, options?: RequestInit): Promise<T> {
     return this.request<T>(endpoint, {
       ...options,
-      method: 'POST',
+      method: "POST",
       body: data ? JSON.stringify(data) : undefined,
     });
   }
@@ -164,19 +155,19 @@ export class ApiClient {
   async put<T>(endpoint: string, data: unknown, options?: RequestInit): Promise<T> {
     return this.request<T>(endpoint, {
       ...options,
-      method: 'PUT',
+      method: "PUT",
       body: JSON.stringify(data),
     });
   }
 
   async delete<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    return this.request<T>(endpoint, { ...options, method: 'DELETE' });
+    return this.request<T>(endpoint, { ...options, method: "DELETE" });
   }
 
   async patch<T>(endpoint: string, data?: unknown, options?: RequestInit): Promise<T> {
     return this.request<T>(endpoint, {
       ...options,
-      method: 'PATCH',
+      method: "PATCH",
       body: data ? JSON.stringify(data) : undefined,
     });
   }

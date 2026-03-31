@@ -6,10 +6,12 @@ import {
   useRef,
   useState,
   type ReactNode,
-} from 'react';
-import { useMediaManagerDirect } from './media-manager.context';
-import { loadSelectedDevices } from '@/features/media/hooks/use-media-devices';
-import { CaptureState } from '@/lib/media/capture-state';
+} from "react";
+
+import { loadSelectedDevices } from "@/features/media/hooks/use-media-devices";
+import { CaptureState } from "@/lib/media/capture-state";
+
+import { useMediaManagerDirect } from "./media-manager.context";
 
 export interface MediaStreamContextValue {
   videoStream: MediaStream | null;
@@ -85,7 +87,9 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
   }, []);
 
   return (
-    <MediaStreamContext.Provider value={{ videoStream, audioStream, videoState, audioState, start, stop }}>
+    <MediaStreamContext.Provider
+      value={{ videoStream, audioStream, videoState, audioState, start, stop }}
+    >
       {children}
     </MediaStreamContext.Provider>
   );
@@ -95,7 +99,7 @@ export function MediaStreamProvider({ children }: MediaStreamProviderProps) {
 export function useMediaStreamContext(): MediaStreamContextValue {
   const ctx = useContext(MediaStreamContext);
   if (!ctx) {
-    throw new Error('useMediaStreamContext must be used within a MediaStreamProvider');
+    throw new Error("useMediaStreamContext must be used within a MediaStreamProvider");
   }
   return ctx;
 }

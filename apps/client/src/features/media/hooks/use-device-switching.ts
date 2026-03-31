@@ -1,6 +1,12 @@
-import { useCallback, useRef } from 'react';
-import { useVideoCaptureControl, useAudioCaptureControl, useVideoCaptureState, useAudioCaptureState } from '@/features/media/contexts/media-manager.context';
-import { isActive } from '@/lib/media/capture-state';
+import { useCallback, useRef } from "react";
+
+import {
+  useVideoCaptureControl,
+  useAudioCaptureControl,
+  useVideoCaptureState,
+  useAudioCaptureState,
+} from "@/features/media/contexts/media-manager.context";
+import { isActive } from "@/lib/media/capture-state";
 
 export interface UseDeviceSwitchingReturn {
   switchVideoDevice: (deviceId: string) => Promise<boolean>;
@@ -16,74 +22,82 @@ export function useDeviceSwitching(): UseDeviceSwitchingReturn {
   const audioStateReader = useAudioCaptureState();
   const isSwitchingRef = useRef(false);
 
-  const switchVideoDevice = useCallback(async (deviceId: string): Promise<boolean> => {
-    if (isSwitchingRef.current) {
-      console.log('[DeviceSwitching] Already switching, skipping');
-      return false;
-    }
-
-    isSwitchingRef.current = true;
-
-    try {
-      if (!isActive(videoStateReader.getState())) {
-        return true;
+  const switchVideoDevice = useCallback(
+    async (deviceId: string): Promise<boolean> => {
+      if (isSwitchingRef.current) {
+        console.log("[DeviceSwitching] Already switching, skipping");
+        return false;
       }
 
-      return await videoController.switchDevice(deviceId);
-    } catch (error) {
-      console.error('[DeviceSwitching] Failed to switch video device:', error);
-      return false;
-    } finally {
-      isSwitchingRef.current = false;
-    }
-  }, [videoController, videoStateReader]);
+      isSwitchingRef.current = true;
 
-  const switchAudioDevice = useCallback(async (deviceId: string): Promise<boolean> => {
-    if (isSwitchingRef.current) {
-      console.log('[DeviceSwitching] Already switching, skipping');
-      return false;
-    }
+      try {
+        if (!isActive(videoStateReader.getState())) {
+          return true;
+        }
 
-    isSwitchingRef.current = true;
+        return await videoController.switchDevice(deviceId);
+      } catch (error) {
+        console.error("[DeviceSwitching] Failed to switch video device:", error);
+        return false;
+      } finally {
+        isSwitchingRef.current = false;
+      }
+    },
+    [videoController, videoStateReader],
+  );
 
-    try {
-      if (!isActive(audioStateReader.getState())) {
-        return true;
+  const switchAudioDevice = useCallback(
+    async (deviceId: string): Promise<boolean> => {
+      if (isSwitchingRef.current) {
+        console.log("[DeviceSwitching] Already switching, skipping");
+        return false;
       }
 
-      return await audioController.switchDevice(deviceId);
-    } catch (error) {
-      console.error('[DeviceSwitching] Failed to switch audio device:', error);
-      return false;
-    } finally {
-      isSwitchingRef.current = false;
-    }
-  }, [audioController, audioStateReader]);
+      isSwitchingRef.current = true;
+
+      try {
+        if (!isActive(audioStateReader.getState())) {
+          return true;
+        }
+
+        return await audioController.switchDevice(deviceId);
+      } catch (error) {
+        console.error("[DeviceSwitching] Failed to switch audio device:", error);
+        return false;
+      } finally {
+        isSwitchingRef.current = false;
+      }
+    },
+    [audioController, audioStateReader],
+  );
 
   const switchSpeakerDevice = useCallback(
     async (element: HTMLMediaElement | null, deviceId: string): Promise<boolean> => {
       if (!element) {
-        console.error('[DeviceSwitching] Failed to switch speaker device: element is null');
+        console.error("[DeviceSwitching] Failed to switch speaker device: element is null");
         return false;
       }
 
-      if (!('setSinkId' in HTMLMediaElement.prototype)) {
-        console.error('[DeviceSwitching] Failed to switch speaker device: setSinkId not supported');
+      if (!("setSinkId" in HTMLMediaElement.prototype)) {
+        console.error("[DeviceSwitching] Failed to switch speaker device: setSinkId not supported");
         return false;
       }
 
       try {
-        await (element as HTMLMediaElement & { setSinkId: (id: string) => Promise<void> }).setSinkId(deviceId);
+        await (
+          element as HTMLMediaElement & { setSinkId: (id: string) => Promise<void> }
+        ).setSinkId(deviceId);
         return true;
       } catch (error) {
-        console.error('[DeviceSwitching] Failed to switch speaker device:', error);
+        console.error("[DeviceSwitching] Failed to switch speaker device:", error);
         return false;
       }
     },
     [],
   );
 
-  const isSpeakerSwitchSupported = 'setSinkId' in HTMLMediaElement.prototype;
+  const isSpeakerSwitchSupported = "setSinkId" in HTMLMediaElement.prototype;
 
   return {
     switchVideoDevice,

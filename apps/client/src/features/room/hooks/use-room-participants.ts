@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
-import type { Participant } from '@/components/room/participants-list';
-import type { RemotePeerMedia } from '@/hooks/use-mediasoup';
+import { useMemo } from "react";
+
+import type { Participant } from "@/components/room/participants-list";
+import type { RemotePeerMedia } from "@/hooks/use-mediasoup";
 
 export interface UseRoomParticipantsOptions {
   userId: string | undefined;
@@ -23,15 +24,14 @@ export function useRoomParticipants({
   connectionState,
   remotePeers,
 }: UseRoomParticipantsOptions): UseRoomParticipantsReturn {
-
   const participants: Participant[] = useMemo(() => {
     const localParticipant: Participant = {
-      id: userId ?? 'local',
+      id: userId ?? "local",
       userId: userId,
-      username: username ?? 'You',
+      username: username ?? "You",
       isMuted: !isAudioEnabled,
       isVideoOff: !isVideoEnabled,
-      isConnected: connectionState === 'connected',
+      isConnected: connectionState === "connected",
     };
 
     const remoteParticipants: Participant[] = remotePeers.map((peer: RemotePeerMedia) => {

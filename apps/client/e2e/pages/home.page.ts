@@ -1,4 +1,4 @@
-import { type Page, type Locator, expect } from '@playwright/test';
+import { type Page, type Locator, expect } from "@playwright/test";
 
 export class HomePage {
   readonly page: Page;
@@ -9,12 +9,12 @@ export class HomePage {
   constructor(page: Page) {
     this.page = page;
     this.roomCodeInput = page.locator('input[placeholder*="room code" i]');
-    this.joinRoomButton = page.getByRole('button', { name: /^join room$/i });
-    this.createRoomButton = page.getByRole('button', { name: /create room/i });
+    this.joinRoomButton = page.getByRole("button", { name: /^join room$/i });
+    this.createRoomButton = page.getByRole("button", { name: /create room/i });
   }
 
   async goto() {
-    await this.page.goto('/');
+    await this.page.goto("/");
   }
 
   async enterRoomCode(code: string) {
@@ -45,6 +45,6 @@ export class HomePage {
   async expectLoginPromptVisible() {
     // Login link should be visible for unauthenticated users
     // Use .first() because there may be multiple login links (header + button)
-    await expect(this.page.getByRole('link', { name: /login/i }).first()).toBeVisible();
+    await expect(this.page.getByRole("link", { name: /login/i }).first()).toBeVisible();
   }
 }

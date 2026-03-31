@@ -1,9 +1,17 @@
-import { useCallback, useEffect } from 'react';
-import { useMediasoup, type RemotePeerMedia } from '@/hooks/use-mediasoup';
-import { useMediaControls, type UseMediaControlsReturn } from '@/features/media/hooks/use-media-controls';
-import { useVideoCaptureControl, useAudioCaptureControl, useCaptureTrackProvider } from '@/features/media/contexts/media-manager.context';
-import { useSfuTrackSync } from '@/features/media/hooks/use-sfu-track-sync';
-import type { SfuState } from '@/lib/sfu/types';
+import { useCallback, useEffect } from "react";
+
+import {
+  useVideoCaptureControl,
+  useAudioCaptureControl,
+  useCaptureTrackProvider,
+} from "@/features/media/contexts/media-manager.context";
+import {
+  useMediaControls,
+  type UseMediaControlsReturn,
+} from "@/features/media/hooks/use-media-controls";
+import { useSfuTrackSync } from "@/features/media/hooks/use-sfu-track-sync";
+import { useMediasoup, type RemotePeerMedia } from "@/hooks/use-mediasoup";
+import type { SfuState } from "@/lib/sfu/types";
 
 export interface UseRoomSfuOptions {
   roomId: string;
@@ -34,8 +42,8 @@ export function useRoomSfu({
 }: UseRoomSfuOptions): UseRoomSfuResult {
   const videoControl = useVideoCaptureControl();
   const audioControl = useAudioCaptureControl();
-  const videoTrackProvider = useCaptureTrackProvider('video');
-  const audioTrackProvider = useCaptureTrackProvider('audio');
+  const videoTrackProvider = useCaptureTrackProvider("video");
+  const audioTrackProvider = useCaptureTrackProvider("audio");
   const mediaControls = useMediaControls();
 
   useSfuTrackSync();
@@ -80,25 +88,33 @@ export function useRoomSfu({
         return;
       }
 
-      if (!hasProducer('video')) {
+      if (!hasProducer("video")) {
         const produced = await produceTrack(track);
         if (!produced) {
           videoControl.stop();
           mediaControls.setVideoEnabled(false);
           return;
         }
-        resumeProducer('video');
+        resumeProducer("video");
         return;
       }
 
-      resumeProducer('video');
+      resumeProducer("video");
     } else {
-      if (hasProducer('video')) {
-        pauseProducer('video');
+      if (hasProducer("video")) {
+        pauseProducer("video");
       }
       videoControl.stop();
     }
-  }, [videoControl, videoTrackProvider, produceTrack, mediaControls, hasProducer, pauseProducer, resumeProducer]);
+  }, [
+    videoControl,
+    videoTrackProvider,
+    produceTrack,
+    mediaControls,
+    hasProducer,
+    pauseProducer,
+    resumeProducer,
+  ]);
 
   const toggleAudio = useCallback(async () => {
     const nextEnabled = !mediaControls.isAudioEnabled;
@@ -117,25 +133,33 @@ export function useRoomSfu({
         return;
       }
 
-      if (!hasProducer('audio')) {
+      if (!hasProducer("audio")) {
         const produced = await produceTrack(track);
         if (!produced) {
           audioControl.stop();
           mediaControls.setAudioEnabled(false);
           return;
         }
-        resumeProducer('audio');
+        resumeProducer("audio");
         return;
       }
 
-      resumeProducer('audio');
+      resumeProducer("audio");
     } else {
-      if (hasProducer('audio')) {
-        pauseProducer('audio');
+      if (hasProducer("audio")) {
+        pauseProducer("audio");
       }
       audioControl.stop();
     }
-  }, [audioControl, audioTrackProvider, produceTrack, mediaControls, hasProducer, pauseProducer, resumeProducer]);
+  }, [
+    audioControl,
+    audioTrackProvider,
+    produceTrack,
+    mediaControls,
+    hasProducer,
+    pauseProducer,
+    resumeProducer,
+  ]);
 
   return {
     sfuState,

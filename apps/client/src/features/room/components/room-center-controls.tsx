@@ -1,13 +1,10 @@
-import { Button } from '@/components/ui/button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { Video, VideoOff, Mic, MicOff, AlertTriangle, Loader2, PhoneOff } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { CaptureState, getCaptureStateDisplay, isActive } from '@/lib/media/capture-state';
-import { LinkButton } from '@/components/ui/link-button';
+import { Video, VideoOff, Mic, MicOff, AlertTriangle, Loader2, PhoneOff } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/link-button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { CaptureState, getCaptureStateDisplay, isActive } from "@/lib/media/capture-state";
+import { cn } from "@/lib/utils";
 
 interface Props {
   isVideoEnabled: boolean;
@@ -17,8 +14,8 @@ interface Props {
   onToggleVideo: () => void;
   onToggleAudio: () => void;
   className?: string;
-  size?: 'default' | 'sm' | 'lg' | 'icon';
-  variant?: 'default' | 'secondary' | 'destructive' | 'outline' | 'ghost' | 'link';
+  size?: "default" | "sm" | "lg" | "icon";
+  variant?: "default" | "secondary" | "destructive" | "outline" | "ghost" | "link";
 }
 
 export function RoomCenterControls({
@@ -29,39 +26,43 @@ export function RoomCenterControls({
   onToggleVideo,
   onToggleAudio,
   className,
-  size = 'icon',
-  variant = 'outline',
+  size = "icon",
+  variant = "outline",
 }: Props) {
-  const videoDisplay = getCaptureStateDisplay(videoCaptureState, 'video');
-  const audioDisplay = getCaptureStateDisplay(audioCaptureState, 'audio');
+  const videoDisplay = getCaptureStateDisplay(videoCaptureState, "video");
+  const audioDisplay = getCaptureStateDisplay(audioCaptureState, "audio");
 
   const renderVideoIcon = () => {
-    if (videoDisplay.icon === 'spinner') return <Loader2 className="size-4 animate-spin" />;
-    if (videoDisplay.icon === 'off-warning') return <AlertTriangle className="size-4 text-yellow-500" />;
-    if (videoDisplay.icon === 'off-error') return <AlertTriangle className="size-4 text-destructive" />;
+    if (videoDisplay.icon === "spinner") return <Loader2 className="size-4 animate-spin" />;
+    if (videoDisplay.icon === "off-warning")
+      return <AlertTriangle className="size-4 text-yellow-500" />;
+    if (videoDisplay.icon === "off-error")
+      return <AlertTriangle className="size-4 text-destructive" />;
     return isVideoEnabled ? <Video className="size-4" /> : <VideoOff className="size-4" />;
   };
 
   const renderAudioIcon = () => {
-    if (audioDisplay.icon === 'spinner') return <Loader2 className="size-4 animate-spin" />;
-    if (audioDisplay.icon === 'off-warning') return <AlertTriangle className="size-4 text-yellow-500" />;
-    if (audioDisplay.icon === 'off-error') return <AlertTriangle className="size-4 text-destructive" />;
+    if (audioDisplay.icon === "spinner") return <Loader2 className="size-4 animate-spin" />;
+    if (audioDisplay.icon === "off-warning")
+      return <AlertTriangle className="size-4 text-yellow-500" />;
+    if (audioDisplay.icon === "off-error")
+      return <AlertTriangle className="size-4 text-destructive" />;
     return isAudioEnabled ? <Mic className="size-4" /> : <MicOff className="size-4" />;
   };
 
-  const videoHasError = videoDisplay.variant !== 'default' && !isActive(videoCaptureState);
-  const audioHasError = audioDisplay.variant !== 'default' && !isActive(audioCaptureState);
-  const videoIsWarning = videoDisplay.variant === 'warning';
-  const audioIsWarning = audioDisplay.variant === 'warning';
+  const videoHasError = videoDisplay.variant !== "default" && !isActive(videoCaptureState);
+  const audioHasError = audioDisplay.variant !== "default" && !isActive(audioCaptureState);
+  const videoIsWarning = videoDisplay.variant === "warning";
+  const audioIsWarning = audioDisplay.variant === "warning";
 
   return (
-    <div className={cn('flex gap-2', className)}>
+    <div className={cn("flex gap-2", className)}>
       <Tooltip>
         <TooltipTrigger
           render={
             <Button
               type="button"
-              variant={videoHasError && !videoIsWarning ? 'destructive' : variant}
+              variant={videoHasError && !videoIsWarning ? "destructive" : variant}
               size={size}
               onClick={onToggleVideo}
               aria-label={videoDisplay.tooltip}
@@ -78,7 +79,7 @@ export function RoomCenterControls({
           render={
             <Button
               type="button"
-              variant={audioHasError && !audioIsWarning ? 'destructive' : variant}
+              variant={audioHasError && !audioIsWarning ? "destructive" : variant}
               size={size}
               onClick={onToggleAudio}
               aria-label={audioDisplay.tooltip}

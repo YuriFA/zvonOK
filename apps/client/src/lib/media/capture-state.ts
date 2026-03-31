@@ -47,38 +47,78 @@ export function canRetry(state: CaptureState): boolean {
 }
 
 export type CaptureStateDisplay = {
-  variant: 'default' | 'warning' | 'destructive';
-  icon: 'on' | 'off' | 'spinner' | 'off-warning' | 'off-error';
+  variant: "default" | "warning" | "destructive";
+  icon: "on" | "off" | "spinner" | "off-warning" | "off-error";
   tooltip: string;
   statusText: string | null;
 };
 
 export function getCaptureStateDisplay(
   state: CaptureState,
-  kind: 'video' | 'audio',
+  kind: "video" | "audio",
 ): CaptureStateDisplay {
-  const label = kind === 'video' ? 'Camera' : 'Microphone';
+  const label = kind === "video" ? "Camera" : "Microphone";
 
   switch (state) {
     case CaptureState.ACTIVE:
-      return { variant: 'default', icon: 'on', tooltip: `Turn off ${label.toLowerCase()}`, statusText: null };
+      return {
+        variant: "default",
+        icon: "on",
+        tooltip: `Turn off ${label.toLowerCase()}`,
+        statusText: null,
+      };
     case CaptureState.STOPPED:
     case CaptureState.MUTED:
     case CaptureState.CAPTURE_CANCELED:
-      return { variant: 'default', icon: 'off', tooltip: `Turn on ${label.toLowerCase()}`, statusText: null };
+      return {
+        variant: "default",
+        icon: "off",
+        tooltip: `Turn on ${label.toLowerCase()}`,
+        statusText: null,
+      };
     case CaptureState.STARTING:
-      return { variant: 'default', icon: 'spinner', tooltip: `${label} starting...`, statusText: 'Starting...' };
+      return {
+        variant: "default",
+        icon: "spinner",
+        tooltip: `${label} starting...`,
+        statusText: "Starting...",
+      };
     case CaptureState.DEVICE_NOT_FOUND:
-      return { variant: 'warning', icon: 'off-warning', tooltip: `${label} blocked. You can turn on in browser settings`, statusText: 'Blocked' };
+      return {
+        variant: "warning",
+        icon: "off-warning",
+        tooltip: `${label} blocked. You can turn on in browser settings`,
+        statusText: "Blocked",
+      };
     case CaptureState.SYSTEM_DENIED:
-      return { variant: 'destructive', icon: 'off-error', tooltip: `${label} blocked in system settings`, statusText: 'Blocked in system settings' };
+      return {
+        variant: "destructive",
+        icon: "off-error",
+        tooltip: `${label} blocked in system settings`,
+        statusText: "Blocked in system settings",
+      };
     case CaptureState.DEVICE_IN_USE:
-      return { variant: 'warning', icon: 'off', tooltip: `${label} in use by another app`, statusText: 'In use by another app' };
+      return {
+        variant: "warning",
+        icon: "off",
+        tooltip: `${label} in use by another app`,
+        statusText: "In use by another app",
+      };
     case CaptureState.NO_DEVICE:
-      return { variant: 'warning', icon: 'off', tooltip: `No ${label.toLowerCase()} found`, statusText: 'No device found' };
+      return {
+        variant: "warning",
+        icon: "off",
+        tooltip: `No ${label.toLowerCase()} found`,
+        statusText: "No device found",
+      };
     case CaptureState.DEVICE_ERROR:
-      return { variant: 'warning', icon: 'off-warning', tooltip: `${label} unavailable`, statusText: 'Device unavailable' };
+      return {
+        variant: "warning",
+        icon: "off-warning",
+        tooltip: `${label} unavailable`,
+        statusText: "Device unavailable",
+      };
     default:
-      return { variant: 'default', icon: 'off', tooltip: `${label} off`, statusText: null };
+      return { variant: "default", icon: "off", tooltip: `${label} off`, statusText: null };
   }
 }

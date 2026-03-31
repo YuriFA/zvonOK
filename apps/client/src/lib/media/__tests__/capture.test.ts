@@ -1,10 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { CaptureState } from '../capture-state';
-import { MediaCapture } from '../capture';
-import type { IMediaDeviceService } from '../device-service';
-import type { IErrorClassifier } from '../error-classifier';
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-function createMockTrack(kind: string, deviceId = 'device-1') {
+import { MediaCapture } from "../capture";
+import { CaptureState } from "../capture-state";
+import type { IMediaDeviceService } from "../device-service";
+import type { IErrorClassifier } from "../error-classifier";
+
+function createMockTrack(kind: string, deviceId = "device-1") {
   return {
     kind,
     stop: vi.fn(),
@@ -22,14 +23,14 @@ function createMockStream(tracks: MediaStreamTrack[]) {
 
 const mockErrorClassifier: IErrorClassifier = {
   classify: (error: unknown) => {
-    if (error instanceof DOMException && error.name === 'NotAllowedError') {
-      return { state: CaptureState.DEVICE_NOT_FOUND, recoverable: true, reason: 'Blocked' };
+    if (error instanceof DOMException && error.name === "NotAllowedError") {
+      return { state: CaptureState.DEVICE_NOT_FOUND, recoverable: true, reason: "Blocked" };
     }
-    return { state: CaptureState.DEVICE_ERROR, recoverable: false, reason: 'Error' };
+    return { state: CaptureState.DEVICE_ERROR, recoverable: false, reason: "Error" };
   },
 };
 
-describe('MediaCapture', () => {
+describe("MediaCapture", () => {
   let deviceService: IMediaDeviceService;
   let capture: MediaCapture;
 
@@ -41,13 +42,13 @@ describe('MediaCapture', () => {
     };
   });
 
-  describe('video capture', () => {
+  describe("video capture", () => {
     beforeEach(() => {
-      capture = new MediaCapture(deviceService, 'video', mockErrorClassifier);
+      capture = new MediaCapture(deviceService, "video", mockErrorClassifier);
     });
 
-    it('starts and transitions to ACTIVE', async () => {
-      const track = createMockTrack('video');
+    it("starts and transitions to ACTIVE", async () => {
+      const track = createMockTrack("video");
       (deviceService.getUserMedia as ReturnType<typeof vi.fn>).mockResolvedValue(
         createMockStream([track]),
       );
@@ -59,11 +60,11 @@ describe('MediaCapture', () => {
       expect(capture.getTrack()).toBe(track);
     });
 
-    it('transitions through STARTING', async () => {
+    it("transitions through STARTING", async () => {
       const states: CaptureState[] = [];
       capture.onStateChange((state) => states.push(state));
 
-      const track = createMockTrack('video');
+      const track = createMockTrack("video");
       (deviceService.getUserMedia as ReturnType<typeof vi.fn>).mockResolvedValue(
         createMockStream([track]),
       );
@@ -74,8 +75,8 @@ describe('MediaCapture', () => {
       expect(states).toContain(CaptureState.ACTIVE);
     });
 
-    it('returns NO_DEVICE when no matching track in stream', async () => {
-      const wrongTrack = createMockTrack('audio');
+    it("returns NO_DEVICE when no matching track in stream", async () => {
+      const wrongTrack = createMockTrack("audio");
       (deviceService.getUserMedia as ReturnType<typeof vi.fn>).mockResolvedValue(
         createMockStream([wrongTrack]),
       );
@@ -86,9 +87,9 @@ describe('MediaCapture', () => {
       expect(capture.getState()).toBe(CaptureState.NO_DEVICE);
     });
 
-    it('transitions to error state on getUserMedia rejection', async () => {
+    it("transitions to error state on getUserMedia rejection", async () => {
       (deviceService.getUserMedia as ReturnType<typeof vi.fn>).mockRejectedValue(
-        new DOMException('Blocked', 'NotAllowedError'),
+        new DOMException("Blocked", "NotAllowedError"),
       );
 
       const result = await capture.start();
@@ -97,8 +98,8 @@ describe('MediaCapture', () => {
       expect(capture.getState()).toBe(CaptureState.DEVICE_NOT_FOUND);
     });
 
-    it('stops and transitions to STOPPED', async () => {
-      const track = createMockTrack('video');
+    it("stops and transitions to STOPPED", async () => {
+      const track = createMockTrack("video");
       (deviceService.getUserMedia as ReturnType<typeof vi.fn>).mockResolvedValue(
         createMockStream([track]),
       );
@@ -111,21 +112,21 @@ describe('MediaCapture', () => {
       expect(track.stop).toHaveBeenCalled();
     });
 
-    it('switches device', async () => {
-      const track1 = createMockTrack('video', 'device-1');
-      const track2 = createMockTrack('video', 'device-2');
+    it("switches device", async () => {
+      const track1 = createMockTrack("video", "device-1");
+      const track2 = createMockTrack("video", "device-2");
       (deviceService.getUserMedia as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce(createMockStream([track1]))
         .mockResolvedValueOnce(createMockStream([track2]));
 
       await capture.start();
-      await capture.switchDevice('device-2');
+      await capture.switchDevice("device-2");
 
       expect(capture.getTrack()).toBe(track2);
     });
 
-    it('toggles off and on', async () => {
-      const track = createMockTrack('video');
+    it("toggles off and on", async () => {
+      const track = createMockTrack("video");
       (deviceService.getUserMedia as ReturnType<typeof vi.fn>).mockResolvedValue(
         createMockStream([track]),
       );
@@ -137,11 +138,11 @@ describe('MediaCapture', () => {
       expect(capture.getState()).toBe(CaptureState.ACTIVE);
     });
 
-    it('notifies state change subscribers', async () => {
+    it("notifies state change subscribers", async () => {
       const callback = vi.fn();
       capture.onStateChange(callback);
 
-      const track = createMockTrack('video');
+      const track = createMockTrack("video");
       (deviceService.getUserMedia as ReturnType<typeof vi.fn>).mockResolvedValue(
         createMockStream([track]),
       );
@@ -152,12 +153,12 @@ describe('MediaCapture', () => {
       expect(callback).toHaveBeenCalledWith(CaptureState.ACTIVE, track, undefined);
     });
 
-    it('unsubscribes from state changes', async () => {
+    it("unsubscribes from state changes", async () => {
       const callback = vi.fn();
       const unsubscribe = capture.onStateChange(callback);
       unsubscribe();
 
-      const track = createMockTrack('video');
+      const track = createMockTrack("video");
       (deviceService.getUserMedia as ReturnType<typeof vi.fn>).mockResolvedValue(
         createMockStream([track]),
       );
@@ -168,13 +169,13 @@ describe('MediaCapture', () => {
     });
   });
 
-  describe('audio capture', () => {
+  describe("audio capture", () => {
     beforeEach(() => {
-      capture = new MediaCapture(deviceService, 'audio', mockErrorClassifier);
+      capture = new MediaCapture(deviceService, "audio", mockErrorClassifier);
     });
 
-    it('starts audio capture', async () => {
-      const track = createMockTrack('audio');
+    it("starts audio capture", async () => {
+      const track = createMockTrack("audio");
       (deviceService.getUserMedia as ReturnType<typeof vi.fn>).mockResolvedValue(
         createMockStream([track]),
       );
@@ -185,8 +186,8 @@ describe('MediaCapture', () => {
       expect(capture.getState()).toBe(CaptureState.ACTIVE);
     });
 
-    it('uses audio constraints without deviceId', async () => {
-      const track = createMockTrack('audio');
+    it("uses audio constraints without deviceId", async () => {
+      const track = createMockTrack("audio");
       (deviceService.getUserMedia as ReturnType<typeof vi.fn>).mockResolvedValue(
         createMockStream([track]),
       );
@@ -199,18 +200,18 @@ describe('MediaCapture', () => {
       expect(constraints.video).toBeUndefined();
     });
 
-    it('uses audio constraints with deviceId', async () => {
-      const track = createMockTrack('audio', 'device-2');
+    it("uses audio constraints with deviceId", async () => {
+      const track = createMockTrack("audio", "device-2");
       (deviceService.getUserMedia as ReturnType<typeof vi.fn>).mockResolvedValue(
         createMockStream([track]),
       );
 
-      await capture.start('device-2');
+      await capture.start("device-2");
 
       const constraints = (deviceService.getUserMedia as ReturnType<typeof vi.fn>).mock
         .calls[0][0] as MediaStreamConstraints;
       expect(constraints.audio).toEqual(
-        expect.objectContaining({ deviceId: { exact: 'device-2' } }),
+        expect.objectContaining({ deviceId: { exact: "device-2" } }),
       );
     });
   });

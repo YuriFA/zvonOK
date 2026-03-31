@@ -1,7 +1,9 @@
-import { Users } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { ParticipantItem } from './participant-item';
-import type { QualityScore, QualityStats } from '@/lib/sfu/types';
+import { Users } from "lucide-react";
+
+import type { QualityScore, QualityStats } from "@/lib/sfu/types";
+import { cn } from "@/lib/utils";
+
+import { ParticipantItem } from "./participant-item";
 
 export interface Participant {
   id: string;
@@ -43,7 +45,7 @@ export function ParticipantsList({
   });
 
   return (
-    <div className={cn('rounded-lg border bg-card', className)}>
+    <div className={cn("rounded-lg border bg-card", className)}>
       <div className="flex items-center gap-2 px-4 py-3">
         <Users className="size-4 text-muted-foreground" />
         <span className="font-medium">Participants</span>
@@ -54,9 +56,7 @@ export function ParticipantsList({
 
       <div className="border-t px-2 py-2">
         {participants.length === 0 ? (
-          <p className="px-2 py-4 text-center text-sm text-muted-foreground">
-            No participants
-          </p>
+          <p className="px-2 py-4 text-center text-sm text-muted-foreground">No participants</p>
         ) : (
           <ul className="space-y-1" aria-label="Participants list">
             {sortedParticipants.map((participant) => (

@@ -1,6 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
-import { roomKeys } from '@/lib/react-query/query-keys';
-import { roomApi } from '../services/room-api';
+import { useQuery } from "@tanstack/react-query";
+
+import { roomKeys } from "@/lib/react-query/query-keys";
+
+import { roomApi } from "../services/room-api";
 
 /**
  * Fetch a single room by slug

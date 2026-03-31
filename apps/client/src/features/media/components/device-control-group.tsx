@@ -1,6 +1,8 @@
-import { useCallback } from 'react';
-import { ChevronDown, Check } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ChevronDown, Check } from "lucide-react";
+import { useCallback } from "react";
+
+import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -9,10 +11,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
   DropdownMenuGroup,
-} from '@/components/ui/dropdown-menu';
-import type { MediaDevice } from '../hooks/use-media-devices';
-import { CaptureState, canToggle, isActive } from '@/lib/media/capture-state';
-import { ButtonGroup } from '@/components/ui/button-group';
+} from "@/components/ui/dropdown-menu";
+import { CaptureState, canToggle, isActive } from "@/lib/media/capture-state";
+
+import type { MediaDevice } from "../hooks/use-media-devices";
 
 export interface DeviceControlGroupProps {
   captureState?: CaptureState;

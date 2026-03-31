@@ -17,12 +17,12 @@ Client: http://localhost:5173
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `pnpm dev` | Vite dev server with HMR |
-| `pnpm build` | TypeScript check + production build |
-| `pnpm lint` | ESLint check |
-| `pnpm preview` | Preview production build |
+| Command        | Description                         |
+| -------------- | ----------------------------------- |
+| `pnpm dev`     | Vite dev server with HMR            |
+| `pnpm build`   | TypeScript check + production build |
+| `pnpm lint`    | ESLint check                        |
+| `pnpm preview` | Preview production build            |
 
 ## Architecture
 
@@ -59,11 +59,11 @@ VITE_SOCKET_URL=http://localhost:3000
 
 ## Tech Stack
 
-| Tech | Version | Purpose |
-|------|---------|---------|
-| React | 19.1.1 | UI framework |
-| Vite | 7.1.6 | Build tool + dev server |
-| TypeScript | 5.8.3 | Typing |
-| React Router | 7.9.1 | Routing |
-| Tailwind CSS | 4.1.13 | Styling |
-| Socket.io Client | - | WebRTC signalling |
+| Tech             | Version | Purpose                 |
+| ---------------- | ------- | ----------------------- |
+| React            | 19.1.1  | UI framework            |
+| Vite             | 7.1.6   | Build tool + dev server |
+| TypeScript       | 5.8.3   | Typing                  |
+| React Router     | 7.9.1   | Routing                 |
+| Tailwind CSS     | 4.1.13  | Styling                 |
+| Socket.io Client | -       | WebRTC signalling       |

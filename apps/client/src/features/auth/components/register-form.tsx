@@ -1,20 +1,22 @@
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Link, useNavigate } from 'react-router';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useAuth } from '../contexts/auth.context';
-import { registerSchema, type RegisterInput } from '../validation/register.schema';
-import { ApiError, ValidationError } from '@/lib/api/api.errors';
-import { ROUTES } from '@/lib/config/routes';
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { Link, useNavigate } from "react-router";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ApiError, ValidationError } from "@/lib/api/api.errors";
+import { ROUTES } from "@/lib/config/routes";
+
+import { useAuth } from "../contexts/auth.context";
+import { registerSchema, type RegisterInput } from "../validation/register.schema";
 
 export function RegisterForm() {
   const navigate = useNavigate();
   const { register: registerUser } = useAuth();
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
@@ -26,23 +28,23 @@ export function RegisterForm() {
   });
 
   const onSubmit = async (data: RegisterInput) => {
-    setError('');
+    setError("");
     setIsSubmitting(true);
 
     try {
       await registerUser(data.username, data.email, data.password);
-      toast.success('Account created successfully!');
+      toast.success("Account created successfully!");
       navigate(ROUTES.HOME);
     } catch (err) {
       if (err instanceof ValidationError) {
         setError(err.message);
         toast.error(err.message);
       } else if (err instanceof ApiError && err.status === 409) {
-        setError('Email or username already exists');
-        toast.error('Email or username already exists');
+        setError("Email or username already exists");
+        toast.error("Email or username already exists");
       } else {
-        setError('An error occurred. Please try again.');
-        toast.error('An error occurred. Please try again.');
+        setError("An error occurred. Please try again.");
+        toast.error("An error occurred. Please try again.");
       }
     } finally {
       setIsSubmitting(false);
@@ -52,9 +54,7 @@ export function RegisterForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       {error && (
-        <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
-          {error}
-        </div>
+        <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">{error}</div>
       )}
 
       <div className="space-y-2">
@@ -64,11 +64,9 @@ export function RegisterForm() {
           type="text"
           placeholder="johndoe"
           disabled={isSubmitting}
-          {...register('username')}
+          {...register("username")}
         />
-        {errors.username && (
-          <p className="text-sm text-destructive">{errors.username.message}</p>
-        )}
+        {errors.username && <p className="text-sm text-destructive">{errors.username.message}</p>}
       </div>
 
       <div className="space-y-2">
@@ -78,11 +76,9 @@ export function RegisterForm() {
           type="email"
           placeholder="you@example.com"
           disabled={isSubmitting}
-          {...register('email')}
+          {...register("email")}
         />
-        {errors.email && (
-          <p className="text-sm text-destructive">{errors.email.message}</p>
-        )}
+        {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
       </div>
 
       <div className="space-y-2">
@@ -92,11 +88,9 @@ export function RegisterForm() {
           type="password"
           placeholder="••••••••"
           disabled={isSubmitting}
-          {...register('password')}
+          {...register("password")}
         />
-        {errors.password && (
-          <p className="text-sm text-destructive">{errors.password.message}</p>
-        )}
+        {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
         <p className="text-xs text-muted-foreground">
           6-16 characters, must contain uppercase, lowercase, and number
         </p>
@@ -109,7 +103,7 @@ export function RegisterForm() {
           type="password"
           placeholder="••••••••"
           disabled={isSubmitting}
-          {...register('confirmPassword')}
+          {...register("confirmPassword")}
         />
         {errors.confirmPassword && (
           <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
@@ -117,11 +111,11 @@ export function RegisterForm() {
       </div>
 
       <Button type="submit" className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? 'Creating account...' : 'Register'}
+        {isSubmitting ? "Creating account..." : "Register"}
       </Button>
 
       <p className="text-center text-sm text-muted-foreground">
-        Already have an account?{' '}
+        Already have an account?{" "}
         <Link to={ROUTES.LOGIN} className="text-primary underline-offset-4 hover:underline">
           Login
         </Link>

@@ -1,9 +1,9 @@
-import type { IMediaDeviceService } from './device-service';
-import type { IErrorClassifier } from './error-classifier';
-import type { IMediaCapture } from './interfaces';
-import type { StateCallback } from './types';
-import { CaptureState } from './capture-state';
-import { DEFAULT_AUDIO_CONSTRAINTS, DEFAULT_VIDEO_CONSTRAINTS } from '../config/media';
+import { DEFAULT_AUDIO_CONSTRAINTS, DEFAULT_VIDEO_CONSTRAINTS } from "../config/media";
+import { CaptureState } from "./capture-state";
+import type { IMediaDeviceService } from "./device-service";
+import type { IErrorClassifier } from "./error-classifier";
+import type { IMediaCapture } from "./interfaces";
+import type { StateCallback } from "./types";
 
 export class MediaCapture implements IMediaCapture {
   private state: CaptureState = CaptureState.STOPPED;
@@ -15,11 +15,11 @@ export class MediaCapture implements IMediaCapture {
   private stateCallbacks = new Set<StateCallback>();
   private deviceService: IMediaDeviceService;
   private errorClassifier: IErrorClassifier;
-  private kind: 'video' | 'audio';
+  private kind: "video" | "audio";
 
   constructor(
     deviceService: IMediaDeviceService,
-    kind: 'video' | 'audio',
+    kind: "video" | "audio",
     errorClassifier: IErrorClassifier,
   ) {
     this.deviceService = deviceService;
@@ -42,7 +42,9 @@ export class MediaCapture implements IMediaCapture {
   onStateChange(cb: StateCallback): () => void {
     this.stateCallbacks.add(cb);
     cb(this.state, this.track);
-    return () => { this.stateCallbacks.delete(cb); };
+    return () => {
+      this.stateCallbacks.delete(cb);
+    };
   }
 
   async start(deviceId?: string): Promise<boolean> {
@@ -55,14 +57,14 @@ export class MediaCapture implements IMediaCapture {
       const stream = await this.deviceService.getUserMedia(constraints);
 
       if (requestId !== this.currentRequestId) {
-        stream.getTracks().forEach(t => t.stop());
+        stream.getTracks().forEach((t) => t.stop());
         return false;
       }
 
-      const track = stream.getTracks().find(t => t.kind === this.kind) ?? null;
+      const track = stream.getTracks().find((t) => t.kind === this.kind) ?? null;
 
       if (!track) {
-        stream.getTracks().forEach(t => t.stop());
+        stream.getTracks().forEach((t) => t.stop());
         this.setState(CaptureState.NO_DEVICE);
         return false;
       }
@@ -72,7 +74,7 @@ export class MediaCapture implements IMediaCapture {
       this.track = track;
       this.deviceId = track.getSettings().deviceId ?? deviceId ?? null;
 
-      track.addEventListener('ended', () => {
+      track.addEventListener("ended", () => {
         if (requestId === this.currentRequestId) {
           this.deviceId = null;
           this.setState(CaptureState.DEVICE_NOT_FOUND);
@@ -118,12 +120,12 @@ export class MediaCapture implements IMediaCapture {
 
   private setState(state: CaptureState, reason?: string): void {
     this.state = state;
-    this.stateCallbacks.forEach(cb => cb(state, this.track, reason));
+    this.stateCallbacks.forEach((cb) => cb(state, this.track, reason));
   }
 
   private stopCurrentStream(): void {
     if (this.stream) {
-      this.stream.getTracks().forEach(t => t.stop());
+      this.stream.getTracks().forEach((t) => t.stop());
       this.stream = null;
     }
     this.track = null;
@@ -150,7 +152,7 @@ export class MediaCapture implements IMediaCapture {
   }
 
   private buildConstraints(deviceId?: string): MediaStreamConstraints {
-    if (this.kind === 'video') {
+    if (this.kind === "video") {
       return deviceId
         ? { video: { ...DEFAULT_VIDEO_CONSTRAINTS, deviceId: { exact: deviceId } }, audio: false }
         : { video: DEFAULT_VIDEO_CONSTRAINTS, audio: false };

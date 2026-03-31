@@ -1,14 +1,16 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ParticipantsList } from '@/components/room/participants-list';
-import type { UseRoomSessionResult } from '@/features/room/hooks/use-room-session';
-import type { Room } from '@/features/room/types/room.types';
-import { RoomCenterControls } from '@/features/room/components/room-center-controls';
-import { cn } from '@/lib/utils';
-import { computeLayout } from '@zvonok/video-layout';
-import { VideoGrid } from '@/components/video-grid';
-import { RoomVideo } from '@/features/room/components/room-video';
-import { RoomRemoteAudio } from './room-remote-audio';
-import { RoomRightControls } from './room-right-controls';
+import { computeLayout } from "@zvonok/video-layout";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+import { ParticipantsList } from "@/components/room/participants-list";
+import { VideoGrid } from "@/components/video-grid";
+import { RoomCenterControls } from "@/features/room/components/room-center-controls";
+import { RoomVideo } from "@/features/room/components/room-video";
+import type { UseRoomSessionResult } from "@/features/room/hooks/use-room-session";
+import type { Room } from "@/features/room/types/room.types";
+import { cn } from "@/lib/utils";
+
+import { RoomRemoteAudio } from "./room-remote-audio";
+import { RoomRightControls } from "./room-right-controls";
 
 interface ActiveRoomViewProps {
   session: UseRoomSessionResult;
@@ -38,44 +40,45 @@ export function ActiveRoomView({
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
   const layout = useMemo(
-    () => computeLayout({
-      containerWidth: dimensions.width,
-      containerHeight: dimensions.height,
-      participantCount: remotePeers.length + 1,
-    }),
-    [dimensions.width, dimensions.height, remotePeers.length],
+    () =>
+      computeLayout({
+        containerWidth: dimensions.width,
+        containerHeight: dimensions.height,
+        participantCount: remotePeers.length + 1,
+      }),
+    [dimensions.height, dimensions.width, remotePeers.length],
   );
 
   useEffect(() => {
-    const element = containerRef.current
+    const element = containerRef.current;
     if (!element) {
-      return
+      return;
     }
 
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        const { clientWidth: width, clientHeight: height } = entry.target
+        const { clientWidth: width, clientHeight: height } = entry.target;
         setDimensions((prev) => {
           if (prev.width === width && prev.height === height) {
-            return prev
+            return prev;
           }
-          return { width, height }
-        })
+          return { width, height };
+        });
       }
-    })
+    });
 
-    observer.observe(element)
+    observer.observe(element);
 
     // Get initial dimensions
     setDimensions({
       width: element.clientWidth,
       height: element.clientHeight,
-    })
+    });
 
     return () => {
-      observer.disconnect()
-    }
-  }, [])
+      observer.disconnect();
+    };
+  }, []);
 
   const handleToggleVideo = useCallback(async () => {
     await toggleVideo();
@@ -96,12 +99,12 @@ export function ActiveRoomView({
               <RoomVideo
                 userId={localUserId}
                 style={{
-                  position: 'absolute',
+                  position: "absolute",
                   top: 0,
                   left: 0,
                   width: layout.tileWidth,
                   height: layout.tileHeight,
-                  transform: `translateX(${layout.tiles[0].x}px) translateY(${layout.tiles[0].y}px)`
+                  transform: `translateX(${layout.tiles[0].x}px) translateY(${layout.tiles[0].y}px)`,
                 }}
                 stream={localVideoStream}
                 username={currentUsername}
@@ -109,24 +112,25 @@ export function ActiveRoomView({
                 isAudioEnabled={mediaControls.isAudioEnabled}
               />
 
-              {remotePeers.length > 0 && remotePeers.map((peer, index) => (
-                <RoomVideo
-                  key={peer.userId}
-                  userId={peer.userId}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: layout.tileWidth,
-                    height: layout.tileHeight,
-                    transform: `translateX(${layout.tiles[index + 1].x}px) translateY(${layout.tiles[index + 1].y}px)`
-                  }}
-                  stream={peer.stream}
-                  username={peer.username}
-                  isVideoEnabled={peer.isVideoEnabled}
-                  isAudioEnabled={peer.isAudioEnabled}
-                />
-              ))}
+              {remotePeers.length > 0 &&
+                remotePeers.map((peer, index) => (
+                  <RoomVideo
+                    key={peer.userId}
+                    userId={peer.userId}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: layout.tileWidth,
+                      height: layout.tileHeight,
+                      transform: `translateX(${layout.tiles[index + 1].x}px) translateY(${layout.tiles[index + 1].y}px)`,
+                    }}
+                    stream={peer.stream}
+                    username={peer.username}
+                    isVideoEnabled={peer.isVideoEnabled}
+                    isAudioEnabled={peer.isAudioEnabled}
+                  />
+                ))}
             </>
           )}
         </VideoGrid>
@@ -135,8 +139,8 @@ export function ActiveRoomView({
 
         <aside
           className={cn(
-            'flex-1 transition-all duration-300 ease-in-out overflow-hidden',
-            isParticipantsVisible ? 'max-w-80 ml-4' : 'max-w-0 ml-0',
+            "flex-1 overflow-hidden transition-all duration-300 ease-in-out",
+            isParticipantsVisible ? "ml-4 max-w-80" : "ml-0 max-w-0",
           )}
         >
           <ParticipantsList

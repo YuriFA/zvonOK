@@ -3,8 +3,9 @@
  * Provides ISfuManager to components and hooks.
  */
 
-import { createContext, useContext, type ReactNode } from 'react';
-import type { ISfuManager } from '@/lib/sfu/interfaces';
+import { createContext, useContext, type ReactNode } from "react";
+
+import type { ISfuManager } from "@/lib/sfu/interfaces";
 
 const SfuManagerContext = createContext<ISfuManager | null>(null);
 
@@ -13,15 +14,8 @@ export interface SfuManagerProviderProps {
   children: ReactNode;
 }
 
-export function SfuManagerProvider({
-  manager,
-  children,
-}: SfuManagerProviderProps) {
-  return (
-    <SfuManagerContext.Provider value={manager}>
-      {children}
-    </SfuManagerContext.Provider>
-  );
+export function SfuManagerProvider({ manager, children }: SfuManagerProviderProps) {
+  return <SfuManagerContext.Provider value={manager}>{children}</SfuManagerContext.Provider>;
 }
 
 /**
@@ -32,7 +26,7 @@ export function SfuManagerProvider({
 export function useSfuManager(): ISfuManager {
   const manager = useContext(SfuManagerContext);
   if (!manager) {
-    throw new Error('useSfuManager must be used within a SfuManagerProvider');
+    throw new Error("useSfuManager must be used within a SfuManagerProvider");
   }
   return manager;
 }

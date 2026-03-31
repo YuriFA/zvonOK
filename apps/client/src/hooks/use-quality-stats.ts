@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
-import { useSfuManager } from '@/features/sfu/contexts/sfu-manager.context';
-import type { PeerQualityStats } from '@/lib/sfu/types';
+import { useEffect, useState } from "react";
+
+import { useSfuManager } from "@/features/sfu/contexts/sfu-manager.context";
+import type { PeerQualityStats } from "@/lib/sfu/types";
 
 export interface UseQualityStatsOptions {
   enabled?: boolean;
@@ -10,7 +11,9 @@ export interface UseQualityStatsResult {
   peerStats: Map<string, PeerQualityStats>;
 }
 
-export function useQualityStats({ enabled = true }: UseQualityStatsOptions = {}): UseQualityStatsResult {
+export function useQualityStats({
+  enabled = true,
+}: UseQualityStatsOptions = {}): UseQualityStatsResult {
   const sfuManager = useSfuManager();
   const [peerStats, setPeerStats] = useState<Map<string, PeerQualityStats>>(new Map());
 
@@ -20,8 +23,8 @@ export function useQualityStats({ enabled = true }: UseQualityStatsOptions = {})
     }
 
     const unsubscribe = sfuManager.onQualityStats((stats) => {
-    setPeerStats(stats);
-  });
+      setPeerStats(stats);
+    });
 
     sfuManager.startStatsCollection(2000);
 

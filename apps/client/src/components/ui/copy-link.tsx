@@ -1,10 +1,11 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Check, Link } from 'lucide-react';
+import { Check, Link } from "lucide-react";
+import { useState } from "react";
+
+import { Button } from "@/components/ui/button";
 
 interface CopyLinkProps {
   url: string;
-  variant?: 'default' | 'compact';
+  variant?: "default" | "compact";
   className?: string;
 }
 
@@ -17,11 +18,11 @@ export function CopyLink({ url, className }: CopyLinkProps) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      const textArea = document.createElement('textarea');
+      const textArea = document.createElement("textarea");
       textArea.value = url;
       document.body.appendChild(textArea);
       textArea.select();
-      document.execCommand('copy');
+      document.execCommand("copy");
       document.body.removeChild(textArea);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -29,12 +30,7 @@ export function CopyLink({ url, className }: CopyLinkProps) {
   };
 
   return (
-    <Button
-      type="button"
-      variant="outline"
-      onClick={handleCopy}
-      className={className}
-    >
+    <Button type="button" variant="outline" onClick={handleCopy} className={className}>
       {copied ? (
         <>
           <Check className="mr-2 size-4" />

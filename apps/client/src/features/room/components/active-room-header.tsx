@@ -1,11 +1,13 @@
-import { Button } from '@/components/ui/button';
-import { DeviceSettingsPanel } from '@/features/media/components/device-settings-panel';
-import { APP_NAME } from '@/lib/config/app';
-import { ROUTES } from '@/lib/config/routes';
-import Logo from '@/assets/logo.svg?react';
-import { Link } from 'react-router';
-import { ThemeSwitcher } from '@/components/ui/theme-switcher';
-import { useRoomAudioContext } from '../contexts/room-audio.context';
+import { Link } from "react-router";
+
+import Logo from "@/assets/logo.svg?react";
+import { Button } from "@/components/ui/button";
+import { ThemeSwitcher } from "@/components/ui/theme-switcher";
+import { DeviceSettingsPanel } from "@/features/media/components/device-settings-panel";
+import { APP_NAME } from "@/lib/config/app";
+import { ROUTES } from "@/lib/config/routes";
+
+import { useRoomAudioContext } from "../contexts/room-audio.context";
 
 interface Props {
   isVideoEnabled: boolean;
@@ -15,11 +17,17 @@ interface Props {
   isEndingRoom: boolean;
 }
 
-export function ActiveRoomHeader({ isVideoEnabled, isAudioEnabled, isOwner, onEndRoom, isEndingRoom }: Props) {
-  const { audioElement } = useRoomAudioContext()
+export function ActiveRoomHeader({
+  isVideoEnabled,
+  isAudioEnabled,
+  isOwner,
+  onEndRoom,
+  isEndingRoom,
+}: Props) {
+  const { audioElement } = useRoomAudioContext();
 
   return (
-    <header className="border-b w-full flex h-16 items-center justify-between px-4">
+    <header className="flex h-16 w-full items-center justify-between border-b px-4">
       <Link to={ROUTES.HOME} className="flex items-center gap-2 text-primary">
         <Logo className="size-8" />
         <span className="text-lg font-semibold">{APP_NAME}</span>
@@ -35,12 +43,8 @@ export function ActiveRoomHeader({ isVideoEnabled, isAudioEnabled, isOwner, onEn
             isAudioEnabled={isAudioEnabled}
           />
           {isOwner && (
-            <Button
-              variant="destructive"
-              onClick={onEndRoom}
-              disabled={isEndingRoom}
-            >
-              {isEndingRoom ? 'Ending...' : 'End Room'}
+            <Button variant="destructive" onClick={onEndRoom} disabled={isEndingRoom}>
+              {isEndingRoom ? "Ending..." : "End Room"}
             </Button>
           )}
         </div>

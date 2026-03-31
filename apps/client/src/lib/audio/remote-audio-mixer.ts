@@ -28,9 +28,9 @@ export class RemoteAudioMixer implements IRemoteAudioMixer {
 
     this.destination = this.ctx.createMediaStreamDestination();
 
-    this.audioElement = document.createElement('audio');
+    this.audioElement = document.createElement("audio");
     this.audioElement.autoplay = true;
-    this.audioElement.style.display = 'none';
+    this.audioElement.style.display = "none";
     this.audioElement.srcObject = this.destination.stream;
   }
 
@@ -83,7 +83,7 @@ export class RemoteAudioMixer implements IRemoteAudioMixer {
   }
 
   async setSink(deviceId: string): Promise<boolean> {
-    if (!('setSinkId' in HTMLMediaElement.prototype)) {
+    if (!("setSinkId" in HTMLMediaElement.prototype)) {
       return false;
     }
 

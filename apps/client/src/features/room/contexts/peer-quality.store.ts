@@ -1,5 +1,6 @@
-import { useSyncExternalStore } from 'react';
-import type { PeerQualityStats } from '@/lib/sfu/types';
+import { useSyncExternalStore } from "react";
+
+import type { PeerQualityStats } from "@/lib/sfu/types";
 
 type Listener = () => void;
 

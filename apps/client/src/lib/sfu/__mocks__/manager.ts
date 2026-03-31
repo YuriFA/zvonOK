@@ -3,7 +3,9 @@
  * Implements ISfuManager interface with controllable behavior.
  */
 
-import type { ISfuManager } from '../interfaces';
+import type { Producer } from "mediasoup-client/types";
+
+import type { ISfuManager } from "../interfaces";
 import type {
   SfuState,
   SfuStateCallback,
@@ -17,8 +19,7 @@ import type {
   PeerQualityStats,
   QualityScore,
   SfuProducerStateCallback,
-} from '../types';
-import type { Producer } from 'mediasoup-client/types';
+} from "../types";
 
 export interface MockSfuManagerConfig {
   initialState?: Partial<SfuState>;
@@ -26,7 +27,7 @@ export interface MockSfuManagerConfig {
 }
 
 const DEFAULT_STATE: SfuState = {
-  connectionState: 'disconnected',
+  connectionState: "disconnected",
   isDeviceLoaded: false,
   isSendTransportCreated: false,
   sendTransportConnected: false,
@@ -35,16 +36,14 @@ const DEFAULT_STATE: SfuState = {
   videoProducerId: null,
 };
 
-export function createMockSfuManager(
-  config: MockSfuManagerConfig = {}
-): ISfuManager & {
+export function createMockSfuManager(config: MockSfuManagerConfig = {}): ISfuManager & {
   // Test utilities
   setState(state: Partial<SfuState>): void;
   simulateConnection(): void;
   simulateDisconnection(): void;
   simulatePeerJoined(peer: SfuPeerInfo): void;
   simulatePeerLeft(userId: string): void;
-  simulateTrackReceived(track: MediaStreamTrack, kind: 'audio' | 'video', userId: string): void;
+  simulateTrackReceived(track: MediaStreamTrack, kind: "audio" | "video", userId: string): void;
   simulateKicked(roomId: string): void;
   simulateRoomEnded(roomId: string): void;
   getJoinRoomCalls(): SfuJoinPayload[];
@@ -69,7 +68,7 @@ export function createMockSfuManager(
   const joinRoomCalls: SfuJoinPayload[] = [];
   const produceCalls: MediaStreamTrack[] = [];
 
-  const producers = new Map<'audio' | 'video', Producer>();
+  const producers = new Map<"audio" | "video", Producer>();
   let statsInterval: ReturnType<typeof setInterval> | null = null;
 
   const notifyStateChange = () => {
@@ -77,24 +76,24 @@ export function createMockSfuManager(
   };
 
   const createMockQualityScore = (): QualityScore => ({
-    level: 'excellent',
+    level: "excellent",
     score: 100,
   });
 
   return {
     // ISfuConnection
     connect(): void {
-      state = { ...state, connectionState: 'connected' };
+      state = { ...state, connectionState: "connected" };
       notifyStateChange();
     },
 
     disconnect(): void {
-      state = { ...state, connectionState: 'disconnected' };
+      state = { ...state, connectionState: "disconnected" };
       notifyStateChange();
     },
 
     isConnected(): boolean {
-      return state.connectionState === 'connected';
+      return state.connectionState === "connected";
     },
 
     getSocket(): null {
@@ -131,7 +130,7 @@ export function createMockSfuManager(
     // ISfuProducerManager
     async produce(track: MediaStreamTrack): Promise<Producer | null> {
       produceCalls.push(track);
-      const kind = track.kind as 'audio' | 'video';
+      const kind = track.kind as "audio" | "video";
       const producer = {
         id: `producer-${kind}-${Date.now()}`,
         kind,
@@ -141,7 +140,7 @@ export function createMockSfuManager(
         close: () => {},
       } as unknown as Producer;
       producers.set(kind, producer);
-      if (kind === 'audio') {
+      if (kind === "audio") {
         state = { ...state, audioProducerId: producer.id };
       } else {
         state = { ...state, videoProducerId: producer.id };
@@ -160,11 +159,11 @@ export function createMockSfuManager(
       producer?.resume();
     },
 
-    closeProducer(kind: 'audio' | 'video'): void {
+    closeProducer(kind: "audio" | "video"): void {
       const producer = producers.get(kind);
       producer?.close();
       producers.delete(kind);
-      if (kind === 'audio') {
+      if (kind === "audio") {
         state = { ...state, audioProducerId: null };
       } else {
         state = { ...state, videoProducerId: null };
@@ -176,7 +175,7 @@ export function createMockSfuManager(
       return true;
     },
 
-    getProducerByKind(kind: 'audio' | 'video'): Producer | undefined {
+    getProducerByKind(kind: "audio" | "video"): Producer | undefined {
       return producers.get(kind);
     },
 
@@ -282,12 +281,12 @@ export function createMockSfuManager(
     },
 
     simulateConnection(): void {
-      state = { ...state, connectionState: 'connected' };
+      state = { ...state, connectionState: "connected" };
       notifyStateChange();
     },
 
     simulateDisconnection(): void {
-      state = { ...state, connectionState: 'disconnected' };
+      state = { ...state, connectionState: "disconnected" };
       notifyStateChange();
     },
 
@@ -301,7 +300,7 @@ export function createMockSfuManager(
       peerLeftCallbacks.forEach((cb) => cb(userId));
     },
 
-    simulateTrackReceived(track: MediaStreamTrack, kind: 'audio' | 'video', userId: string): void {
+    simulateTrackReceived(track: MediaStreamTrack, kind: "audio" | "video", userId: string): void {
       trackCallbacks.forEach((cb) => cb(track, kind, userId));
     },
 

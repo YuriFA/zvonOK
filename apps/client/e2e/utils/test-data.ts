@@ -7,8 +7,8 @@ export function generateTestUser() {
   return {
     email: `e2e-${timestamp}@example.com`,
     username: `e2e-user-${timestamp}`,
-    password: 'TestPass123',
+    password: "TestPass123",
   };
 }
 
-export const API_BASE_URL = 'http://localhost:3000';
+export const API_BASE_URL = "http://localhost:3000";

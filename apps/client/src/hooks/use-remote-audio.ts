@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react';
-import type { IRemoteAudioMixer } from '@/lib/audio/remote-audio-mixer';
-import type { RemotePeerMedia } from '@/hooks/use-mediasoup';
+import { useEffect, useRef } from "react";
+
+import type { RemotePeerMedia } from "@/hooks/use-mediasoup";
+import type { IRemoteAudioMixer } from "@/lib/audio/remote-audio-mixer";
 
 interface UseRemoteAudioOptions {
   remotePeers: RemotePeerMedia[];

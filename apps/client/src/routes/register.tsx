@@ -1,6 +1,6 @@
-import { AuthHeader } from '@/features/auth/components/auth-header';
-import { RegisterForm } from '@/features/auth/components/register-form';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AuthHeader } from "@/features/auth/components/auth-header";
+import { RegisterForm } from "@/features/auth/components/register-form";
 
 export const RegisterPage = () => {
   return (

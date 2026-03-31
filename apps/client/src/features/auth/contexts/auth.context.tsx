@@ -1,7 +1,9 @@
-import { createContext, useContext, useEffect, useState, type ReactNode, useCallback } from 'react';
-import { authApi } from '../services/auth-api';
-import type { User } from '../types/auth.types';
-import { AuthError } from '@/lib/api/api.errors';
+import { createContext, useContext, useEffect, useState, type ReactNode, useCallback } from "react";
+
+import { AuthError } from "@/lib/api/api.errors";
+
+import { authApi } from "../services/auth-api";
+import type { User } from "../types/auth.types";
 
 interface AuthContextValue {
   isAuthenticated: boolean;
@@ -19,7 +21,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
+    throw new Error("useAuth must be used within AuthProvider");
   }
   return context;
 }
@@ -40,7 +42,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (error instanceof AuthError) {
         setUser(null);
       } else {
-        console.error('Failed to fetch user:', error);
+        console.error("Failed to fetch user:", error);
       }
     } finally {
       setIsLoading(false);

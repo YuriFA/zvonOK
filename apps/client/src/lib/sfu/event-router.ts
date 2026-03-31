@@ -3,7 +3,8 @@
  * Routes socket events to handler methods.
  */
 
-import type { Socket } from 'socket.io-client';
+import type { Socket } from "socket.io-client";
+
 import type {
   SfuJoinedPayload,
   SfuTransportCreatedPayload,
@@ -14,8 +15,8 @@ import type {
   SfuKickedPayload,
   SfuRoomEndedPayload,
   SfuProducerStateChangedPayload,
-} from './types';
-import type { SfuExistingPeersPayload } from './types';
+} from "./types";
+import type { SfuExistingPeersPayload } from "./types";
 
 /**
  * Handler interface for SFU socket events.
@@ -56,43 +57,37 @@ export class SfuEventRouter {
     const socket = this.getSocket();
     if (!socket) return;
 
-    socket.on('connect', () => this.handlers.onConnected());
-    socket.on('disconnect', () => this.handlers.onDisconnected());
-    socket.on('sfu:joined', (payload: SfuJoinedPayload) =>
-      this.handlers.onJoined(payload)
+    socket.on("connect", () => this.handlers.onConnected());
+    socket.on("disconnect", () => this.handlers.onDisconnected());
+    socket.on("sfu:joined", (payload: SfuJoinedPayload) => this.handlers.onJoined(payload));
+    socket.on("sfu:transport-created", (payload: SfuTransportCreatedPayload) =>
+      this.handlers.onTransportCreated(payload),
     );
-    socket.on('sfu:transport-created', (payload: SfuTransportCreatedPayload) =>
-      this.handlers.onTransportCreated(payload)
+    socket.on("sfu:transport-connected", (payload: { transportId: string }) =>
+      this.handlers.onTransportConnected(payload),
     );
-    socket.on('sfu:transport-connected', (payload: { transportId: string }) =>
-      this.handlers.onTransportConnected(payload)
+    socket.on("sfu:producer-created", (payload: SfuProducerCreatedPayload) =>
+      this.handlers.onProducerCreated(payload),
     );
-    socket.on('sfu:producer-created', (payload: SfuProducerCreatedPayload) =>
-      this.handlers.onProducerCreated(payload)
+    socket.on("sfu:peer-joined", (payload: SfuPeerJoinedPayload) =>
+      this.handlers.onPeerJoined(payload),
     );
-    socket.on('sfu:peer-joined', (payload: SfuPeerJoinedPayload) =>
-      this.handlers.onPeerJoined(payload)
+    socket.on("sfu:existing-peers", (payload: SfuExistingPeersPayload[]) =>
+      this.handlers.onExistingPeers(payload),
     );
-    socket.on('sfu:existing-peers', (payload: SfuExistingPeersPayload[]) =>
-      this.handlers.onExistingPeers(payload)
+    socket.on("sfu:new-producer", (payload: SfuNewProducerPayload) =>
+      this.handlers.onNewProducer(payload),
     );
-    socket.on('sfu:new-producer', (payload: SfuNewProducerPayload) =>
-      this.handlers.onNewProducer(payload)
+    socket.on("sfu:consumer-created", (payload: SfuConsumerCreatedPayload) =>
+      this.handlers.onConsumerCreated(payload),
     );
-    socket.on('sfu:consumer-created', (payload: SfuConsumerCreatedPayload) =>
-      this.handlers.onConsumerCreated(payload)
+    socket.on("sfu:producer-state-changed", (payload: SfuProducerStateChangedPayload) =>
+      this.handlers.onProducerStateChanged(payload),
     );
-    socket.on('sfu:producer-state-changed', (payload: SfuProducerStateChangedPayload) =>
-      this.handlers.onProducerStateChanged(payload)
-    );
-    socket.on('sfu:peer-left', (payload: { userId: string }) =>
-      this.handlers.onPeerLeft(payload)
-    );
-    socket.on('sfu:kicked', (payload: SfuKickedPayload) =>
-      this.handlers.onKicked(payload)
-    );
-    socket.on('sfu:room-ended', (payload: SfuRoomEndedPayload) =>
-      this.handlers.onRoomEnded(payload)
+    socket.on("sfu:peer-left", (payload: { userId: string }) => this.handlers.onPeerLeft(payload));
+    socket.on("sfu:kicked", (payload: SfuKickedPayload) => this.handlers.onKicked(payload));
+    socket.on("sfu:room-ended", (payload: SfuRoomEndedPayload) =>
+      this.handlers.onRoomEnded(payload),
     );
   }
 

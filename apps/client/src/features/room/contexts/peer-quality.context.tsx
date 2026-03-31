@@ -1,12 +1,8 @@
-import { PeerQualityStore } from './peer-quality.store';
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useRef,
-  type ReactNode,
-} from 'react';
-import { useSfuManager } from '@/features/sfu/contexts/sfu-manager.context';
+import { createContext, useContext, useEffect, useRef, type ReactNode } from "react";
+
+import { useSfuManager } from "@/features/sfu/contexts/sfu-manager.context";
+
+import { PeerQualityStore } from "./peer-quality.store";
 
 export interface PeerQualityContextValue {
   store: PeerQualityStore;
@@ -55,7 +51,7 @@ export function PeerQualityProvider({ enabled = true, children }: Props) {
 export function usePeerQualityContext(): PeerQualityContextValue {
   const ctx = useContext(PeerQualityContext);
   if (!ctx) {
-    throw new Error('usePeerQualityContext must be used within a PeerQualityProvider');
+    throw new Error("usePeerQualityContext must be used within a PeerQualityProvider");
   }
   return ctx;
 }

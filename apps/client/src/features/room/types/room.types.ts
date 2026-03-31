@@ -5,7 +5,7 @@ export interface Room {
   ownerId: string;
   isPublic: boolean;
   maxParticipants: number;
-  status: 'active' | 'ended';
+  status: "active" | "ended";
   createdAt: string;
   updatedAt: string;
   endedAt: string | null;
@@ -19,6 +19,6 @@ export interface CreateRoomInput {
 
 export interface UpdateRoomInput {
   name?: string;
-  status?: 'active' | 'ended';
+  status?: "active" | "ended";
   maxParticipants?: number;
 }

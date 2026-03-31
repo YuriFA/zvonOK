@@ -1,8 +1,9 @@
-import { useEffect, useRef } from 'react';
-import { useRoomAudioContext } from '../contexts/room-audio.context';
+import { useEffect, useRef } from "react";
+
+import { useRoomAudioContext } from "../contexts/room-audio.context";
 
 export function RoomRemoteAudio() {
-  const { mixer } = useRoomAudioContext()
+  const { mixer } = useRoomAudioContext();
   const containerRef = useRef<HTMLDivElement>(null);
   const appendedRef = useRef(false);
 
@@ -13,7 +14,7 @@ export function RoomRemoteAudio() {
     containerRef.current.appendChild(audioElement);
     appendedRef.current = true;
 
-    void audioElement.play().catch(() => { });
+    void audioElement.play().catch(() => {});
 
     return () => {
       audioElement.remove();

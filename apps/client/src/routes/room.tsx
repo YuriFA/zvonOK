@@ -1,26 +1,27 @@
-import { useParams } from 'react-router';
-import { useRoom } from '@/features/room/hooks/use-room';
-import { PrejoinView } from '@/features/room/components/prejoin-view';
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { RoomView } from '@/features/room/components/room-view';
-import { CallEndedView } from '@/features/room/components/call-ended-view';
-import { MediaStreamProvider } from '@/features/media/contexts/media-stream.context';
-import { MediaManagerProvider } from '@/features/media/contexts/media-manager.context';
-import { SfuManagerProvider } from '@/features/sfu/contexts/sfu-manager.context';
-import { sfuManager } from '@/lib/sfu/manager';
-import { createMediaManager } from '@/lib/media/manager-factory';
-import { LinkButton } from '@/components/ui/link-button';
-import { useAuth } from '@/features/auth/contexts/auth.context';
-import { loadGuestDisplayName, saveGuestDisplayName } from '@/lib/utils/display-name';
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useParams } from "react-router";
 
-type RoomViewState = 'prejoin' | 'active' | 'ended';
+import { LinkButton } from "@/components/ui/link-button";
+import { useAuth } from "@/features/auth/contexts/auth.context";
+import { MediaManagerProvider } from "@/features/media/contexts/media-manager.context";
+import { MediaStreamProvider } from "@/features/media/contexts/media-stream.context";
+import { CallEndedView } from "@/features/room/components/call-ended-view";
+import { PrejoinView } from "@/features/room/components/prejoin-view";
+import { RoomView } from "@/features/room/components/room-view";
+import { useRoom } from "@/features/room/hooks/use-room";
+import { SfuManagerProvider } from "@/features/sfu/contexts/sfu-manager.context";
+import { createMediaManager } from "@/lib/media/manager-factory";
+import { sfuManager } from "@/lib/sfu/manager";
+import { loadGuestDisplayName, saveGuestDisplayName } from "@/lib/utils/display-name";
+
+type RoomViewState = "prejoin" | "active" | "ended";
 
 export const RoomPage = () => {
   const { slug } = useParams<{ slug: string }>();
-  const [viewState, setViewState] = useState<RoomViewState>('prejoin');
+  const [viewState, setViewState] = useState<RoomViewState>("prejoin");
   const { user } = useAuth();
 
-  const { data: room, isLoading, error } = useRoom(slug || '');
+  const { data: room, isLoading, error } = useRoom(slug || "");
 
   const [displayName, setDisplayName] = useState(() => user?.username ?? loadGuestDisplayName());
 
@@ -33,17 +34,17 @@ export const RoomPage = () => {
   }, [user]);
 
   useEffect(() => {
-    if (room?.status === 'ended') {
-      setViewState('ended');
+    if (room?.status === "ended") {
+      setViewState("ended");
     }
   }, [room?.status]);
 
   const handleRoomEnded = useCallback(() => {
-    setViewState('ended');
+    setViewState("ended");
   }, []);
 
   useEffect(() => {
-    if (viewState !== 'active') return;
+    if (viewState !== "active") return;
     const unsubscribe = sfuManager.onRoomEnded(handleRoomEnded);
     return unsubscribe;
   }, [viewState, handleRoomEnded]);
@@ -53,7 +54,7 @@ export const RoomPage = () => {
       saveGuestDisplayName(displayName);
     }
 
-    setViewState('active');
+    setViewState("active");
   };
 
   if (isLoading) {
@@ -67,15 +68,13 @@ export const RoomPage = () => {
   if (error || !room) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4">
-        <p className="text-destructive">{error?.message || 'Room not found'}</p>
-        <LinkButton to="/">
-          Back to Home
-        </LinkButton>
+        <p className="text-destructive">{error?.message || "Room not found"}</p>
+        <LinkButton to="/">Back to Home</LinkButton>
       </div>
     );
   }
 
-  if (viewState === 'ended') {
+  if (viewState === "ended") {
     return <CallEndedView room={room} />;
   }
 
@@ -85,7 +84,7 @@ export const RoomPage = () => {
     <MediaManagerProvider manager={mediaManager}>
       <SfuManagerProvider manager={sfuManager}>
         <MediaStreamProvider>
-          {viewState === 'prejoin' ? (
+          {viewState === "prejoin" ? (
             <PrejoinView
               roomUrl={roomUrl}
               displayName={displayName}

@@ -1,5 +1,6 @@
-import { User, LogOut } from 'lucide-react';
-import { toast } from 'sonner';
+import { User, LogOut } from "lucide-react";
+import { toast } from "sonner";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -7,15 +8,16 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { useAuth } from '../contexts/auth.context';
+} from "@/components/ui/dropdown-menu";
+
+import { useAuth } from "../contexts/auth.context";
 
 export function ProfileDropdown() {
   const { user, logout } = useAuth();
 
   const handleLogout = async () => {
     await logout();
-    toast.success('Logged out successfully');
+    toast.success("Logged out successfully");
   };
 
   return (

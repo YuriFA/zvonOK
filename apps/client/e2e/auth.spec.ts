@@ -1,10 +1,10 @@
-import { test, expect } from './fixtures/auth.fixture';
-import { HomePage } from './pages/home.page';
-import { LoginPage } from './pages/login.page';
-import { RegisterPage } from './pages/register.page';
-import { generateTestUser } from './utils/test-data';
+import { test, expect } from "./fixtures/auth.fixture";
+import { HomePage } from "./pages/home.page";
+import { LoginPage } from "./pages/login.page";
+import { RegisterPage } from "./pages/register.page";
+import { generateTestUser } from "./utils/test-data";
 
-test.describe('Registration', () => {
+test.describe("Registration", () => {
   let registerPage: RegisterPage;
 
   test.beforeEach(async ({ page }) => {
@@ -12,7 +12,7 @@ test.describe('Registration', () => {
     await registerPage.goto();
   });
 
-  test('should display registration form', async () => {
+  test("should display registration form", async () => {
     await expect(registerPage.usernameInput).toBeVisible();
     await expect(registerPage.emailInput).toBeVisible();
     await expect(registerPage.passwordInput).toBeVisible();
@@ -20,7 +20,7 @@ test.describe('Registration', () => {
     await expect(registerPage.submitButton).toBeVisible();
   });
 
-  test('should submit registration form without validation errors', async () => {
+  test("should submit registration form without validation errors", async () => {
     const user = generateTestUser();
 
     await registerPage.register(user.username, user.email, user.password);
@@ -30,25 +30,25 @@ test.describe('Registration', () => {
     await registerPage.expectNoError();
   });
 
-  test('should show validation errors for invalid inputs', async () => {
+  test("should show validation errors for invalid inputs", async () => {
     // Empty form submission
     await registerPage.submit();
 
     // Should show at least one validation error
-    await expect(registerPage.page.locator('.text-destructive').first()).toBeVisible();
+    await expect(registerPage.page.locator(".text-destructive").first()).toBeVisible();
   });
 
-  test('should show error for password mismatch', async () => {
+  test("should show error for password mismatch", async () => {
     const user = generateTestUser();
 
-    await registerPage.fillCredentials(user.username, user.email, 'Password123', 'Different456');
+    await registerPage.fillCredentials(user.username, user.email, "Password123", "Different456");
     await registerPage.submit();
 
-    await expect(registerPage.page.locator('.text-destructive').first()).toBeVisible();
+    await expect(registerPage.page.locator(".text-destructive").first()).toBeVisible();
   });
 });
 
-test.describe('Login', () => {
+test.describe("Login", () => {
   let loginPage: LoginPage;
 
   test.beforeEach(async ({ page }) => {
@@ -56,44 +56,44 @@ test.describe('Login', () => {
     await loginPage.goto();
   });
 
-  test('should display login form', async () => {
+  test("should display login form", async () => {
     await expect(loginPage.emailInput).toBeVisible();
     await expect(loginPage.passwordInput).toBeVisible();
     await expect(loginPage.submitButton).toBeVisible();
   });
 
-  test('should login successfully with valid credentials', async ({ testUser }) => {
+  test("should login successfully with valid credentials", async ({ testUser }) => {
     await loginPage.login(testUser.email, testUser.password);
 
     await loginPage.expectNoError();
     await loginPage.expectRedirectToHome();
   });
 
-  test('should show error for invalid credentials', async () => {
-    await loginPage.login('nonexistent@example.com', 'WrongPassword123');
+  test("should show error for invalid credentials", async () => {
+    await loginPage.login("nonexistent@example.com", "WrongPassword123");
 
     await loginPage.expectError(/invalid/i);
   });
 
-  test('should show validation errors for empty fields', async () => {
+  test("should show validation errors for empty fields", async () => {
     await loginPage.submit();
 
-    await expect(loginPage.page.locator('.text-destructive').first()).toBeVisible();
+    await expect(loginPage.page.locator(".text-destructive").first()).toBeVisible();
   });
 
-  test('should redirect to previous page after login', async ({ testUser, page }) => {
+  test("should redirect to previous page after login", async ({ testUser, page }) => {
     // Try to access a protected action, get redirected to login with redirect param
-    await page.goto('/login?redirect=/');
+    await page.goto("/login?redirect=/");
 
     await loginPage.login(testUser.email, testUser.password);
 
     // Should redirect back to the original page
-    await expect(page).toHaveURL('/');
+    await expect(page).toHaveURL("/");
   });
 });
 
-test.describe('Logout', () => {
-  test('should logout successfully', async ({ authenticatedPage }) => {
+test.describe("Logout", () => {
+  test("should logout successfully", async ({ authenticatedPage }) => {
     const homePage = new HomePage(authenticatedPage);
     await homePage.goto();
 
@@ -101,27 +101,30 @@ test.describe('Logout', () => {
     await homePage.expectCreateRoomVisible();
 
     // Click on the button that contains the username (opens dropdown)
-    await authenticatedPage.locator('button').filter({ hasText: /e2e-user/ }).click();
+    await authenticatedPage
+      .locator("button")
+      .filter({ hasText: /e2e-user/ })
+      .click();
 
     // Click logout in dropdown
-    await authenticatedPage.getByText('Logout').click();
+    await authenticatedPage.getByText("Logout").click();
 
     // Should show login prompt (unauthenticated state)
     await homePage.expectLoginPromptVisible();
   });
 });
 
-test.describe('Protected Routes', () => {
-  test('should show login prompt on home page when unauthenticated', async ({ page }) => {
+test.describe("Protected Routes", () => {
+  test("should show login prompt on home page when unauthenticated", async ({ page }) => {
     const homePage = new HomePage(page);
     await homePage.goto();
 
     // Should show login button for unauthenticated users
-    await expect(page.getByRole('link', { name: /login/i }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: /login/i }).first()).toBeVisible();
     await homePage.expectCreateRoomNotVisible();
   });
 
-  test('should show create room button when authenticated', async ({ authenticatedPage }) => {
+  test("should show create room button when authenticated", async ({ authenticatedPage }) => {
     const homePage = new HomePage(authenticatedPage);
     await homePage.goto();
 

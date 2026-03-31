@@ -1,5 +1,5 @@
-import { waitFor } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const testContext = vi.hoisted(() => {
   type EventHandler = (...args: unknown[]) => unknown;
@@ -9,8 +9,8 @@ const testContext = vi.hoisted(() => {
   const recvTransportHandlers = new Map<string, EventHandler>();
 
   const mockProducer = {
-    id: 'producer-1',
-    kind: 'video' as const,
+    id: "producer-1",
+    kind: "video" as const,
     on: vi.fn(),
     close: vi.fn(),
     pause: vi.fn(),
@@ -19,20 +19,20 @@ const testContext = vi.hoisted(() => {
   };
 
   const mockConsumerTrack = {
-    id: 'track-1',
-    kind: 'video' as const,
+    id: "track-1",
+    kind: "video" as const,
   } as MediaStreamTrack;
 
   const mockConsumer = {
-    id: 'consumer-1',
-    producerId: 'producer-remote',
+    id: "consumer-1",
+    producerId: "producer-remote",
     track: mockConsumerTrack,
     on: vi.fn(),
     close: vi.fn(),
   };
 
   const mockSendTransport = {
-    id: 'send-transport',
+    id: "send-transport",
     on: vi.fn((event: string, handler: EventHandler) => {
       sendTransportHandlers.set(event, handler);
     }),
@@ -41,7 +41,7 @@ const testContext = vi.hoisted(() => {
   };
 
   const mockRecvTransport = {
-    id: 'recv-transport',
+    id: "recv-transport",
     on: vi.fn((event: string, handler: EventHandler) => {
       recvTransportHandlers.set(event, handler);
     }),
@@ -119,9 +119,7 @@ const testContext = vi.hoisted(() => {
 
   const emitSocketEvent = async (event: string, payload?: unknown) => {
     const handlers = Array.from(socketHandlers.get(event) ?? []);
-    await Promise.all(
-      handlers.map((handler) => handler(payload))
-    );
+    await Promise.all(handlers.map((handler) => handler(payload)));
   };
 
   return {
@@ -140,17 +138,17 @@ const testContext = vi.hoisted(() => {
   };
 });
 
-vi.mock('socket.io-client', () => ({
+vi.mock("socket.io-client", () => ({
   io: vi.fn(() => testContext.mockSocket),
 }));
 
-vi.mock('mediasoup-client', () => ({
+vi.mock("mediasoup-client", () => ({
   Device: class MockDevice {
     load = testContext.mockDeviceLoad;
     createSendTransport = testContext.mockCreateSendTransport;
     createRecvTransport = testContext.mockCreateRecvTransport;
-    rtpCapabilities = { codecs: ['vp8'] };
-    recvRtpCapabilities = { codecs: ['vp8'] };
+    rtpCapabilities = { codecs: ["vp8"] };
+    recvRtpCapabilities = { codecs: ["vp8"] };
 
     constructor() {
       testContext.latestDevice.current = this;
@@ -158,16 +156,16 @@ vi.mock('mediasoup-client', () => ({
   },
 }));
 
-import { SfuManager } from '../manager';
+import { SfuManager } from "../manager";
 
 const transportPayload = {
-  transportId: 'transport-1',
-  iceParameters: { usernameFragment: 'user', password: 'pass' },
+  transportId: "transport-1",
+  iceParameters: { usernameFragment: "user", password: "pass" },
   iceCandidates: [],
-  dtlsParameters: { fingerprints: [], role: 'auto' as const },
+  dtlsParameters: { fingerprints: [], role: "auto" as const },
 };
 
-describe('SfuManager', () => {
+describe("SfuManager", () => {
   let manager: SfuManager;
 
   beforeEach(() => {
@@ -179,15 +177,15 @@ describe('SfuManager', () => {
     manager.disconnect();
   });
 
-  it('loads the device and requests transports after joining the SFU room', async () => {
+  it("loads the device and requests transports after joining the SFU room", async () => {
     const stateCallback = vi.fn();
     manager.onStateChange(stateCallback);
 
     manager.connect();
 
     testContext.mockSocket.connected = true;
-    await testContext.emitSocketEvent('connect');
-    await testContext.emitSocketEvent('sfu:joined', {
+    await testContext.emitSocketEvent("connect");
+    await testContext.emitSocketEvent("sfu:joined", {
       routerRtpCapabilities: { codecs: [] },
     });
 
@@ -197,17 +195,17 @@ describe('SfuManager', () => {
       });
     });
 
-    expect(testContext.mockSocket.emit).toHaveBeenCalledWith('sfu:create-send-transport');
-    expect(testContext.mockSocket.emit).toHaveBeenCalledWith('sfu:create-recv-transport');
+    expect(testContext.mockSocket.emit).toHaveBeenCalledWith("sfu:create-send-transport");
+    expect(testContext.mockSocket.emit).toHaveBeenCalledWith("sfu:create-recv-transport");
     expect(stateCallback).toHaveBeenCalledWith(
       expect.objectContaining({
-        connectionState: 'connected',
+        connectionState: "connected",
         isDeviceLoaded: true,
-      })
+      }),
     );
   });
 
-  it('consumes a remote producer and notifies track subscribers', async () => {
+  it("consumes a remote producer and notifies track subscribers", async () => {
     const onPeerJoined = vi.fn();
     const onTrack = vi.fn();
 
@@ -216,75 +214,75 @@ describe('SfuManager', () => {
     manager.connect();
 
     testContext.mockSocket.connected = true;
-    await testContext.emitSocketEvent('connect');
-    await testContext.emitSocketEvent('sfu:joined', {
+    await testContext.emitSocketEvent("connect");
+    await testContext.emitSocketEvent("sfu:joined", {
       routerRtpCapabilities: { codecs: [] },
     });
-    await testContext.emitSocketEvent('sfu:transport-created', {
+    await testContext.emitSocketEvent("sfu:transport-created", {
       ...transportPayload,
-      direction: 'recv',
-      transportId: 'recv-transport',
+      direction: "recv",
+      transportId: "recv-transport",
     });
 
-    await testContext.emitSocketEvent('sfu:new-producer', {
-      producerId: 'producer-remote',
-      userId: 'user-2',
-      username: 'bob',
-      kind: 'video',
+    await testContext.emitSocketEvent("sfu:new-producer", {
+      producerId: "producer-remote",
+      userId: "user-2",
+      username: "bob",
+      kind: "video",
     });
 
     expect(onPeerJoined).toHaveBeenCalledWith(
       expect.objectContaining({
-        userId: 'user-2',
-        username: 'bob',
-      })
+        userId: "user-2",
+        username: "bob",
+      }),
     );
-    expect(testContext.mockSocket.emit).toHaveBeenCalledWith('sfu:consume', {
-      producerId: 'producer-remote',
-      rtpCapabilities: { codecs: ['vp8'] },
+    expect(testContext.mockSocket.emit).toHaveBeenCalledWith("sfu:consume", {
+      producerId: "producer-remote",
+      rtpCapabilities: { codecs: ["vp8"] },
     });
 
-    await testContext.emitSocketEvent('sfu:consumer-created', {
-      consumerId: 'consumer-1',
-      producerId: 'producer-remote',
-      kind: 'video',
+    await testContext.emitSocketEvent("sfu:consumer-created", {
+      consumerId: "consumer-1",
+      producerId: "producer-remote",
+      kind: "video",
       rtpParameters: { codecs: [] },
     });
 
     expect(testContext.mockRecvTransport.consume).toHaveBeenCalledWith({
-      id: 'consumer-1',
-      producerId: 'producer-remote',
-      kind: 'video',
+      id: "consumer-1",
+      producerId: "producer-remote",
+      kind: "video",
       rtpParameters: { codecs: [] },
     });
-    expect(testContext.mockSocket.emit).toHaveBeenCalledWith('sfu:resume-consumer', {
-      consumerId: 'consumer-1',
+    expect(testContext.mockSocket.emit).toHaveBeenCalledWith("sfu:resume-consumer", {
+      consumerId: "consumer-1",
     });
-    expect(onTrack).toHaveBeenCalledWith(testContext.mockConsumerTrack, 'video', 'user-2');
+    expect(onTrack).toHaveBeenCalledWith(testContext.mockConsumerTrack, "video", "user-2");
   });
 
-  it('produces a local track and replaces it through the matching producer', async () => {
+  it("produces a local track and replaces it through the matching producer", async () => {
     manager.connect();
 
     testContext.mockSocket.connected = true;
-    await testContext.emitSocketEvent('connect');
-    await testContext.emitSocketEvent('sfu:joined', {
+    await testContext.emitSocketEvent("connect");
+    await testContext.emitSocketEvent("sfu:joined", {
       routerRtpCapabilities: { codecs: [] },
     });
-    await testContext.emitSocketEvent('sfu:transport-created', {
+    await testContext.emitSocketEvent("sfu:transport-created", {
       ...transportPayload,
-      direction: 'send',
-      transportId: 'send-transport',
+      direction: "send",
+      transportId: "send-transport",
     });
 
-    const originalTrack = { kind: 'video' } as MediaStreamTrack;
-    const nextTrack = { kind: 'video' } as MediaStreamTrack;
+    const originalTrack = { kind: "video" } as MediaStreamTrack;
+    const nextTrack = { kind: "video" } as MediaStreamTrack;
 
     await manager.produce(originalTrack);
-    const replaced = await manager.replaceTrack('video', nextTrack);
+    const replaced = await manager.replaceTrack("video", nextTrack);
 
     expect(testContext.mockSendTransport.produce).toHaveBeenCalledWith(
-      expect.objectContaining({ track: originalTrack })
+      expect.objectContaining({ track: originalTrack }),
     );
     expect(replaced).toBe(true);
     expect(testContext.mockProducer.replaceTrack).toHaveBeenCalledWith({ track: nextTrack });

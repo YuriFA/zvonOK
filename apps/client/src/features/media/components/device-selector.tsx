@@ -1,17 +1,19 @@
-import { useCallback, useState } from 'react';
-import { useMediaControls } from '../hooks/use-media-controls';
-import { DeviceControlGroup } from './device-control-group';
-import { LocalVideo } from '@/components/local-video';
-import { cn } from '@/lib/utils';
-import { useMediaStreamContext } from '../contexts/media-stream.context';
-import { useVideoCaptureControl, useAudioCaptureControl } from '../contexts/media-manager.context';
-import { useMediaDevices } from '../hooks/use-media-devices';
-import { useDeviceSwitching } from '../hooks/use-device-switching';
-import { CaptureState } from '@/lib/media/capture-state';
-import { SpeakerDeviceControlGroup } from './speaker-device-control-group';
-import { PermissionRequestModal } from './permission-request-modal';
-import { AlertTriangleIcon, Mic, MicOff, Video, VideoOff } from 'lucide-react';
-import { Alert, AlertTitle } from '@/components/ui/alert';
+import { AlertTriangleIcon, Mic, MicOff, Video, VideoOff } from "lucide-react";
+import { useCallback, useState } from "react";
+
+import { LocalVideo } from "@/components/local-video";
+import { Alert, AlertTitle } from "@/components/ui/alert";
+import { CaptureState } from "@/lib/media/capture-state";
+import { cn } from "@/lib/utils";
+
+import { useVideoCaptureControl, useAudioCaptureControl } from "../contexts/media-manager.context";
+import { useMediaStreamContext } from "../contexts/media-stream.context";
+import { useDeviceSwitching } from "../hooks/use-device-switching";
+import { useMediaControls } from "../hooks/use-media-controls";
+import { useMediaDevices } from "../hooks/use-media-devices";
+import { DeviceControlGroup } from "./device-control-group";
+import { PermissionRequestModal } from "./permission-request-modal";
+import { SpeakerDeviceControlGroup } from "./speaker-device-control-group";
 
 interface DeviceSelectorProps {
   className?: string;
@@ -52,7 +54,7 @@ export function DeviceSelector({ className, username }: DeviceSelectorProps) {
     if (!success) {
       mediaControls.setVideoEnabled(false);
       if (isPermissionDenied(mediaControls.getVideoCaptureState())) {
-        setDeniedDevices(prev => ({ ...prev, camera: true }));
+        setDeniedDevices((prev) => ({ ...prev, camera: true }));
         setPermissionModalOpen(true);
       }
     }
@@ -65,7 +67,7 @@ export function DeviceSelector({ className, username }: DeviceSelectorProps) {
     if (!success) {
       mediaControls.setAudioEnabled(false);
       if (isPermissionDenied(mediaControls.getAudioCaptureState())) {
-        setDeniedDevices(prev => ({ ...prev, microphone: true }));
+        setDeniedDevices((prev) => ({ ...prev, microphone: true }));
         setPermissionModalOpen(true);
       }
     }
@@ -109,7 +111,7 @@ export function DeviceSelector({ className, username }: DeviceSelectorProps) {
   const isAudioLoading = audioState === CaptureState.STARTING;
 
   return (
-    <div className={cn('space-y-3', className)}>
+    <div className={cn("space-y-3", className)}>
       <div className="relative aspect-video overflow-hidden rounded-lg bg-muted">
         {isVideoLoading && (
           <div className="flex h-full items-center justify-center">
@@ -139,7 +141,6 @@ export function DeviceSelector({ className, username }: DeviceSelectorProps) {
           <AlertTitle>No microphone found</AlertTitle>
         </Alert>
       )}
-
 
       <div className="flex items-center justify-center gap-2">
         {isSpeakerSwitchSupported && (
@@ -181,4 +182,3 @@ export function DeviceSelector({ className, username }: DeviceSelectorProps) {
     </div>
   );
 }
-

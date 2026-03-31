@@ -1,4 +1,4 @@
-import { CaptureState } from './capture-state';
+import { CaptureState } from "./capture-state";
 
 export interface ErrorClassification {
   state: CaptureState;
@@ -7,17 +7,17 @@ export interface ErrorClassification {
 }
 
 export interface IErrorClassifier {
-  classify(error: unknown, kind: 'video' | 'audio'): ErrorClassification;
+  classify(error: unknown, kind: "video" | "audio"): ErrorClassification;
 }
 
 export class DefaultErrorClassifier implements IErrorClassifier {
-  classify(error: unknown, kind: 'video' | 'audio'): ErrorClassification {
-    const label = kind === 'video' ? 'camera' : 'microphone';
+  classify(error: unknown, kind: "video" | "audio"): ErrorClassification {
+    const label = kind === "video" ? "camera" : "microphone";
 
     if (error instanceof DOMException) {
       switch (error.name) {
-        case 'NotAllowedError':
-          if (error.message.toLowerCase().includes('system')) {
+        case "NotAllowedError":
+          if (error.message.toLowerCase().includes("system")) {
             return {
               state: CaptureState.SYSTEM_DENIED,
               recoverable: false,
@@ -29,19 +29,19 @@ export class DefaultErrorClassifier implements IErrorClassifier {
             recoverable: true,
             reason: `${label.charAt(0).toUpperCase() + label.slice(1)} blocked. Click to retry.`,
           };
-        case 'NotFoundError':
+        case "NotFoundError":
           return {
             state: CaptureState.DEVICE_NOT_FOUND,
             recoverable: true,
             reason: `No ${label} device found`,
           };
-        case 'NotReadableError':
+        case "NotReadableError":
           return {
             state: CaptureState.DEVICE_IN_USE,
             recoverable: true,
             reason: `${label.charAt(0).toUpperCase() + label.slice(1)} in use by another app`,
           };
-        case 'OverconstrainedError':
+        case "OverconstrainedError":
           return {
             state: CaptureState.DEVICE_ERROR,
             recoverable: true,
@@ -50,7 +50,7 @@ export class DefaultErrorClassifier implements IErrorClassifier {
       }
     }
 
-    if (error instanceof Error && error.name === 'AbortError') {
+    if (error instanceof Error && error.name === "AbortError") {
       return {
         state: CaptureState.CAPTURE_CANCELED,
         recoverable: true,

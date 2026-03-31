@@ -1,7 +1,9 @@
-import { Video, Mic, Volume2 } from 'lucide-react';
-import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
-import type { MediaDevice, DeviceType } from '../hooks/use-media-devices';
+import { Video, Mic, Volume2 } from "lucide-react";
+
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
+
+import type { MediaDevice, DeviceType } from "../hooks/use-media-devices";
 
 export interface SingleDeviceSelectorProps {
   type: DeviceType;
@@ -13,9 +15,9 @@ export interface SingleDeviceSelectorProps {
 }
 
 const deviceConfig: Record<DeviceType, { label: string; icon: typeof Video }> = {
-  videoinput: { label: 'Camera', icon: Video },
-  audioinput: { label: 'Microphone', icon: Mic },
-  audiooutput: { label: 'Speaker', icon: Volume2 },
+  videoinput: { label: "Camera", icon: Video },
+  audioinput: { label: "Microphone", icon: Mic },
+  audiooutput: { label: "Speaker", icon: Volume2 },
 };
 
 export function SingleDeviceSelector({
@@ -34,30 +36,30 @@ export function SingleDeviceSelector({
   // Single device: just show label, no dropdown needed
   if (!hasMultipleDevices) {
     return (
-      <div className={cn('space-y-2', className)}>
+      <div className={cn("space-y-2", className)}>
         <Label className="flex items-center gap-2">
           <Icon className="size-4" />
           {config.label}
         </Label>
         <div className="flex h-10 items-center rounded-md border border-input bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
-          {hasNoDevices ? 'No device available' : devices[0]?.label || 'Unknown device'}
+          {hasNoDevices ? "No device available" : devices[0]?.label || "Unknown device"}
         </div>
       </div>
     );
   }
 
   return (
-    <div className={cn('space-y-2', className)}>
+    <div className={cn("space-y-2", className)}>
       <Label htmlFor={`device-${type}`} className="flex items-center gap-2">
         <Icon className="size-4" />
         {config.label}
       </Label>
       <select
         id={`device-${type}`}
-        value={selectedDeviceId || ''}
+        value={selectedDeviceId || ""}
         onChange={(e) => onDeviceChange(e.target.value)}
         disabled={disabled || hasNoDevices}
-        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
       >
         {devices.map((device) => (
           <option key={device.deviceId} value={device.deviceId}>

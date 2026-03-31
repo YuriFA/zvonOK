@@ -1,13 +1,13 @@
-import { apiClient } from '@/lib/api/api-client';
-import type { Room, CreateRoomInput, UpdateRoomInput } from '../types/room.types';
+import { apiClient } from "@/lib/api/api-client";
+
+import type { Room, CreateRoomInput, UpdateRoomInput } from "../types/room.types";
 
 class RoomApi {
   private readonly client = apiClient;
 
   async createRoom(input: CreateRoomInput): Promise<Room> {
-    return this.client.post<Room>('/rooms', input);
+    return this.client.post<Room>("/rooms", input);
   }
-
 
   async getRoomBySlug(slug: string): Promise<Room> {
     return this.client.get<Room>(`/rooms/${slug}`);

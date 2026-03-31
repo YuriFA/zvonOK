@@ -1,16 +1,12 @@
-import { useRemoteAudio } from '@/hooks/use-remote-audio';
-import { ActiveSpeakerDetector } from '@/lib/audio/active-speaker-detector';
-import { AudioLevelSampler } from '@/lib/audio/audio-level-sampler';
-import { RemoteAudioMixer, type IRemoteAudioMixer } from '@/lib/audio/remote-audio-mixer';
-import { RoomAudioStore } from './room-audio.store';
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useRef,
-  type ReactNode,
-} from 'react';
-import type { UseRoomSessionResult } from '../hooks/use-room-session';
+import { createContext, useContext, useEffect, useRef, type ReactNode } from "react";
+
+import { useRemoteAudio } from "@/hooks/use-remote-audio";
+import { ActiveSpeakerDetector } from "@/lib/audio/active-speaker-detector";
+import { AudioLevelSampler } from "@/lib/audio/audio-level-sampler";
+import { RemoteAudioMixer, type IRemoteAudioMixer } from "@/lib/audio/remote-audio-mixer";
+
+import type { UseRoomSessionResult } from "../hooks/use-room-session";
+import { RoomAudioStore } from "./room-audio.store";
 
 export interface RoomAudioContextValue {
   mixer: IRemoteAudioMixer | null;
@@ -32,7 +28,7 @@ export function RoomAudioContextProvider({ children, session }: Props) {
   const detectorRef = useRef<ActiveSpeakerDetector>(new ActiveSpeakerDetector());
   const storeRef = useRef<RoomAudioStore>(new RoomAudioStore());
   const tickCountRef = useRef(0);
-  const isConnected = session.sfuState.connectionState === 'connected';
+  const isConnected = session.sfuState.connectionState === "connected";
   const { mixer } = useRemoteAudio(createMixer, {
     remotePeers: session.remotePeers,
     enabled: isConnected,
@@ -114,7 +110,7 @@ export function RoomAudioContextProvider({ children, session }: Props) {
 export function useRoomAudioContext(): RoomAudioContextValue {
   const ctx = useContext(RoomAudioContext);
   if (!ctx) {
-    throw new Error('useRoomAudioContext must be used within a RoomAudioContextProvider');
+    throw new Error("useRoomAudioContext must be used within a RoomAudioContextProvider");
   }
 
   return ctx;

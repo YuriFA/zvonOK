@@ -1,24 +1,26 @@
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Link, useNavigate, useSearchParams } from 'react-router';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useAuth } from '../contexts/auth.context';
-import { loginSchema, type LoginInput } from '../validation/login.schema';
-import { ApiError, ValidationError } from '@/lib/api/api.errors';
-import { ROUTES } from '@/lib/config/routes';
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { Link, useNavigate, useSearchParams } from "react-router";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ApiError, ValidationError } from "@/lib/api/api.errors";
+import { ROUTES } from "@/lib/config/routes";
+
+import { useAuth } from "../contexts/auth.context";
+import { loginSchema, type LoginInput } from "../validation/login.schema";
 
 export function LoginForm() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { login } = useAuth();
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const redirectTo = searchParams.get('redirect') || ROUTES.HOME;
+  const redirectTo = searchParams.get("redirect") || ROUTES.HOME;
 
   const {
     register,
@@ -29,23 +31,23 @@ export function LoginForm() {
   });
 
   const onSubmit = async (data: LoginInput) => {
-    setError('');
+    setError("");
     setIsSubmitting(true);
 
     try {
       await login(data.email, data.password);
-      toast.success('Welcome back!');
+      toast.success("Welcome back!");
       navigate(redirectTo);
     } catch (err) {
       if (err instanceof ValidationError) {
         setError(err.message);
         toast.error(err.message);
       } else if (err instanceof ApiError) {
-        setError('Invalid email or password');
-        toast.error('Invalid email or password');
+        setError("Invalid email or password");
+        toast.error("Invalid email or password");
       } else {
-        setError('An error occurred. Please try again.');
-        toast.error('An error occurred. Please try again.');
+        setError("An error occurred. Please try again.");
+        toast.error("An error occurred. Please try again.");
       }
     } finally {
       setIsSubmitting(false);
@@ -55,9 +57,7 @@ export function LoginForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       {error && (
-        <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
-          {error}
-        </div>
+        <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">{error}</div>
       )}
 
       <div className="space-y-2">
@@ -67,11 +67,9 @@ export function LoginForm() {
           type="email"
           placeholder="you@example.com"
           disabled={isSubmitting}
-          {...register('email')}
+          {...register("email")}
         />
-        {errors.email && (
-          <p className="text-sm text-destructive">{errors.email.message}</p>
-        )}
+        {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
       </div>
 
       <div className="space-y-2">
@@ -81,19 +79,17 @@ export function LoginForm() {
           type="password"
           placeholder="••••••••"
           disabled={isSubmitting}
-          {...register('password')}
+          {...register("password")}
         />
-        {errors.password && (
-          <p className="text-sm text-destructive">{errors.password.message}</p>
-        )}
+        {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
       </div>
 
       <Button type="submit" className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? 'Logging in...' : 'Login'}
+        {isSubmitting ? "Logging in..." : "Login"}
       </Button>
 
       <p className="text-center text-sm text-muted-foreground">
-        Don't have an account?{' '}
+        Don't have an account?{" "}
         <Link to={ROUTES.REGISTER} className="text-primary underline-offset-4 hover:underline">
           Register
         </Link>

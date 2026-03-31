@@ -1,11 +1,12 @@
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useContext, type ReactNode } from "react";
+
 import type {
   IMediaManager,
   ICaptureStateReader,
   ICaptureController,
   ICaptureTrackProvider,
   IMediaDeviceService,
-} from '@/lib/media/interfaces';
+} from "@/lib/media/interfaces";
 
 const MediaManagerContext = createContext<IMediaManager | null>(null);
 
@@ -14,21 +15,14 @@ export interface MediaManagerProviderProps {
   children: ReactNode;
 }
 
-export function MediaManagerProvider({
-  manager,
-  children,
-}: MediaManagerProviderProps) {
-  return (
-    <MediaManagerContext.Provider value={manager}>
-      {children}
-    </MediaManagerContext.Provider>
-  );
+export function MediaManagerProvider({ manager, children }: MediaManagerProviderProps) {
+  return <MediaManagerContext.Provider value={manager}>{children}</MediaManagerContext.Provider>;
 }
 
 function useMediaManager(): IMediaManager {
   const manager = useContext(MediaManagerContext);
   if (!manager) {
-    throw new Error('useMediaManager must be used within a MediaManagerProvider');
+    throw new Error("useMediaManager must be used within a MediaManagerProvider");
   }
   return manager;
 }
@@ -54,9 +48,9 @@ export function useAudioCaptureControl(): ICaptureController {
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
-export function useCaptureTrackProvider(kind: 'video' | 'audio'): ICaptureTrackProvider {
+export function useCaptureTrackProvider(kind: "video" | "audio"): ICaptureTrackProvider {
   const manager = useMediaManager();
-  return kind === 'video' ? manager.videoCapture : manager.audioCapture;
+  return kind === "video" ? manager.videoCapture : manager.audioCapture;
 }
 
 // eslint-disable-next-line react-refresh/only-export-components

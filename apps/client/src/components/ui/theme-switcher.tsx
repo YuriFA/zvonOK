@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
-import { MoonIcon, SunIcon, Palette } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { MoonIcon, SunIcon, Palette } from "lucide-react";
+import { useEffect, useState } from "react";
+
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,7 +11,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+} from "@/components/ui/dropdown-menu";
 import {
   colorThemes,
   modes,
@@ -18,28 +19,28 @@ import {
   getInitialTheme,
   type ColorTheme,
   type Mode,
-} from '@/lib/config/themes'
+} from "@/lib/config/themes";
 
 export function ThemeSwitcher() {
-  const [color, setColor] = useState<ColorTheme>('teal')
-  const [mode, setMode] = useState<Mode>('light')
+  const [color, setColor] = useState<ColorTheme>("teal");
+  const [mode, setMode] = useState<Mode>("light");
 
   useEffect(() => {
-    const initial = getInitialTheme()
-    setColor(initial.color)
-    setMode(initial.mode)
-    applyTheme(initial.color, initial.mode)
-  }, [])
+    const initial = getInitialTheme();
+    setColor(initial.color);
+    setMode(initial.mode);
+    applyTheme(initial.color, initial.mode);
+  }, []);
 
   const handleColorChange = (newColor: ColorTheme) => {
-    setColor(newColor)
-    applyTheme(newColor, mode)
-  }
+    setColor(newColor);
+    applyTheme(newColor, mode);
+  };
 
   const handleModeChange = (newMode: Mode) => {
-    setMode(newMode)
-    applyTheme(color, newMode)
-  }
+    setMode(newMode);
+    applyTheme(color, newMode);
+  };
 
   return (
     <DropdownMenu>
@@ -69,13 +70,10 @@ export function ThemeSwitcher() {
           </DropdownMenuRadioGroup>
           <DropdownMenuSeparator />
           <DropdownMenuLabel>Mode</DropdownMenuLabel>
-          <DropdownMenuRadioGroup
-            value={mode}
-            onValueChange={(v) => handleModeChange(v as Mode)}
-          >
+          <DropdownMenuRadioGroup value={mode} onValueChange={(v) => handleModeChange(v as Mode)}>
             {modes.map((m) => (
               <DropdownMenuRadioItem key={m.id} value={m.id}>
-                {m.id === 'light' ? (
+                {m.id === "light" ? (
                   <SunIcon className="mr-2 size-4" />
                 ) : (
                   <MoonIcon className="mr-2 size-4" />
@@ -87,5 +85,5 @@ export function ThemeSwitcher() {
         </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }

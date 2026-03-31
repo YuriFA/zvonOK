@@ -3,11 +3,11 @@
  * Handles socket.io connection lifecycle.
  */
 
-import { io } from 'socket.io-client';
-import type { Socket } from 'socket.io-client';
+import { io } from "socket.io-client";
+import type { Socket } from "socket.io-client";
 
-const SOCKET_URL = (import.meta.env as { VITE_SOCKET_URL?: string })
-  .VITE_SOCKET_URL ?? 'http://localhost:3000';
+const SOCKET_URL =
+  (import.meta.env as { VITE_SOCKET_URL?: string }).VITE_SOCKET_URL ?? "http://localhost:3000";
 
 /**
  * Manages socket.io connection to the SFU server.
@@ -26,7 +26,7 @@ export class SfuConnection {
 
     this.socket = io(`${SOCKET_URL}/sfu`, {
       withCredentials: true,
-      transports: ['websocket', 'polling'],
+      transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 1000,

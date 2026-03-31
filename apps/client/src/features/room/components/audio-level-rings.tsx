@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
-import { cn } from '@/lib/utils';
+import { useMemo } from "react";
+
+import { cn } from "@/lib/utils";
 
 const THRESHOLD = 0.01;
 
@@ -10,12 +11,7 @@ interface AudioLevelRingsProps {
   className?: string;
 }
 
-export function AudioLevelRings({
-  level,
-  color,
-  maxRings = 4,
-  className,
-}: AudioLevelRingsProps) {
+export function AudioLevelRings({ level, color, maxRings = 4, className }: AudioLevelRingsProps) {
   const rings = useMemo(() => {
     if (level < THRESHOLD) {
       return [];
@@ -25,8 +21,8 @@ export function AudioLevelRings({
     const result: { size: number; opacity: number }[] = [];
 
     for (let i = 0; i < maxRings; i++) {
-      const opacity = Math.max(0, 1 - (i / maxRings) - (1 - level));
-      const size = fromWidth + ((i + 1) * 20);
+      const opacity = Math.max(0, 1 - i / maxRings - (1 - level));
+      const size = fromWidth + (i + 1) * 20;
 
       result.push({ size, opacity });
     }
@@ -39,7 +35,12 @@ export function AudioLevelRings({
   }
 
   return (
-    <div className={cn('pointer-events-none absolute inset-0 flex items-center justify-center', className)}>
+    <div
+      className={cn(
+        "pointer-events-none absolute inset-0 flex items-center justify-center",
+        className,
+      )}
+    >
       {rings.map((ring, i) => {
         return (
           <div

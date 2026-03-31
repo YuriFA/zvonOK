@@ -1,6 +1,6 @@
-import { AuthHeader } from '@/features/auth/components/auth-header';
-import { LoginForm } from '@/features/auth/components/login-form';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AuthHeader } from "@/features/auth/components/auth-header";
+import { LoginForm } from "@/features/auth/components/login-form";
 
 export const LoginPage = () => {
   return (

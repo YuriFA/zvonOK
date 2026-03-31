@@ -3,7 +3,7 @@
  * Composes connection, event router, stats collector into a unified interface.
  */
 
-import { Device } from 'mediasoup-client';
+import { Device } from "mediasoup-client";
 import type {
   Consumer,
   DtlsParameters,
@@ -12,11 +12,12 @@ import type {
   RtpCapabilities,
   RtpParameters,
   Transport,
-} from 'mediasoup-client/types';
-import { SfuConnection } from './connection';
-import { SfuEventRouter, type SfuEventHandlers } from './event-router';
-import { SfuStatsCollector } from './stats-collector';
-import type { ISfuManager } from './interfaces';
+} from "mediasoup-client/types";
+
+import { SfuConnection } from "./connection";
+import { SfuEventRouter, type SfuEventHandlers } from "./event-router";
+import type { ISfuManager } from "./interfaces";
+import { SfuStatsCollector } from "./stats-collector";
 import type {
   SfuState,
   SfuJoinedPayload,
@@ -37,7 +38,7 @@ import type {
   SfuTrackCallback,
   SfuPeerCallback,
   SfuProducerStateCallback,
-} from './types';
+} from "./types";
 
 /**
  * Facade for SFU management.
@@ -59,7 +60,7 @@ export class SfuManager implements ISfuManager {
 
   // State and callbacks
   private state: SfuState = {
-    connectionState: 'disconnected',
+    connectionState: "disconnected",
     isDeviceLoaded: false,
     isSendTransportCreated: false,
     sendTransportConnected: false,
@@ -78,14 +79,14 @@ export class SfuManager implements ISfuManager {
   // Event router
   private eventRouter = new SfuEventRouter(
     () => this.connection.getSocket(),
-    this.createEventHandlers()
+    this.createEventHandlers(),
   );
 
   constructor() {
     this.statsCollector = new SfuStatsCollector(
       () => this.recvTransport,
       () => this.consumers.entries(),
-      (producerId) => this.findPeerForProducer(producerId)
+      (producerId) => this.findPeerForProducer(producerId),
     );
   }
 
@@ -111,7 +112,7 @@ export class SfuManager implements ISfuManager {
   // ISfuConnection
   connect(): void {
     if (this.connection.isConnected()) return;
-    this.updateState({ connectionState: 'connecting' });
+    this.updateState({ connectionState: "connecting" });
     this.connection.connect();
     this.eventRouter.setup();
   }
@@ -136,15 +137,15 @@ export class SfuManager implements ISfuManager {
   async joinRoom(payload: SfuJoinPayload): Promise<void> {
     const socket = this.connection.getSocket();
     if (!socket) {
-      throw new Error('Socket not connected');
+      throw new Error("Socket not connected");
     }
-    socket.emit('sfu:join', payload);
+    socket.emit("sfu:join", payload);
   }
 
   leaveRoom(): void {
     const socket = this.connection.getSocket();
     if (socket) {
-      socket.emit('sfu:leave');
+      socket.emit("sfu:leave");
     }
     this.closeAll();
   }
@@ -152,7 +153,7 @@ export class SfuManager implements ISfuManager {
   kickPeer(userId: string): boolean {
     const socket = this.connection.getSocket();
     if (!socket) return false;
-    socket.emit('sfu:kick-peer', { userId });
+    socket.emit("sfu:kick-peer", { userId });
     return true;
   }
 
@@ -169,23 +170,23 @@ export class SfuManager implements ISfuManager {
   // ISfuProducerManager
   async produce(track: MediaStreamTrack): Promise<Producer | null> {
     if (!this.sendTransport) {
-      console.error('[SFU] Send transport not ready');
+      console.error("[SFU] Send transport not ready");
       return null;
     }
 
     const kind = track.kind;
 
     // Guard: if a producer for this kind already exists, skip
-    if (this.getProducerByKind(kind as 'audio' | 'video')) {
-      console.warn('[SFU] Producer already exists for kind:', kind);
-      return this.getProducerByKind(kind as 'audio' | 'video') ?? null;
+    if (this.getProducerByKind(kind as "audio" | "video")) {
+      console.warn("[SFU] Producer already exists for kind:", kind);
+      return this.getProducerByKind(kind as "audio" | "video") ?? null;
     }
 
     // Guard: if a produce call for this kind is already in-flight, return
     // the pending promise to deduplicate concurrent callers
     const pending = this.producingInProgress.get(kind);
     if (pending) {
-      console.warn('[SFU] Produce already in-flight for kind:', kind);
+      console.warn("[SFU] Produce already in-flight for kind:", kind);
       return pending;
     }
 
@@ -205,22 +206,19 @@ export class SfuManager implements ISfuManager {
     try {
       const producer = await this.sendTransport.produce({
         track,
-        codecOptions:
-          track.kind === 'video'
-            ? { videoGoogleStartBitrate: 1000 }
-            : undefined,
+        codecOptions: track.kind === "video" ? { videoGoogleStartBitrate: 1000 } : undefined,
       });
 
       this.producers.set(producer.id, producer);
-      console.log('[SFU] Produced track:', track.kind, producer.id);
+      console.log("[SFU] Produced track:", track.kind, producer.id);
 
-      producer.on('transportclose', () => {
+      producer.on("transportclose", () => {
         this.producers.delete(producer.id);
       });
 
       return producer;
     } catch (error) {
-      console.error('[SFU] Failed to produce track:', error);
+      console.error("[SFU] Failed to produce track:", error);
       return null;
     }
   }
@@ -229,7 +227,7 @@ export class SfuManager implements ISfuManager {
     const producer = this.producers.get(producerId);
     if (producer) {
       producer.pause();
-      this.connection.getSocket()?.emit('sfu:pause-producer', { producerId });
+      this.connection.getSocket()?.emit("sfu:pause-producer", { producerId });
     }
   }
 
@@ -237,31 +235,26 @@ export class SfuManager implements ISfuManager {
     const producer = this.producers.get(producerId);
     if (producer) {
       producer.resume();
-      this.connection.getSocket()?.emit('sfu:resume-producer', { producerId });
+      this.connection.getSocket()?.emit("sfu:resume-producer", { producerId });
     }
   }
 
-  closeProducer(kind: 'audio' | 'video'): void {
+  closeProducer(kind: "audio" | "video"): void {
     const producer = this.getProducerByKind(kind);
     if (!producer) return;
 
     producer.close();
     this.producers.delete(producer.id);
-    this.connection
-      .getSocket()
-      ?.emit('sfu:close-producer', { producerId: producer.id });
+    this.connection.getSocket()?.emit("sfu:close-producer", { producerId: producer.id });
 
-    if (kind === 'audio') {
+    if (kind === "audio") {
       this.updateState({ audioProducerId: null });
     } else {
       this.updateState({ videoProducerId: null });
     }
   }
 
-  async replaceTrack(
-    kind: 'audio' | 'video',
-    newTrack: MediaStreamTrack | null
-  ): Promise<boolean> {
+  async replaceTrack(kind: "audio" | "video", newTrack: MediaStreamTrack | null): Promise<boolean> {
     const producer = this.getProducerByKind(kind);
     if (!producer) return true;
 
@@ -274,7 +267,7 @@ export class SfuManager implements ISfuManager {
     }
   }
 
-  getProducerByKind(kind: 'audio' | 'video'): Producer | undefined {
+  getProducerByKind(kind: "audio" | "video"): Producer | undefined {
     for (const producer of this.producers.values()) {
       if (producer.kind === kind) {
         return producer;
@@ -342,24 +335,22 @@ export class SfuManager implements ISfuManager {
 
   // Event handlers
   private handleConnected(): void {
-    console.log('[SFU] Connected');
-    this.updateState({ connectionState: 'connected' });
+    console.log("[SFU] Connected");
+    this.updateState({ connectionState: "connected" });
   }
 
   private handleDisconnected(): void {
-    console.log('[SFU] Disconnected');
+    console.log("[SFU] Disconnected");
     this.closeAll();
-    this.updateState({ connectionState: 'disconnected' });
+    this.updateState({ connectionState: "disconnected" });
   }
 
   private async handleJoined(payload: SfuJoinedPayload): Promise<void> {
-    console.log('[SFU] Joined room, loading device...');
+    console.log("[SFU] Joined room, loading device...");
     await this.loadDevice(payload.routerRtpCapabilities);
   }
 
-  private async handleTransportCreated(
-    payload: SfuTransportCreatedPayload
-  ): Promise<void> {
+  private async handleTransportCreated(payload: SfuTransportCreatedPayload): Promise<void> {
     if (!this.device) return;
 
     const transportOptions = {
@@ -371,58 +362,53 @@ export class SfuManager implements ISfuManager {
     };
 
     // TODO(TASK-072): remove debug log after verifying ICE servers flow
-    console.log('[SFU] Transport created:', payload.direction, {
+    console.log("[SFU] Transport created:", payload.direction, {
       iceServers: payload.iceServers,
       transportId: payload.transportId,
     });
 
-    if (payload.direction === 'send') {
+    if (payload.direction === "send") {
       this.sendTransport = this.device.createSendTransport(transportOptions);
       this.updateState({ isSendTransportCreated: true });
 
       this.sendTransport.on(
-        'connect',
+        "connect",
         async (
           { dtlsParameters }: { dtlsParameters: DtlsParameters },
           callback: () => void,
-          errback: (error: Error) => void
+          errback: (error: Error) => void,
         ) => {
           try {
             const sendTransport = this.sendTransport;
             if (!sendTransport) {
-              throw new Error('Send transport not ready');
+              throw new Error("Send transport not ready");
             }
 
-            this.connection
-              .getSocket()
-              ?.emit('sfu:connect-transport', {
-                transportId: sendTransport.id,
-                dtlsParameters,
-              });
+            this.connection.getSocket()?.emit("sfu:connect-transport", {
+              transportId: sendTransport.id,
+              dtlsParameters,
+            });
             callback();
           } catch (error) {
             errback(error as Error);
           }
-        }
+        },
       );
 
       this.sendTransport.on(
-        'produce',
+        "produce",
         async (
-          {
-            kind,
-            rtpParameters,
-          }: { kind: MediaKind; rtpParameters: RtpParameters },
+          { kind, rtpParameters }: { kind: MediaKind; rtpParameters: RtpParameters },
           callback: ({ id }: { id: string }) => void,
-          errback: (error: Error) => void
+          errback: (error: Error) => void,
         ) => {
           try {
             const sendTransport = this.sendTransport;
             if (!sendTransport) {
-              throw new Error('Send transport not ready');
+              throw new Error("Send transport not ready");
             }
 
-            this.connection.getSocket()?.emit('sfu:produce', {
+            this.connection.getSocket()?.emit("sfu:produce", {
               transportId: sendTransport.id,
               kind,
               rtpParameters,
@@ -430,15 +416,15 @@ export class SfuManager implements ISfuManager {
 
             const handler = (response: SfuProducerCreatedPayload) => {
               if (response.kind === kind) {
-                this.connection.getSocket()?.off('sfu:producer-created', handler);
+                this.connection.getSocket()?.off("sfu:producer-created", handler);
                 callback({ id: response.producerId });
               }
             };
-            this.connection.getSocket()?.on('sfu:producer-created', handler);
+            this.connection.getSocket()?.on("sfu:producer-created", handler);
           } catch (error) {
             errback(error as Error);
           }
-        }
+        },
       );
     } else {
       this.recvTransport = this.device.createRecvTransport(transportOptions);
@@ -446,42 +432,40 @@ export class SfuManager implements ISfuManager {
       // Replay any producers that arrived before the recv transport was ready
       if (this.pendingNewProducers.length > 0) {
         const pending = this.pendingNewProducers.splice(0);
-        console.log('[SFU] Processing', pending.length, 'buffered new-producer(s)');
+        console.log("[SFU] Processing", pending.length, "buffered new-producer(s)");
         for (const pendingPayload of pending) {
           void this.consumeProducer(pendingPayload);
         }
       }
 
       this.recvTransport.on(
-        'connect',
+        "connect",
         async (
           { dtlsParameters }: { dtlsParameters: DtlsParameters },
           callback: () => void,
-          errback: (error: Error) => void
+          errback: (error: Error) => void,
         ) => {
           try {
             const recvTransport = this.recvTransport;
             if (!recvTransport) {
-              throw new Error('Receive transport not ready');
+              throw new Error("Receive transport not ready");
             }
 
-            this.connection
-              .getSocket()
-              ?.emit('sfu:connect-transport', {
-                transportId: recvTransport.id,
-                dtlsParameters,
-              });
+            this.connection.getSocket()?.emit("sfu:connect-transport", {
+              transportId: recvTransport.id,
+              dtlsParameters,
+            });
             callback();
           } catch (error) {
             errback(error as Error);
           }
-        }
+        },
       );
     }
   }
 
   private handleTransportConnected(payload: { transportId: string }): void {
-    console.log('[SFU] Transport connected:', payload.transportId);
+    console.log("[SFU] Transport connected:", payload.transportId);
     if (this.sendTransport?.id === payload.transportId) {
       this.updateState({ sendTransportConnected: true });
     } else if (this.recvTransport?.id === payload.transportId) {
@@ -490,8 +474,8 @@ export class SfuManager implements ISfuManager {
   }
 
   private handleProducerCreated(payload: SfuProducerCreatedPayload): void {
-    console.log('[SFU] Producer created:', payload.kind, payload.producerId);
-    if (payload.kind === 'audio') {
+    console.log("[SFU] Producer created:", payload.kind, payload.producerId);
+    if (payload.kind === "audio") {
       this.updateState({ audioProducerId: payload.producerId });
     } else {
       this.updateState({ videoProducerId: payload.producerId });
@@ -499,7 +483,7 @@ export class SfuManager implements ISfuManager {
   }
 
   private handlePeerJoined(payload: SfuPeerJoinedPayload): void {
-    console.log('[SFU] Peer joined:', payload.userId, payload.username);
+    console.log("[SFU] Peer joined:", payload.userId, payload.username);
     let peer = this.peers.get(payload.userId);
     if (!peer) {
       peer = {
@@ -517,7 +501,7 @@ export class SfuManager implements ISfuManager {
   }
 
   private handleExistingPeers(peers: SfuExistingPeersPayload[]): void {
-    console.log('[SFU] Existing peers:', peers.length);
+    console.log("[SFU] Existing peers:", peers.length);
     for (const peerData of peers) {
       let peer = this.peers.get(peerData.userId);
       if (!peer) {
@@ -537,13 +521,11 @@ export class SfuManager implements ISfuManager {
   }
 
   private handleNewProducer(payload: SfuNewProducerPayload): void {
-    console.log('[SFU] New producer:', payload.userId, payload.kind);
+    console.log("[SFU] New producer:", payload.userId, payload.kind);
     void this.consumeProducer(payload);
   }
 
-  private async handleConsumerCreated(
-    payload: SfuConsumerCreatedPayload
-  ): Promise<void> {
+  private async handleConsumerCreated(payload: SfuConsumerCreatedPayload): Promise<void> {
     if (!this.recvTransport || !this.device) return;
 
     try {
@@ -555,15 +537,13 @@ export class SfuManager implements ISfuManager {
       });
 
       this.consumers.set(consumer.id, consumer);
-      console.log('[SFU] Consumer ready:', payload.kind, consumer.id);
+      console.log("[SFU] Consumer ready:", payload.kind, consumer.id);
 
       // Resume the consumer
-      this.connection
-        .getSocket()
-        ?.emit('sfu:resume-consumer', { consumerId: consumer.id });
+      this.connection.getSocket()?.emit("sfu:resume-consumer", { consumerId: consumer.id });
 
       // Find the peer userId for this consumer
-      let userId = '';
+      let userId = "";
       for (const [uid, peer] of this.peers) {
         if (peer.producers.has(payload.producerId)) {
           userId = uid;
@@ -588,26 +568,31 @@ export class SfuManager implements ISfuManager {
         });
       }
 
-      consumer.on('transportclose', () => {
+      consumer.on("transportclose", () => {
         this.consumers.delete(consumer.id);
       });
 
-      consumer.on('trackended', () => {
+      consumer.on("trackended", () => {
         consumer.close();
         this.consumers.delete(consumer.id);
       });
     } catch (error) {
-      console.error('[SFU] Failed to create consumer:', error);
+      console.error("[SFU] Failed to create consumer:", error);
     }
   }
 
   private handleProducerStateChanged(payload: SfuProducerStateChangedPayload): void {
-    console.log('[SFU] Producer state changed:', payload.userId, payload.kind, payload.paused ? 'paused' : 'resumed');
+    console.log(
+      "[SFU] Producer state changed:",
+      payload.userId,
+      payload.kind,
+      payload.paused ? "paused" : "resumed",
+    );
     this.producerStateCallbacks.forEach((callback) => callback(payload));
   }
 
   private handlePeerLeft(payload: { userId: string }): void {
-    console.log('[SFU] Peer left:', payload.userId);
+    console.log("[SFU] Peer left:", payload.userId);
     const peer = this.peers.get(payload.userId);
     if (peer) {
       // Close consumers for this peer
@@ -623,17 +608,17 @@ export class SfuManager implements ISfuManager {
   }
 
   private handleKicked(payload: SfuKickedPayload): void {
-    console.log('[SFU] Kicked from room:', payload.roomId);
+    console.log("[SFU] Kicked from room:", payload.roomId);
     this.kickedCallbacks.forEach((callback) => callback(payload));
     this.closeAll();
-    this.updateState({ connectionState: 'disconnected' });
+    this.updateState({ connectionState: "disconnected" });
   }
 
   private handleRoomEnded(payload: SfuRoomEndedPayload): void {
-    console.log('[SFU] Room ended:', payload.roomId);
+    console.log("[SFU] Room ended:", payload.roomId);
     this.roomEndedCallbacks.forEach((callback) => callback(payload));
     this.closeAll();
-    this.updateState({ connectionState: 'disconnected' });
+    this.updateState({ connectionState: "disconnected" });
   }
 
   // Private helpers
@@ -642,13 +627,13 @@ export class SfuManager implements ISfuManager {
       this.device = new Device();
       await this.device.load({ routerRtpCapabilities });
       this.updateState({ isDeviceLoaded: true });
-      console.log('[SFU] Device loaded');
+      console.log("[SFU] Device loaded");
 
       // Create transports after device is loaded
       await this.createTransports();
     } catch (error) {
-      console.error('[SFU] Failed to load device:', error);
-      this.updateState({ connectionState: 'failed' });
+      console.error("[SFU] Failed to load device:", error);
+      this.updateState({ connectionState: "failed" });
     }
   }
 
@@ -656,16 +641,13 @@ export class SfuManager implements ISfuManager {
     const socket = this.connection.getSocket();
     if (!socket) return;
 
-    socket.emit('sfu:create-send-transport');
-    socket.emit('sfu:create-recv-transport');
+    socket.emit("sfu:create-send-transport");
+    socket.emit("sfu:create-recv-transport");
   }
 
   private async consumeProducer(payload: SfuNewProducerPayload): Promise<void> {
     if (!this.connection.getSocket() || !this.device || !this.recvTransport) {
-      console.warn(
-        '[SFU] Recv transport not ready, buffering new-producer:',
-        payload.producerId
-      );
+      console.warn("[SFU] Recv transport not ready, buffering new-producer:", payload.producerId);
       this.pendingNewProducers.push(payload);
       return;
     }
@@ -675,7 +657,7 @@ export class SfuManager implements ISfuManager {
     if (!peer) {
       peer = {
         userId: payload.userId,
-        username: payload.username || '',
+        username: payload.username || "",
         producers: new Map(),
       };
       this.peers.set(payload.userId, peer);
@@ -684,7 +666,7 @@ export class SfuManager implements ISfuManager {
     peer.producers.set(payload.producerId, { kind: payload.kind, paused: payload.paused });
 
     // Request to consume
-    this.connection.getSocket()!.emit('sfu:consume', {
+    this.connection.getSocket()!.emit("sfu:consume", {
       producerId: payload.producerId,
       rtpCapabilities: this.device.recvRtpCapabilities,
     });
@@ -728,7 +710,7 @@ export class SfuManager implements ISfuManager {
     this.peers.clear();
     this.pendingNewProducers = [];
     this.state = {
-      connectionState: 'disconnected',
+      connectionState: "disconnected",
       isDeviceLoaded: false,
       isSendTransportCreated: false,
       sendTransportConnected: false,

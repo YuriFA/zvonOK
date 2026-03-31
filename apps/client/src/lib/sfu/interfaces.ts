@@ -4,8 +4,9 @@
  * following SOLID principles with single-responsibility interfaces.
  */
 
-import type { Socket } from 'socket.io-client';
-import type { Producer } from 'mediasoup-client/types';
+import type { Producer } from "mediasoup-client/types";
+import type { Socket } from "socket.io-client";
+
 import type {
   SfuState,
   SfuStateCallback,
@@ -18,7 +19,7 @@ import type {
   QualityStatsCallback,
   PeerQualityStats,
   SfuProducerStateCallback,
-} from './types';
+} from "./types";
 
 /**
  * Responsible for socket connection lifecycle.
@@ -64,11 +65,11 @@ interface ISfuProducerManager {
   /** Resume a producer */
   resumeProducer(producerId: string): void;
   /** Close a producer by kind */
-  closeProducer(kind: 'audio' | 'video'): void;
+  closeProducer(kind: "audio" | "video"): void;
   /** Replace track in a producer */
-  replaceTrack(kind: 'audio' | 'video', track: MediaStreamTrack | null): Promise<boolean>;
+  replaceTrack(kind: "audio" | "video", track: MediaStreamTrack | null): Promise<boolean>;
   /** Get producer by kind */
-  getProducerByKind(kind: 'audio' | 'video'): Producer | undefined;
+  getProducerByKind(kind: "audio" | "video"): Producer | undefined;
 }
 
 /**
@@ -122,7 +123,8 @@ interface ISfuStateNotifier {
  * implementation detail and not exposed on the public interface.
  */
 export interface ISfuManager
-  extends ISfuConnection,
+  extends
+    ISfuConnection,
     ISfuRoomMembership,
     ISfuProducerManager,
     ISfuPeerRegistry,

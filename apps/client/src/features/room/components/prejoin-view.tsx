@@ -1,7 +1,8 @@
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { DeviceSelector } from '@/features/media/components/device-selector';
-import { PrejoinRoomHeader } from './prejoin-room-header';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { DeviceSelector } from "@/features/media/components/device-selector";
+
+import { PrejoinRoomHeader } from "./prejoin-room-header";
 
 interface PrejoinViewProps {
   roomUrl: string;
@@ -10,9 +11,14 @@ interface PrejoinViewProps {
   onJoin: () => void;
 }
 
-export function PrejoinView({ roomUrl, displayName, onDisplayNameChange, onJoin }: PrejoinViewProps) {
+export function PrejoinView({
+  roomUrl,
+  displayName,
+  onDisplayNameChange,
+  onJoin,
+}: PrejoinViewProps) {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="flex min-h-screen flex-col">
       <PrejoinRoomHeader roomUrl={roomUrl} />
 
       <main className="flex flex-1 flex-col items-center justify-center p-4">
@@ -27,7 +33,7 @@ export function PrejoinView({ roomUrl, displayName, onDisplayNameChange, onJoin 
               className="max-w-[200px]"
             />
 
-            <Button size="lg" onClick={onJoin} >
+            <Button size="lg" onClick={onJoin}>
               Join Room
             </Button>
           </div>
