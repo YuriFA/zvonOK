@@ -6,6 +6,7 @@ node_modules
 apps/server/dist
 apps/client/dist
 apps/client/build
+packages/*/dist
 
 # IDE
 .idea

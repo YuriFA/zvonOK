@@ -1,22 +1,14 @@
 # Stage 1: Build client assets
-FROM node:22-alpine AS builder
+FROM node:22-alpine AS base
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
 
+FROM base AS build
+COPY . /app
 WORKDIR /app
 
-# Copy workspace config
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
-
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
-# Copy client package.json
-COPY apps/client/package.json ./apps/client/
-
-# Install dependencies
-RUN pnpm install --frozen-lockfile
-
-# Copy client source files
-COPY apps/client ./apps/client
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 # Build args for Vite env vars (baked at build time)
 ARG VITE_API_BASE_URL=""
@@ -30,7 +22,7 @@ RUN pnpm -C apps/client build
 FROM alpine:3.20 AS production
 
 # Copy built assets from builder
-COPY --from=builder /app/apps/client/dist /srv/client
+COPY --from=build /app/apps/client/dist /srv/client
 
 # This container's only job is to hold the built files.
 # In docker-compose, we use it as a volume source for Caddy.
