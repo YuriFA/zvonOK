@@ -99,6 +99,9 @@ vi.mock('@/features/sfu/contexts/sfu-manager.context', () => ({
   useSfuManager: () => ({
     getProducerByKind: () => undefined,
     replaceTrack: vi.fn(),
+    onQualityStats: () => () => {},
+    startStatsCollection: vi.fn(),
+    stopStatsCollection: vi.fn(),
   }),
   SfuManagerProvider: ({ children }: { children: React.ReactNode }) => children,
 }));

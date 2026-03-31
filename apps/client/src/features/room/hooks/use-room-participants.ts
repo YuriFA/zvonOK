@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import type { Participant } from '@/components/room/participants-list';
 import type { RemotePeerMedia } from '@/hooks/use-mediasoup';
-import type { PeerQualityStats } from '@/lib/sfu/types';
 
 export interface UseRoomParticipantsOptions {
   userId: string | undefined;
@@ -10,7 +9,6 @@ export interface UseRoomParticipantsOptions {
   isVideoEnabled: boolean;
   connectionState: string;
   remotePeers: RemotePeerMedia[];
-  peerStats: Map<string, PeerQualityStats>;
 }
 
 export interface UseRoomParticipantsReturn {
@@ -24,7 +22,6 @@ export function useRoomParticipants({
   isVideoEnabled,
   connectionState,
   remotePeers,
-  peerStats,
 }: UseRoomParticipantsOptions): UseRoomParticipantsReturn {
 
   const participants: Participant[] = useMemo(() => {
@@ -38,7 +35,6 @@ export function useRoomParticipants({
     };
 
     const remoteParticipants: Participant[] = remotePeers.map((peer: RemotePeerMedia) => {
-      const stats = peerStats.get(peer.userId);
       return {
         id: peer.userId,
         userId: peer.userId,
@@ -46,13 +42,11 @@ export function useRoomParticipants({
         isMuted: !peer.isAudioEnabled,
         isVideoOff: !peer.isVideoEnabled,
         isConnected: true,
-        qualityScore: stats?.score,
-        qualityStats: stats?.stats,
       };
     });
 
     return [localParticipant, ...remoteParticipants];
-  }, [userId, username, isAudioEnabled, isVideoEnabled, connectionState, remotePeers, peerStats]);
+  }, [userId, username, isAudioEnabled, isVideoEnabled, connectionState, remotePeers]);
 
   return { participants };
 }

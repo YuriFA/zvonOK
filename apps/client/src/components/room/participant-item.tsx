@@ -1,8 +1,9 @@
-import { Mic, MicOff, Video, VideoOff, UserX, Circle } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, UserX } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { QualityIndicator } from './quality-indicator';
 import type { QualityScore, QualityStats } from '@/lib/sfu/types';
+import { getAvatarColor } from '@/lib/utils/display-name';
 
 export interface ParticipantItemProps {
   id: string;
@@ -10,7 +11,6 @@ export interface ParticipantItemProps {
   isMuted: boolean;
   isVideoOff: boolean;
   isConnected: boolean;
-  isSpeaking?: boolean;
   isLocalUser?: boolean;
   canKick?: boolean;
   onKick?: (id: string) => void;
@@ -24,7 +24,6 @@ export function ParticipantItem({
   isMuted,
   isVideoOff,
   isConnected,
-  isSpeaking,
   isLocalUser,
   canKick,
   onKick,
@@ -32,33 +31,20 @@ export function ParticipantItem({
   qualityStats,
 }: ParticipantItemProps) {
   const initial = username.charAt(0).toUpperCase() || '?';
+  const avatarColor = getAvatarColor(username);
 
   return (
     <li
       className={cn(
         'flex items-center gap-3 rounded-lg px-3 py-2 transition-colors',
-        isSpeaking && 'bg-green-500/10',
         !isConnected && 'opacity-50'
       )}
       aria-label={`Participant ${username}${isLocalUser ? ' (you)' : ''}`}
     >
       <div className="relative flex-shrink-0">
-        <div
-          className={cn(
-            'flex size-9 items-center justify-center rounded-full text-sm font-medium',
-            isLocalUser
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-muted text-muted-foreground'
-          )}
-        >
+        <div className="flex size-8 items-center justify-center rounded-full text-sm" style={{ backgroundColor: avatarColor }}>
           {initial}
         </div>
-        {isSpeaking && (
-          <Circle
-            className="absolute -bottom-0.5 -right-0.5 size-3 fill-green-500 text-green-500"
-            aria-label="Speaking"
-          />
-        )}
         {!isConnected && (
           <div
             className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full bg-red-500"
@@ -99,7 +85,6 @@ export function ParticipantItem({
         <QualityIndicator
           score={qualityScore}
           stats={qualityStats}
-          compact
         />
       )}
 

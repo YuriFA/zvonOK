@@ -4,6 +4,9 @@ import { AudioLevelRings } from '@/features/room/components/audio-level-rings';
 import { Mic, MicOff } from 'lucide-react';
 import { useRoomAudioContext } from '../contexts/room-audio.context';
 import { useAudioLevel, useActiveSpeakerId } from '../contexts/room-audio.store';
+import { usePeerQualityContext } from '../contexts/peer-quality.context';
+import { usePeerQuality } from '../contexts/peer-quality.store';
+import { QualityIndicator } from '@/components/room/quality-indicator';
 import { VideoTile } from '@/components/video-grid';
 
 interface Props extends React.ComponentProps<'div'> {
@@ -24,8 +27,11 @@ export function RoomVideo({
 }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const { store } = useRoomAudioContext();
+  const { store: qualityStore } = usePeerQualityContext();
   const audioLevel = useAudioLevel(store, userId);
   const activeSpeakerId = useActiveSpeakerId(store);
+  const peerQuality = usePeerQuality(qualityStore, userId);
+  const avatarColor = getAvatarColor(username ?? '');
 
   useEffect(() => {
     if (videoRef.current && stream) {
@@ -48,10 +54,10 @@ export function RoomVideo({
           <div className="absolute inset-0 flex items-center justify-center select-none bg-muted">
             <AudioLevelRings
               level={audioLevel}
-              color={getAvatarColor(username ?? '')}
+              color={avatarColor}
               className="z-0"
             />
-            <div className="relative z-10 flex size-16 items-center justify-center rounded-full text-xl text-black dark:text-white" style={{ backgroundColor: getAvatarColor(username ?? '') }}>
+            <div className="relative z-10 flex size-16 items-center justify-center rounded-full text-xl text-black dark:text-white" style={{ backgroundColor: avatarColor }}>
               {getInitials(username ?? '')}
             </div>
           </div>
@@ -66,6 +72,9 @@ export function RoomVideo({
 
         {/* Media state indicators */}
         <div className="absolute bottom-2 right-2 flex gap-1">
+          {peerQuality && (
+            <QualityIndicator score={peerQuality.score} stats={peerQuality.stats} />
+          )}
           <div
             className="rounded px-2 py-1 bg-black/50 text-white"
           >

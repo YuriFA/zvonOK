@@ -1,5 +1,4 @@
 import { useCallback } from 'react';
-import { useQualityStats } from '@/hooks/use-quality-stats';
 import { useRoomParticipants } from '@/features/room/hooks/use-room-participants';
 import { useRoomSfu } from '@/features/room/hooks/use-room-sfu';
 import type { RemotePeerMedia } from '@/hooks/use-mediasoup';
@@ -55,8 +54,6 @@ export function useRoomSession({ room, userId, displayName }: UseRoomSessionOpti
     displayName,
   });
 
-  const isConnected = sfuState.connectionState === 'connected';
-  const { peerStats } = useQualityStats({ enabled: isConnected });
   const { participants } = useRoomParticipants({
     userId,
     username: displayName,
@@ -64,7 +61,6 @@ export function useRoomSession({ room, userId, displayName }: UseRoomSessionOpti
     isVideoEnabled: mediaControls.isVideoEnabled,
     connectionState: sfuState.connectionState,
     remotePeers,
-    peerStats,
   });
 
 
