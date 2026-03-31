@@ -4,9 +4,9 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 
 import HeroBg from "@/assets/hero-bg.svg?react";
+import { MainHeader } from "@/components/main-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { AuthHeader } from "@/features/auth/components/auth-header";
 import { useAuth } from "@/features/auth/contexts/auth.context";
 import { useCreateRoom } from "@/features/room/hooks/use-create-room";
 import { APP_NAME } from "@/lib/config/app";
@@ -37,8 +37,8 @@ export const Home = () => {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-gradient-to-b from-background via-background to-muted/30">
-      <AuthHeader />
+    <div className="flex min-h-dscreen flex-col bg-gradient-to-b from-background via-background to-muted/30">
+      <MainHeader />
 
       <main className="flex flex-1 items-center justify-center px-4 py-8 lg:py-16">
         <div className="mx-auto grid w-full max-w-6xl items-center gap-8 lg:grid-cols-2 lg:gap-16">

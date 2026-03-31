@@ -1,11 +1,11 @@
+import { MainHeader } from "@/components/main-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { AuthHeader } from "@/features/auth/components/auth-header";
 import { LoginForm } from "@/features/auth/components/login-form";
 
 export const LoginPage = () => {
   return (
-    <div className="flex min-h-screen flex-col">
-      <AuthHeader />
+    <div className="flex min-h-dscreen flex-col">
+      <MainHeader />
 
       <main className="flex flex-1 items-center justify-center p-4">
         <Card className="w-full max-w-md">

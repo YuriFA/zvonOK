@@ -152,6 +152,7 @@ vi.mock("@/assets/logo.svg?react", () => ({
 vi.mock("@/lib/utils/display-name", () => ({
   loadGuestDisplayName: () => "Guest",
   saveGuestDisplayName: () => {},
+  getAvatarColor: () => "bg-blue-500",
 }));
 
 vi.stubGlobal(
