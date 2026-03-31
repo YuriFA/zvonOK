@@ -2,7 +2,7 @@
 # setup-vps.sh — First-time VPS setup for WebRTC Chat deployment
 #
 # Run this script on a fresh Ubuntu 22.04/24.04 VPS as root:
-#   curl -sSL https://raw.githubusercontent.com/<user>/webrtc-chat/main/scripts/setup-vps.sh | bash
+#   curl -sSL https://raw.githubusercontent.com/<user>/zvonOK/main/scripts/setup-vps.sh | bash
 #
 # Or copy and run manually:
 #   scp scripts/setup-vps.sh root@<vps-ip>:~/
@@ -19,7 +19,7 @@ set -euo pipefail
 
 # ── Configuration ──────────────────────────────────────────────────
 DEPLOY_USER="${DEPLOY_USER:-deploy}"
-PROJECT_DIR="/home/${DEPLOY_USER}/webrtc-chat"
+PROJECT_DIR="/home/${DEPLOY_USER}/zvonOK"
 
 echo "=== WebRTC Chat VPS Setup ==="
 echo ""
@@ -138,7 +138,7 @@ echo ""
 echo "Next steps:"
 echo "  1. Add your SSH public key to ${DEPLOY_SSH_DIR}/authorized_keys (if not copied from root)"
 echo "  2. Copy .env to ${PROJECT_DIR}/.env (use .env.production.example as template)"
-echo "  3. Set GHCR_REPO in .env to your GitHub repository (e.g., user/webrtc-chat)"
+echo "  3. Set GHCR_REPO in .env to your GitHub repository (e.g., user/zvonOK)"
 echo "  4. Log in to GHCR on the VPS:"
 echo "     ssh ${DEPLOY_USER}@<this-server>"
 echo "     echo \$GITHUB_TOKEN | docker login ghcr.io -u <github-user> --password-stdin"

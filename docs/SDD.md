@@ -789,7 +789,7 @@ Push to main / PR
 - Tags: `latest` + git SHA
 - Pushes to `ghcr.io/<repo>/server`, `ghcr.io/<repo>/client`, `ghcr.io/<repo>/migrator`
 - Deploys via SSH: copies compose files, pulls images, runs `docker compose up -d`
-- Health check: polls server for 60s after deploy
+- Health check: polls `GET /health` for 60s after deploy
 
 **Production Compose (`docker-compose.prod.yml`):**
 - Uses `image:` directives pointing to GHCR instead of `build:`

@@ -125,7 +125,7 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           source: "docker-compose.prod.yml,Caddyfile,turnserver.conf"
-          target: ~/webrtc-chat
+          target: ~/zvonOK
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.0
@@ -140,7 +140,7 @@ jobs:
           script: |
             set -e
 
-            cd ~/webrtc-chat
+            cd ~/zvonOK
 
             # Log in to GHCR (using deploy token stored on VPS)
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
@@ -157,7 +157,7 @@ jobs:
             # Health check — wait for server to respond
             echo "Waiting for server health check..."
             for i in $(seq 1 30); do
-              if curl -sf http://localhost:3000/auth/health > /dev/null 2>&1; then
+              if curl -sf http://localhost:3000/health > /dev/null 2>&1; then
                 echo "Server is healthy!"
                 exit 0
               fi
