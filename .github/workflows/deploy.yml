@@ -1,14 +1,13 @@
 # Deploy Pipeline — Build, Push to GHCR, Deploy to VPS
 #
-# Runs on push to main (after CI passes).
+# Manual deployment only (workflow_dispatch).
 # Builds Docker images, pushes to GitHub Container Registry,
 # then SSHes to VPS to pull and restart services.
 
 name: Deploy
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: deploy-production
