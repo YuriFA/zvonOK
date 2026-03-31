@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.2.1](https://github.com/YuriFA/zvonOK/compare/v0.2.0...v0.2.1) (2026-03-31)
+
+### Bug Fixes
+
+* **ci:** add health endpoint, correct deploy paths, add prod logging ([4572902](https://github.com/YuriFA/zvonOK/commit/457290297bb695cb93701ded370c2294a4a6cf2b))
+
+### Performance Improvements
+
+* **docker:** add BuildKit cache mounts for pnpm store in server Dockerfile ([f0233db](https://github.com/YuriFA/zvonOK/commit/f0233dbda2a854fb1a9005e018f268b6917bf213))
+
 ## 0.2.0 (2026-03-31)
 
 ### Features
