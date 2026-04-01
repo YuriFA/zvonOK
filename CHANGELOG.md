@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.4](https://github.com/YuriFA/zvonOK/compare/v0.2.3...v0.2.4) (2026-04-01)
+
+### Bug Fixes
+
+* **ci:** add Prisma client generation before lint and typecheck ([c6e1fac](https://github.com/YuriFA/zvonOK/commit/c6e1fac8befaceebe110ad39ca33d9d8559c8155))
+
 ## [0.2.3](https://github.com/YuriFA/zvonOK/compare/v0.2.2...v0.2.3) (2026-03-31)
 
 ## [0.2.2](https://github.com/YuriFA/zvonOK/compare/v0.2.1...v0.2.2) (2026-03-31)
