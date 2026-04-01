@@ -1,5 +1,5 @@
-# Stage 1: Build NestJS application (mediasoup worker downloaded as prebuilt)
-FROM node:22-slim AS mediasoup-builder
+# Stage 1: Build NestJS application
+FROM node:22-slim AS builder
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
@@ -82,15 +82,15 @@ COPY apps/server/package.json ./apps/server/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --prod --ignore-scripts
 
 # Copy built mediasoup worker from builder stage
-COPY --from=mediasoup-builder /app/node_modules/.pnpm/mediasoup@*/node_modules/mediasoup/worker/out/Release/mediasoup-worker /app/mediasoup-worker
+COPY --from=builder /app/node_modules/.pnpm/mediasoup@*/node_modules/mediasoup/worker/out/Release/mediasoup-worker /app/mediasoup-worker
 
 # Copy Prisma schema and generated client from builder
-COPY --from=mediasoup-builder /app/apps/server/prisma ./apps/server/prisma
-COPY --from=mediasoup-builder /app/apps/server/src/generated ./apps/server/src/generated
+COPY --from=builder /app/apps/server/prisma ./apps/server/prisma
+COPY --from=builder /app/apps/server/src/generated ./apps/server/src/generated
 
 # Copy built application from builder
-COPY --from=mediasoup-builder /app/apps/server/dist ./apps/server/dist
-COPY --from=mediasoup-builder /app/apps/server/package.json ./apps/server/dist/package.json
+COPY --from=builder /app/apps/server/dist ./apps/server/dist
+COPY --from=builder /app/apps/server/package.json ./apps/server/dist/package.json
 
 # Set mediasoup worker binary path
 ENV MEDIASOUP_WORKER_BIN=/app/mediasoup-worker
