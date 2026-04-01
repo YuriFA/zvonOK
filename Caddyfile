@@ -43,6 +43,10 @@ http://{$SITE_ADDRESS:localhost} {
 		reverse_proxy server:3000
 	}
 
+	handle /version {
+		reverse_proxy server:3000
+	}
+
 	handle /users/* {
 		reverse_proxy server:3000
 	}
