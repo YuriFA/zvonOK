@@ -11,7 +11,6 @@
 # Services:
 #   - caddy:    Reverse proxy with automatic HTTPS, serves client static files
 #   - server:   NestJS backend (API + WebSocket/SFU)
-#   - client:   Build-only container, produces static files for Caddy
 #   - postgres: PostgreSQL 16 database
 #   - coturn:   TURN/STUN relay server for NAT traversal
 
@@ -102,7 +101,7 @@ services:
   caddy:
     build:
       context: .
-      dockerfile: Dockerfile.caddy
+      dockerfile: apps/client/Dockerfile
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
         VITE_SOCKET_URL: ${VITE_SOCKET_URL:-}

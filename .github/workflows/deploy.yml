@@ -16,7 +16,7 @@ concurrency:
 env:
   REGISTRY: ghcr.io
   SERVER_IMAGE: ghcr.io/${{ github.repository }}/server
-  CLIENT_IMAGE: ghcr.io/${{ github.repository }}/client
+  CADDY_IMAGE: ghcr.io/${{ github.repository }}/caddy
 
 jobs:
   # ── Build and Push Docker Images ─────────────────────────────────
@@ -60,26 +60,26 @@ jobs:
           push: true
           tags: ${{ steps.meta-server.outputs.tags }}
           labels: ${{ steps.meta-server.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=server-build
+          cache-to: type=gha,scope=server-build,mode=max
 
-      - name: Extract metadata (client)
-        id: meta-client
+      - name: Extract metadata (caddy)
+        id: meta-caddy
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.CLIENT_IMAGE }}
+          images: ${{ env.CADDY_IMAGE }}
           tags: |
             type=sha,prefix=
             type=raw,value=latest
 
-      - name: Build and push client image
+      - name: Build and push caddy image
         uses: docker/build-push-action@v6
         with:
           context: .
           file: apps/client/Dockerfile
           push: true
-          tags: ${{ steps.meta-client.outputs.tags }}
-          labels: ${{ steps.meta-client.outputs.labels }}
+          tags: ${{ steps.meta-caddy.outputs.tags }}
+          labels: ${{ steps.meta-caddy.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -102,8 +102,8 @@ jobs:
           push: true
           tags: ${{ steps.meta-migrator.outputs.tags }}
           labels: ${{ steps.meta-migrator.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=server-build
+          cache-to: type=gha,scope=server-build,mode=max
 
   # ── Deploy to VPS ────────────────────────────────────────────────
   deploy:
@@ -138,6 +138,7 @@ jobs:
           envs: REGISTRY,GITHUB_REPOSITORY
           script: |
             set -e
+            export GHCR_REPO="$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')"
 
             cd ~/zvonOK
 

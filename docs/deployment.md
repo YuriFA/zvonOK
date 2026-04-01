@@ -18,16 +18,25 @@ Internet
      └─ UDP (49152-49252)     relay port range (host network mode)
 ```
 
-**Six services** run via `docker-compose.yml`:
+**Five services** run via `docker-compose.yml`:
 
 | Service    | Image / Dockerfile         | Role |
 |------------|---------------------------|------|
 | `postgres` | `postgres:16-alpine`       | Database |
 | `migrate`  | `apps/server/Dockerfile` (target: `migrator`) | Runs `prisma migrate deploy`, then exits |
 | `server`   | `apps/server/Dockerfile` (target: `production`) | NestJS API + mediasoup SFU |
-| `client`   | `apps/client/Dockerfile`   | Builds React SPA, copies to shared volume, then exits |
-| `caddy`    | `caddy:2-alpine`           | Reverse proxy + automatic HTTPS + serves static files |
+| `caddy`    | `apps/client/Dockerfile`   | Caddy reverse proxy with baked-in client static assets + automatic HTTPS |
 | `coturn`   | `coturn/coturn:alpine`     | STUN/TURN server for NAT traversal (host network mode) |
+
+### `docker-compose.yml` vs `docker-compose.prod.yml`
+
+Both files define the same five services but differ intentionally:
+
+| Difference | `docker-compose.yml` | `docker-compose.prod.yml` | Reason |
+|------------|---------------------|---------------------------|--------|
+| Images | Builds from local Dockerfiles | Pulls pre-built images from GHCR | Prod uses CI-built images; dev builds locally |
+| Server `TURN_*` env vars | Not set | `TURN_URL`, `TURNS_URL`, `TURN_USER`, `TURN_PASSWORD` | In local dev coturn runs without auth; prod passes TURN credentials to clients via `sfu:transport-created` |
+| Caddy `certs` volume | `./certs:/srv/certs:ro` | Not mounted | Dev uses self-signed certs from `./certs`; prod uses Caddy's automatic Let's Encrypt |
 
 ## Prerequisites
 
@@ -139,7 +148,7 @@ make status    # equivalent to: docker compose ps -a
 
 > Run `make help` to see all available Makefile targets.
 
-Expected output of `make status`: `postgres` should show "healthy", `migrate` and `client` should show "Exited (0)", and `server`, `caddy`, `coturn` should show "Up".
+Expected output of `make status`: `postgres` should show "healthy", `migrate` should show "Exited (0)", and `server`, `caddy`, `coturn` should show "Up".
 
 ## Step 5: Verify
 
@@ -421,8 +430,7 @@ Summary of required open ports:
 
 ### Client shows blank page
 
-- Check that the `client` service completed successfully: `docker compose ps client` (should show "Exited (0)")
-- Verify static files exist: `docker compose exec caddy ls /srv/client/index.html`
+- Check that static files are baked into the Caddy image: `docker compose exec caddy ls /srv/client/index.html`
 - Check browser console for errors (mismatched `VITE_API_BASE_URL` or CORS issues)
 
 ### Database connection errors

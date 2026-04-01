@@ -718,7 +718,7 @@ Run `make help` for the full list.
 - `docker-compose.yml` — Full stack service definitions
 - `Caddyfile` — Reverse proxy configuration
 - `apps/server/Dockerfile` — Server multi-stage build (mediasoup worker + NestJS)
-- `apps/client/Dockerfile` — Client multi-stage build (node + Vite → static files)
+- `apps/client/Dockerfile` — Caddy with baked-in client static assets (node + Vite → Caddy image)
 - `.env.production.example` — Environment variable template
 
 **TURN Server:** coturn in Docker Compose (network_mode: host) for STUN/TURN relay on ports 3478/5349, relay range 49152-49252
