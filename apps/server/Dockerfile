@@ -1,17 +1,8 @@
-# Stage 1: Build mediasoup worker + NestJS application
-FROM node:22-alpine AS mediasoup-builder
+# Stage 1: Build NestJS application (mediasoup worker downloaded as prebuilt)
+FROM node:22-slim AS mediasoup-builder
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-
-# Install build dependencies for mediasoup worker
-# Required: Python 3, make, g++, py3-pip
-RUN apk add --no-cache \
-    python3 \
-    py3-pip \
-    make \
-    g++ \
-    linux-headers
 
 RUN corepack enable
 
@@ -23,7 +14,7 @@ COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 # Copy server package.json
 COPY apps/server/package.json ./apps/server/
 
-# Install dependencies (this will build mediasoup worker from source)
+# Install dependencies (mediasoup worker downloaded as prebuilt binary)
 # pnpm store is cached across builds via BuildKit mount
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
@@ -35,7 +26,7 @@ RUN pnpm -C apps/server exec prisma generate && \
     pnpm -C apps/server build
 
 # Stage 2: Migrations runner (has prisma CLI + ts-node for prisma.config.ts)
-FROM node:22-alpine AS migrator
+FROM node:22-slim AS migrator
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
@@ -67,13 +58,15 @@ RUN chmod +x ./prisma/entrypoint.sh
 CMD ["./prisma/entrypoint.sh"]
 
 # Stage 3: Production image
-FROM node:22-alpine AS production
+FROM node:22-slim AS production
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
 # Install runtime dependencies
-RUN apk add --no-cache dumb-init
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends dumb-init && \
+    rm -rf /var/lib/apt/lists/*
 
 RUN corepack enable
 
@@ -115,16 +108,10 @@ ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "dist/src/main.js"]
 
 # Stage 4: Development image (for local dev with hot reload)
-FROM node:22-alpine AS development
+FROM node:22-slim AS development
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-
-# Install build dependencies for mediasoup worker
-RUN apk add --no-cache \
-    python3 \
-    make \
-    g++
 
 RUN corepack enable
 
