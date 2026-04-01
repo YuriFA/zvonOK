@@ -59,7 +59,7 @@ COPY apps/server/tsconfig.json ./apps/server/tsconfig.json
 
 WORKDIR /app/apps/server
 
-COPY --from=mediasoup-builder /app/apps/server/src/generated ./src/generated
+RUN pnpm exec prisma generate
 
 COPY apps/server/prisma/entrypoint.sh ./prisma/entrypoint.sh
 RUN chmod +x ./prisma/entrypoint.sh
@@ -97,6 +97,7 @@ COPY --from=mediasoup-builder /app/apps/server/src/generated ./apps/server/src/g
 
 # Copy built application from builder
 COPY --from=mediasoup-builder /app/apps/server/dist ./apps/server/dist
+COPY --from=mediasoup-builder /app/apps/server/package.json ./apps/server/dist/package.json
 
 # Set mediasoup worker binary path
 ENV MEDIASOUP_WORKER_BIN=/app/mediasoup-worker
