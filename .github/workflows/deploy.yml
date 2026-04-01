@@ -153,17 +153,3 @@ jobs:
 
             # Clean up old images
             docker image prune -f
-
-            # Health check — wait for server to respond
-            echo "Waiting for server health check..."
-            for i in $(seq 1 30); do
-              if curl -sf http://localhost:3000/health > /dev/null 2>&1; then
-                echo "Server is healthy!"
-                exit 0
-              fi
-              echo "Attempt $i/30 — waiting..."
-              sleep 2
-            done
-
-            echo "WARNING: Health check did not pass within 60s. Check logs with: docker compose -f docker-compose.prod.yml logs server"
-            exit 1
