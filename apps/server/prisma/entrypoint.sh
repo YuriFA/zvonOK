@@ -2,9 +2,9 @@
 set -e
 
 echo "Running migrations..."
-npx prisma migrate deploy
+pnpm exec prisma migrate deploy
 
 echo "Running seed..."
-npx prisma db seed
+pnpm exec prisma db seed
 
 echo "Done!"

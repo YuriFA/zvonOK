@@ -1,47 +1,51 @@
-# Stage 1: Build NestJS application
-FROM node:22-slim AS builder
+# ── Shared base ──────────────────────────────────────────────────────────────
+# Single layer enables corepack once; all stages inherit it via FROM base.
+FROM node:22-slim AS base
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
 RUN corepack enable
 
+# ── Stage 1: Builder ──────────────────────────────────────────────────────────
+# Installs all deps (dev + prod), generates Prisma client, compiles NestJS,
+# then prunes devDependencies so the production stage can copy node_modules
+# directly — preserving compiled native addons (bcrypt, mediasoup worker).
+FROM base AS builder
+
 WORKDIR /app
 
-# Copy workspace config
+# Copy workspace manifests first so pnpm install is cached independently of source changes
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
-
-# Copy server package.json
 COPY apps/server/package.json ./apps/server/
 
-# Install dependencies (mediasoup worker downloaded as prebuilt binary)
-# pnpm store is cached across builds via BuildKit mount
+# Install all dependencies.
+# onlyBuiltDependencies in root package.json controls which postinstall scripts run.
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 # Copy server source files
 COPY apps/server ./apps/server
 
-# Generate Prisma client and build NestJS
+# Generate Prisma client, build NestJS, then prune devDependencies in place.
+# Pruning here means the production stage can COPY node_modules without
+# reinstalling — keeping compiled native addons (bcrypt, mediasoup) intact.
 RUN pnpm -C apps/server exec prisma generate && \
-    pnpm -C apps/server build
+    pnpm -C apps/server build && \
+    pnpm prune --prod
 
-# Stage 2: Migrations runner (has prisma CLI + ts-node for prisma.config.ts)
-FROM node:22-slim AS migrator
-
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
+# ── Stage 2: Migrations runner ────────────────────────────────────────────────
+# Has prisma CLI + ts-node for prisma.config.ts; also seeds the DB.
+FROM base AS migrator
 
 WORKDIR /app
 
 # Copy workspace config
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
-
-# Copy server package.json
 COPY apps/server/package.json ./apps/server/
 
-# Install all dependencies (prisma CLI is a devDep, bcrypt/pg needed for seed)
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --ignore-scripts
+# Install all dependencies.
+# Do NOT use --ignore-scripts: bcrypt requires its postinstall to compile the native addon.
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 # Copy Prisma schema, config, migrations, and seed
 COPY apps/server/prisma ./apps/server/prisma
@@ -57,32 +61,29 @@ RUN chmod +x ./prisma/entrypoint.sh
 
 CMD ["./prisma/entrypoint.sh"]
 
-# Stage 3: Production image
-FROM node:22-slim AS production
+# ── Stage 3: Production image ─────────────────────────────────────────────────
+FROM base AS production
 
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
-
-# Install runtime dependencies
+# Install dumb-init for correct signal propagation
 RUN apt-get update && \
     apt-get install -y --no-install-recommends dumb-init && \
     rm -rf /var/lib/apt/lists/*
 
-RUN corepack enable
-
 WORKDIR /app
 
-# Copy workspace config
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+# Copy production node_modules from builder.
+# devDependencies were pruned by `pnpm prune --prod`; compiled native addons
+# (bcrypt, mediasoup worker) are preserved — no reinstall required.
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/server/node_modules ./apps/server/node_modules
 
-# Copy server package.json
-COPY apps/server/package.json ./apps/server/
-
-# Install production dependencies only (skip scripts to avoid rebuilding)
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --prod --ignore-scripts
-
-# Copy built mediasoup worker from builder stage
-COPY --from=builder /app/node_modules/.pnpm/mediasoup@*/node_modules/mediasoup/worker/out/Release/mediasoup-worker /app/mediasoup-worker
+# Expose mediasoup worker at a stable, fixed path.
+# Using a symlink avoids duplicating the binary already present in node_modules.
+# The guard (`test -n`) makes the build fail loudly if the binary is not found.
+RUN WORKER=$(find /app/node_modules/.pnpm -name 'mediasoup-worker' \
+        -path '*/worker/out/Release/mediasoup-worker' | head -1) && \
+    { test -n "$WORKER" || { echo "ERROR: mediasoup-worker binary not found in builder" >&2; exit 1; }; } && \
+    ln -s "$WORKER" /app/mediasoup-worker
 
 # Copy Prisma schema and generated client from builder
 COPY --from=builder /app/apps/server/prisma ./apps/server/prisma
@@ -90,11 +91,17 @@ COPY --from=builder /app/apps/server/src/generated ./apps/server/src/generated
 
 # Copy built application from builder
 COPY --from=builder /app/apps/server/dist ./apps/server/dist
+
+# Copy package.json so version.ts can read it at runtime (resolves to dist/package.json)
 COPY --from=builder /app/apps/server/package.json ./apps/server/dist/package.json
 
-# Set mediasoup worker binary path
 ENV MEDIASOUP_WORKER_BIN=/app/mediasoup-worker
 ENV NODE_ENV=production
+
+# Drop privileges: node user (uid 1000) ships with node:22-slim.
+# chown runs as root before USER; all subsequent commands run as node.
+RUN chown -R node:node /app
+USER node
 
 WORKDIR /app/apps/server
 
@@ -103,24 +110,17 @@ EXPOSE 3000
 EXPOSE 40000-40099/udp
 EXPOSE 40000-40099/tcp
 
-# Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "dist/src/main.js"]
 
-# Stage 4: Development image (for local dev with hot reload)
-FROM node:22-slim AS development
-
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
-
-RUN corepack enable
+# ── Stage 4: Development image ────────────────────────────────────────────────
+# For local dev with hot reload — not used in production CI.
+FROM base AS development
 
 WORKDIR /app
 
 # Copy workspace config
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
-
-# Copy package.json files
 COPY apps/server/package.json ./apps/server/
 
 # Install all dependencies (dev + prod)
