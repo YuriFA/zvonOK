@@ -34,7 +34,7 @@ export class AuthController {
     description: 'It will return a new user object.',
   })
   @SkipAuthGuard()
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Throttle({ short: { limit: 5, ttl: 60000 } })
   @Post('register')
   async register(
     @Body() dto: RegisterUserDto,
@@ -69,7 +69,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Login user' })
   @HttpCode(HttpStatus.OK)
   @SkipAuthGuard()
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Throttle({ short: { limit: 10, ttl: 60000 } })
   @Post('login')
   async login(
     @Body() loginDto: LoginUserDto,

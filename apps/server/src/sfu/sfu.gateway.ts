@@ -8,6 +8,7 @@ import {
   MessageBody,
 } from '@nestjs/websockets';
 import { Logger } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { Server, Socket } from 'socket.io';
 import { SfuService } from './sfu.service';
 import type {
@@ -20,6 +21,7 @@ import type {
 } from './interfaces/sfu.interface';
 import { OnGatewayInit } from '@nestjs/websockets';
 
+@SkipThrottle()
 @WebSocketGateway({
   cors: {
     origin: process.env.CLIENT_URL || 'http://localhost:5173',

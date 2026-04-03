@@ -6,6 +6,8 @@ import { PrismaModule } from './prisma/prisma.module';
 import { RoomModule } from './room/room.module';
 import { SfuModule } from './sfu/sfu.module';
 import { VersionController } from './version.controller';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -42,6 +44,23 @@ import { VersionController } from './version.controller';
         return config;
       },
     }),
+    ThrottlerModule.forRoot([
+      {
+        name: 'short',
+        ttl: 60000,
+        limit: 10,
+      },
+      {
+        name: 'medium',
+        ttl: 300000,
+        limit: 20,
+      },
+      {
+        name: 'long',
+        ttl: 3600000,
+        limit: 100,
+      },
+    ]),
     PrismaModule,
     AuthModule,
     UserModule,
@@ -49,6 +68,15 @@ import { VersionController } from './version.controller';
     SfuModule,
   ],
   controllers: [VersionController],
-  providers: [],
+  providers: [
+    // ThrottlerGuard must be registered before JwtAuthGuard (provided by AuthModule)
+    // so rate-limit headers are always emitted, even for unauthenticated requests.
+    // NestJS applies APP_GUARD tokens in registration order: root module providers
+    // are collected before child module providers, preserving this order.
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}
