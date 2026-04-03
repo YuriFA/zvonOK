@@ -14,7 +14,7 @@
 services:
   # --- Database migrations (runs once before server starts) ---
   migrate:
-    image: ghcr.io/${GHCR_REPO}/migrator:latest
+    image: ghcr.io/${GHCR_REPO}/migrator:${IMAGE_TAG:-latest}
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
@@ -26,7 +26,7 @@ services:
 
   # --- NestJS backend ---
   server:
-    image: ghcr.io/${GHCR_REPO}/server:latest
+    image: ghcr.io/${GHCR_REPO}/server:${IMAGE_TAG:-latest}
     container_name: zvonok-server
     logging:
       driver: json-file
@@ -93,7 +93,7 @@ services:
 
   # --- Caddy reverse proxy (with baked-in client assets) ---
   caddy:
-    image: ghcr.io/${GHCR_REPO}/caddy:latest
+    image: ghcr.io/${GHCR_REPO}/caddy:${IMAGE_TAG:-latest}
     container_name: zvonok-caddy
     logging:
       driver: json-file
