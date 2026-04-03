@@ -8,7 +8,7 @@ import { JwtAuthGuard } from './jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtRefreshTokenStrategy } from './strategies/jwt-refresh-token.strategy';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TokenHelper } from './helpers/token.helper';
 
 @Module({
@@ -40,6 +40,12 @@ import { TokenHelper } from './helpers/token.helper';
     JwtRefreshTokenStrategy,
     TokenHelper,
     Logger,
+    // ThrottlerGuard must be registered before JwtAuthGuard so rate-limit
+    // headers are always emitted, even for unauthenticated requests.
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
