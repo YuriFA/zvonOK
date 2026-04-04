@@ -83,14 +83,10 @@ Implementation stages for the WebRTC Chat application.
 
 ---
 
----
-
-## In Progress
-
-### Stage 8 — Screen Share
-**Status:** In Progress  
-**Goal:** Desktop/application window sharing  
-**Result:** Screen sharing capability
+### Stage 8 — Polish & Infrastructure
+**Status:** Completed  
+**Goal:** UX polish, audio/visual enhancements, CI/CD, and architecture improvements  
+**Result:** User roles, toast notifications, prejoin redesign, display name, independent device permissions, remote audio via Web Audio API, avatar pastel colors, audio level rings, SOLID audio refactor, app versioning, CI/CD pipeline, framework-agnostic architecture, UI migration to Base UI, simplified room creation
 
 ---
 
@@ -148,7 +144,7 @@ Implementation stages for the WebRTC Chat application.
 | Stage 5 | Completed | 5-7 days |
 | Stage 6 | Completed | 3-5 days |
 | Stage 7 | Completed | 2-3 days |
-| Stage 8 | In Progress | 1-2 days |
+| Stage 8 | Completed | 5-7 days |
 | Stage 9 | Planned | 2-3 days |
 | Stage 10 | Planned | 2-3 days |
 | Stage 11 | Planned | TBD |
@@ -156,8 +152,9 @@ Implementation stages for the WebRTC Chat application.
 | Stage 13 | Planned | 1 day |
 
 **MVP Path:** Stages 0-7 = 2-3 weeks (completed)
+**Polish & Infra:** Stage 8 = 5-7 days (completed)
 
- *Production-ready: Stages 0-7 + deployment*
+ *Production-ready: Stages 0-8 + deployment*
 
 ---
 
@@ -169,7 +166,6 @@ Implementation stages for the WebRTC Chat application.
 
 ## Next Steps
 
-1. **Stage 8** — screen sharing
- See [tasks/in-progress/](./tasks/in-progress/) for active work
-2. See [tasks/backlog/](./tasks/backlog/) for planned work
-3. Refer to [SDD](./SDD.md) for architecture decisions
+1. **Stage 9** — chat
+   See [tasks/backlog/](./tasks/backlog/) for planned work
+2. Refer to [SDD](./SDD.md) for architecture decisions

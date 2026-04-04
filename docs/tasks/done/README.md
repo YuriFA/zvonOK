@@ -20,8 +20,12 @@ Group video calls with authentication and room management.
 | 4 | Device Management | Device selection UI |
 | 5 | SFU (Group Calls) | mediasoup integration |
 | 6 | Call UX | Pre-join, active call, ended states |
+| 7 | Deployment | HTTPS on VPS, TURN fallback, Docker |
+| 8 | Polish & Infrastructure | UX polish, audio/visual enhancements, CI/CD |
 
 ## Features
+
+### MVP (Stages 0–7)
 
 - User registration & login (JWT with refresh tokens)
 - Room creation with shareable link (slug-based)
@@ -33,9 +37,27 @@ Group video calls with authentication and room management.
 - Call ended state
 - Permission denied handling
 
+### Polish & Infrastructure (Stage 8)
+
+- User roles (USER/HOST/ADMIN) with role-based room creation
+- Simplified room creation (no modal, instant)
+- Toast notifications (accessible)
+- Prejoin device controls redesign (compact layout)
+- Display name in prejoin (authenticated + guest)
+- Independent device permission handling
+- Remote audio via Web Audio API mixer
+- Avatar pastel colors for video-off participants
+- Audio level concentric rings around avatars
+- SOLID audio level sampler refactor
+- App versioning (client + server, release-it)
+- CI/CD pipeline (GitHub Actions + GHCR + VPS deploy)
+- Framework-agnostic client architecture
+- UI migration from Radix to Base UI
+
 ## Architecture
 
 - **Backend:** NestJS + PostgreSQL + Prisma
-- **Frontend:** React 19 + Vite + Tailwind CSS v4
+- **Frontend:** React 19 + Vite + Tailwind CSS v4 + Base UI
 - **WebRTC:** mediasoup SFU
 - **Signalling:** Socket.io
+- **CI/CD:** GitHub Actions + GHCR + Docker Compose

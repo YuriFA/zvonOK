@@ -1,6 +1,6 @@
 # TASK-099 — Remote Audio via Web Audio API
 
-> **Status:** planned
+> **Status:** completed
 > **Priority:** medium
 > **Created:** 2026-03-28
 

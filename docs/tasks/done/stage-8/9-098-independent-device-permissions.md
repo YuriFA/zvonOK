@@ -1,6 +1,6 @@
 # TASK-098 — Independent Device Permission Handling
 
-> **Status:** planned
+> **Status:** completed
 > **Priority:** high
 > **Created:** 2026-03-25
 

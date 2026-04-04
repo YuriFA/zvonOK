@@ -1,6 +1,6 @@
 # TASK-076: CI/CD Pipeline (GitHub Actions + GHCR + VPS Deploy)
 
-> **Status:** in-progress
+> **Status:** completed
 > **Priority:** High
 > **Created:** 2026-03-19
 > **Updated:** 2026-04-01
