@@ -1,7 +1,7 @@
 {
   "name": "webrtc-chat",
   "private": true,
-  "version": "0.2.5",
+  "version": "0.3.0",
   "scripts": {
     "dev": "pnpm --stream -r run dev",
     "clean": "rm -rf .parcel-cache && pnpm -r run clean",

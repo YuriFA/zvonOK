@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0](https://github.com/YuriFA/zvonOK/compare/v0.2.5...v0.3.0) (2026-04-04)
+
+### Features
+
+* **auth:** register ThrottlerGuard before JwtAuthGuard for global rate limiting ([7e426ed](https://github.com/YuriFA/zvonOK/commit/7e426ed240b6ed251f5c68f9c63339eacc520ac1))
+* **caddy:** add /version route ([351dbc5](https://github.com/YuriFA/zvonOK/commit/351dbc5b0e63c0cadeeee6dbd8a65d892afca4f2))
+* **caddy:** harden security headers, remove swagger proxy, switch to JSON logging ([99e5fce](https://github.com/YuriFA/zvonOK/commit/99e5fceca93c6e3a3245ce532848188aa99c37f4))
+
 ## [0.2.5](https://github.com/YuriFA/zvonOK/compare/v0.2.4...v0.2.5) (2026-04-01)
 
 ## [0.2.4](https://github.com/YuriFA/zvonOK/compare/v0.2.3...v0.2.4) (2026-04-01)
