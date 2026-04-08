@@ -256,7 +256,6 @@ Browser
 | Hook | file |
 |-----------|------|
 | `useMediasoup` | `hooks/use-mediasoup.ts` |
-| `useQualityStats` | `hooks/use-quality-stats.ts` |
 | `useRemoteAudio` | `hooks/use-remote-audio.ts` |
 
 ---

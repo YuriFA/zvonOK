@@ -1,6 +1,6 @@
 # TASK-048 — Adaptive Video Quality
 
-> **Status:** planned
+> **Status:** in-progress
 > **Priority:** low
 > **Created:** 2026-02-08
 

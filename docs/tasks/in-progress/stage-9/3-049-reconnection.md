@@ -1,6 +1,6 @@
 # TASK-049 — Automatic Reconnection
 
-> **Status:** planned
+> **Status:** in-progress
 > **Priority:** low
 > **Created:** 2026-02-08
 

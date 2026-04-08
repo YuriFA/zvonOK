@@ -1,8 +1,8 @@
 # Software Design Document: WebRTC Chat
 
-> **Version:** 2.4
+> **Version:** 2.5
 >
-> **Date:** 2025-02-07 / Updated: 2026-04-04
+> **Date:** 2025-02-07 / Updated: 2026-04-08
 >
 > **Status:** Living Document
 
@@ -739,7 +739,7 @@ Run `make help` for the full list.
 - WebRTC connectivity may fail behind strict NAT/firewalls; TURN is required for reliability
 - SFU server resources (CPU/bandwidth) scale with number of participants
 - Device permissions and hardware variability can impact call quality
-- Network conditions vary; quality adaptation is planned in TASK-047 and TASK-048
+- Network conditions vary; quality adaptation is implemented (TASK-047: jitter + network quality metrics)
 - Compliance requirements (education/privacy) must be validated before production rollout
 
 ---
@@ -941,3 +941,4 @@ High-level steps: `POST /auth/login` → bcrypt verify → generate access + ref
 | 2.2 | 2026-03-29 | — | Full docs sync with codebase. Fixed REST API paths (refresh-token, auth/me), token payloads (id+role not sub+username), cookie SameSite=lax, added missing WS events (peer-joined, existing-peers, leave, close-producer, consumer-resumed, producer-state-changed), updated mediasoup config (single worker, VP9 codec, h264 params), removed non-existent endpoints, added RoomModule to component overview. |
 | 2.3 | 2026-03-29 | — | Removed `/api/` prefix from all REST endpoints (code has no global prefix). Fixed UI primitives to @base-ui/react (not Radix UI), removed non-existent Select component. Fixed token extraction (Bearer header + cookies). Added throttling/Swagger docs. Fixed JWT env vars to required. Added NODE_ENV. Fixed register status 201, room DELETE 204. Fixed REQ-002 (removed non-existent /users/me and /users/:id). Updated architecture diagrams (c4-l3-backend, c4-l3-frontend, sequence-auth). Updated all module docs. |
 | 2.4 | 2026-04-04 | — | Stage 8 (Polish & Infrastructure) completed. Added user roles, toast notifications, prejoin redesign, display name, independent device permissions, remote audio via Web Audio API, avatar pastel colors, audio level rings, SOLID audio refactor, app versioning, CI/CD pipeline, framework-agnostic architecture, UI migration to Base UI, simplified room creation. Updated done/README.md, roadmap.md. |
+| 2.5 | 2026-04-08 | — | TASK-047: Network quality metrics complete. Added `jitter` to `QualityStats` (collected from `inbound-rtp` for audio + video, converted from seconds to ms). Jitter penalty added to `calculateQualityScore` (−5/−10/−20 pts). Jitter shown in `QualityIndicator` tooltip. Removed unused `use-quality-stats` / `use-connection-stats` hook (stats pipeline runs through `PeerQualityProvider`). |
