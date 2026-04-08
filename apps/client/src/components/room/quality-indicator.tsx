@@ -36,6 +36,7 @@ function formatTooltip(stats: QualityStats, score: QualityScore): string {
     `Quality: ${score.level.charAt(0).toUpperCase() + score.level.slice(1)} (${score.score}/100)`,
     `Bitrate: ${formatBitrate(stats.bitrate)}`,
     `RTT: ${Math.round(stats.rtt)}ms`,
+    `Jitter: ${Math.round(stats.jitter)}ms`,
     `Packet Loss: ${stats.packetLoss.toFixed(1)}%`,
   ];
 

@@ -8,6 +8,7 @@ describe("calculateQualityScore", () => {
       bitrate: 2500,
       packetLoss: 0,
       rtt: 10,
+      jitter: 0,
       width: 1920,
       height: 1080,
       fps: 30,
@@ -21,6 +22,7 @@ describe("calculateQualityScore", () => {
       bitrate: 2500,
       packetLoss: 0,
       rtt: 10,
+      jitter: 0,
       width: 1280,
       height: 720,
       fps: 30,
@@ -34,6 +36,7 @@ describe("calculateQualityScore", () => {
       bitrate: 1000,
       packetLoss: 12,
       rtt: 20,
+      jitter: 0,
       width: 640,
       height: 480,
       fps: 30,
@@ -46,6 +49,7 @@ describe("calculateQualityScore", () => {
       bitrate: 100,
       packetLoss: 15,
       rtt: 600,
+      jitter: 0,
       width: 160,
       height: 120,
       fps: 5,
@@ -59,6 +63,7 @@ describe("calculateQualityScore", () => {
       bitrate: 1500,
       packetLoss: 6,
       rtt: 50,
+      jitter: 0,
       width: 640,
       height: 480,
       fps: 30,
@@ -71,6 +76,7 @@ describe("calculateQualityScore", () => {
       bitrate: 1500,
       packetLoss: 0,
       rtt: 400,
+      jitter: 0,
       width: 640,
       height: 480,
       fps: 30,
@@ -83,6 +89,7 @@ describe("calculateQualityScore", () => {
       bitrate: 500,
       packetLoss: 0,
       rtt: 10,
+      jitter: 0,
       width: 640,
       height: 480,
       fps: 10,
@@ -95,6 +102,7 @@ describe("calculateQualityScore", () => {
       bitrate: 500,
       packetLoss: 0,
       rtt: 10,
+      jitter: 0,
       width: 200,
       height: 150,
       fps: 30,
@@ -107,6 +115,7 @@ describe("calculateQualityScore", () => {
       bitrate: 500,
       packetLoss: 0,
       rtt: 10,
+      jitter: 0,
       width: 0,
       height: 0,
       fps: 0,
@@ -120,6 +129,7 @@ describe("calculateQualityScore", () => {
       bitrate: 0,
       packetLoss: 50,
       rtt: 1000,
+      jitter: 200,
       width: 100,
       height: 100,
       fps: 1,
@@ -133,10 +143,99 @@ describe("calculateQualityScore", () => {
       bitrate: 500,
       packetLoss: 6,
       rtt: 600,
+      jitter: 0,
       width: 640,
       height: 480,
       fps: 30,
     });
     expect(result.level).toBe("fair");
+  });
+
+  it("penalizes jitter above 100ms by 20 points", () => {
+    const baseline = calculateQualityScore({
+      bitrate: 1500,
+      packetLoss: 0,
+      rtt: 50,
+      jitter: 0,
+      width: 640,
+      height: 480,
+      fps: 30,
+    });
+    const highJitter = calculateQualityScore({
+      bitrate: 1500,
+      packetLoss: 0,
+      rtt: 50,
+      jitter: 110,
+      width: 640,
+      height: 480,
+      fps: 30,
+    });
+    expect(baseline.score - highJitter.score).toBe(20);
+  });
+
+  it("penalizes jitter above 50ms by 10 points", () => {
+    const baseline = calculateQualityScore({
+      bitrate: 1500,
+      packetLoss: 0,
+      rtt: 50,
+      jitter: 0,
+      width: 640,
+      height: 480,
+      fps: 30,
+    });
+    const midJitter = calculateQualityScore({
+      bitrate: 1500,
+      packetLoss: 0,
+      rtt: 50,
+      jitter: 60,
+      width: 640,
+      height: 480,
+      fps: 30,
+    });
+    expect(baseline.score - midJitter.score).toBe(10);
+  });
+
+  it("penalizes jitter above 20ms by 5 points", () => {
+    const baseline = calculateQualityScore({
+      bitrate: 1500,
+      packetLoss: 0,
+      rtt: 50,
+      jitter: 0,
+      width: 640,
+      height: 480,
+      fps: 30,
+    });
+    const lowJitter = calculateQualityScore({
+      bitrate: 1500,
+      packetLoss: 0,
+      rtt: 50,
+      jitter: 25,
+      width: 640,
+      height: 480,
+      fps: 30,
+    });
+    expect(baseline.score - lowJitter.score).toBe(5);
+  });
+
+  it("does not penalize jitter at or below 20ms", () => {
+    const baseline = calculateQualityScore({
+      bitrate: 1500,
+      packetLoss: 0,
+      rtt: 50,
+      jitter: 0,
+      width: 640,
+      height: 480,
+      fps: 30,
+    });
+    const noJitter = calculateQualityScore({
+      bitrate: 1500,
+      packetLoss: 0,
+      rtt: 50,
+      jitter: 20,
+      width: 640,
+      height: 480,
+      fps: 30,
+    });
+    expect(baseline.score).toBe(noJitter.score);
   });
 });

@@ -162,6 +162,7 @@ export interface QualityStats {
   bitrate: number; // kbps
   packetLoss: number; // percentage
   rtt: number; // ms
+  jitter: number; // ms
   width: number;
   height: number;
   fps: number;

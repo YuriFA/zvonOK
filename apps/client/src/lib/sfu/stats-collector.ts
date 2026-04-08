@@ -81,6 +81,7 @@ export class SfuStatsCollector {
               fps: stats.fps || existing.stats.fps,
               rtt: stats.rtt || existing.stats.rtt,
               packetLoss: stats.packetLoss || existing.stats.packetLoss,
+              jitter: stats.jitter || existing.stats.jitter,
             };
             existing.score = calculateQualityScore(existing.stats);
           }
@@ -123,6 +124,7 @@ export class SfuStatsCollector {
       let width = 0;
       let height = 0;
       let fps = 0;
+      let jitter = 0;
 
       if (consumer.kind === "video") {
         const consumerStats = await consumer.getStats();
@@ -132,21 +134,23 @@ export class SfuStatsCollector {
             width = stat.frameWidth || 0;
             height = stat.frameHeight || 0;
             fps = stat.framesPerSecond || 0;
+            jitter = (stat.jitter ?? 0) * 1000; // seconds → ms
             break;
           }
         }
       } else {
-        // For audio, just get bitrate
+        // For audio, just get bitrate and jitter
         const consumerStats = await consumer.getStats();
         for (const stat of consumerStats.values()) {
           if (stat.type === "inbound-rtp" && stat.kind === "audio") {
             bitrate = stat.bitrate ? stat.bitrate / 1000 : 0;
+            jitter = (stat.jitter ?? 0) * 1000; // seconds → ms
             break;
           }
         }
       }
 
-      return { bitrate, packetLoss, rtt, width, height, fps };
+      return { bitrate, packetLoss, rtt, jitter, width, height, fps };
     } catch (error) {
       console.error("[SFU] Error getting consumer stats:", error);
       return null;

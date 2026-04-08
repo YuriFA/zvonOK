@@ -47,6 +47,15 @@ export function calculateQualityScore(stats: QualityStats): QualityScore {
     score -= 5;
   }
 
+  // Jitter penalty (after RTT penalty block)
+  if (stats.jitter > 100) {
+    score -= 20;
+  } else if (stats.jitter > 50) {
+    score -= 10;
+  } else if (stats.jitter > 20) {
+    score -= 5;
+  }
+
   // Resolution bonus/penalty (for video)
   if (stats.width > 0 && stats.height > 0) {
     if (stats.width >= 1280 && stats.height >= 720) {

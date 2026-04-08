@@ -86,6 +86,7 @@ describe("SfuStatsCollector", () => {
             frameWidth: 1280,
             frameHeight: 720,
             framesPerSecond: 30,
+            jitter: 0.01,
           },
         ],
       ]),
@@ -154,5 +155,99 @@ describe("SfuStatsCollector", () => {
 
     await vi.advanceTimersByTimeAsync(1999);
     expect(statsCallback).not.toHaveBeenCalled();
+  });
+
+  it("collects jitter from video consumer inbound-rtp stats", async () => {
+    const consumer = createMockConsumer("c-1", "prod-1", "video");
+    consumer.getStats = vi.fn().mockResolvedValue(
+      new Map([
+        [
+          "rtp-1",
+          {
+            type: "inbound-rtp",
+            kind: "video",
+            bitrate: 500000,
+            frameWidth: 1280,
+            frameHeight: 720,
+            framesPerSecond: 30,
+            jitter: 0.05, // 50ms
+          },
+        ],
+      ]),
+    );
+    consumers.set("c-1", consumer);
+
+    const statsCallback = vi.fn();
+    collector.onStats(statsCallback);
+    collector.start(1000);
+
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(statsCallback).toHaveBeenCalled();
+    const statsMap = statsCallback.mock.calls[0][0] as Map<string, { stats: { jitter: number } }>;
+    const peerStats = statsMap.get("user-1");
+    expect(peerStats).toBeDefined();
+    expect(peerStats!.stats.jitter).toBeCloseTo(50);
+  });
+
+  it("collects jitter from audio consumer inbound-rtp stats", async () => {
+    const consumer = createMockConsumer("c-1", "prod-1", "audio");
+    consumer.getStats = vi.fn().mockResolvedValue(
+      new Map([
+        [
+          "rtp-1",
+          {
+            type: "inbound-rtp",
+            kind: "audio",
+            bitrate: 50000,
+            jitter: 0.02, // 20ms
+          },
+        ],
+      ]),
+    );
+    consumers.set("c-1", consumer);
+
+    const statsCallback = vi.fn();
+    collector.onStats(statsCallback);
+    collector.start(1000);
+
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(statsCallback).toHaveBeenCalled();
+    const statsMap = statsCallback.mock.calls[0][0] as Map<string, { stats: { jitter: number } }>;
+    const peerStats = statsMap.get("user-1");
+    expect(peerStats).toBeDefined();
+    expect(peerStats!.stats.jitter).toBeCloseTo(20);
+  });
+
+  it("defaults jitter to 0 when not present in inbound-rtp stats", async () => {
+    const consumer = createMockConsumer("c-1", "prod-1", "video");
+    consumer.getStats = vi.fn().mockResolvedValue(
+      new Map([
+        [
+          "rtp-1",
+          {
+            type: "inbound-rtp",
+            kind: "video",
+            bitrate: 500000,
+            frameWidth: 640,
+            frameHeight: 480,
+            framesPerSecond: 30,
+            // jitter intentionally omitted
+          },
+        ],
+      ]),
+    );
+    consumers.set("c-1", consumer);
+
+    const statsCallback = vi.fn();
+    collector.onStats(statsCallback);
+    collector.start(1000);
+
+    await vi.advanceTimersByTimeAsync(1000);
+
+    const statsMap = statsCallback.mock.calls[0][0] as Map<string, { stats: { jitter: number } }>;
+    const peerStats = statsMap.get("user-1");
+    expect(peerStats!.stats.jitter).toBe(0);
   });
 });

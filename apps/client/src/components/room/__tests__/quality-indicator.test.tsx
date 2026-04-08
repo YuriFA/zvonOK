@@ -15,6 +15,7 @@ describe("QualityIndicator", () => {
     bitrate: 1500,
     packetLoss: 0.5,
     rtt: 50,
+    jitter: 10,
     width: 1280,
     height: 720,
     fps: 30,
@@ -62,6 +63,7 @@ describe("QualityIndicator", () => {
     expect(title).toContain("Quality: Excellent (95/100)");
     expect(title).toContain("Bitrate: 1.5 Mbps");
     expect(title).toContain("RTT: 50ms");
+    expect(title).toContain("Jitter: 10ms");
     expect(title).toContain("Packet Loss: 0.5%");
     expect(title).toContain("Resolution: 1280x720");
   });
@@ -92,5 +94,16 @@ describe("QualityIndicator", () => {
     render(<QualityIndicator score={score} stats={stats} />);
 
     expect(screen.queryByText("2.5 Mbps")).not.toBeInTheDocument();
+  });
+
+  it("shows jitter in tooltip rounded to ms", () => {
+    const score = createScore("fair", 55);
+    const stats = createStats({ jitter: 45.7 });
+
+    render(<QualityIndicator score={score} stats={stats} />);
+
+    const indicator = screen.getByLabelText("Connection quality: fair");
+    const title = indicator.getAttribute("title");
+    expect(title).toContain("Jitter: 46ms");
   });
 });
