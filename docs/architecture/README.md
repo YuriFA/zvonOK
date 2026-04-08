@@ -7,7 +7,7 @@ C4 диаграммы для WebRTC Chat. Формат — [Mermaid C4](https://
 | **L1 — System Context** | Кто использует систему и какие внешние системы задействованы | [c4-l1-context.md](./c4-l1-context.md) |
 | **L2 — Containers** | Развёртываемые единицы: Caddy, NestJS, React SPA, PostgreSQL, coturn | [c4-l2-containers.md](./c4-l2-containers.md) |
 | **L3 — Backend Components** | NestJS-модули: Auth, User, Room, SFU, Prisma | [c4-l3-backend.md](./c4-l3-backend.md) |
-| **L3 — Frontend Components** | React-фичи, lib/api, lib/sfu, lib/media, routing | [c4-l3-frontend.md](./c4-l3-frontend.md) |
+| **L3 — Frontend Components** | React-фичи: Auth, Room, Media, SFU, API Client, UI Primitives | [c4-l3-frontend.md](./c4-l3-frontend.md) |
 
 ## Domain & High-Level Diagrams
 

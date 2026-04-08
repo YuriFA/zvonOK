@@ -142,7 +142,7 @@ Tokens can be passed via **either** mechanism:
 1. **HTTP-only cookies** — `access_token` and `refresh_token` cookies (primary)
 2. **Authorization header** — `Bearer <token>` (alternative, e.g., for API testing)
 
-Both `JwtStrategy` and `JwtRefreshStrategy` check the header first, then fall back to cookies.
+Both `JwtStrategy` and `JwtRefreshStrategy` try **Bearer header first**, then fall back to cookies. However, in `JwtRefreshStrategy`, the raw token for hash comparison is extracted as `cookieToken ?? headerToken` (cookie takes precedence for hash lookup).
 
 ## Security Properties
 

@@ -20,7 +20,7 @@ C4Container
 
         ContainerDb(postgres, "PostgreSQL", "PostgreSQL 16", "Stores users (credentials, token hashes, lockout state) and rooms (slug, owner, status, participants limit).")
 
-        Container(coturn, "coturn TURN Server", "coturn (network_mode: host)", "STUN/TURN relay for WebRTC ICE. Listens on UDP/TCP 3478 and TLS 5349. Relay port range 49152–49252. Credentials delivered to clients by the NestJS server at transport creation time.")
+        Container(coturn, "coturn TURN Server", "coturn (network_mode: host)", "STUN/TURN relay for WebRTC ICE. Listens on UDP/TCP 3478 and TLS 5349. Relay port range 40000–40099. Credentials delivered to clients by the NestJS server at transport creation time.")
     }
 
     System_Ext(stun, "Google STUN", "stun1/stun2.l.google.com:19302")
@@ -84,7 +84,7 @@ C4Container
 │  ┌──────────────────────────────────────────────────────────┐   │
 │  │  coturn (network_mode: host)                             │   │
 │  │  STUN/TURN :3478 (UDP+TCP) · TURNS :5349 (TLS)          │   │
-│  │  relay range 49152–49252                                 │   │
+│  │  relay range 40000–40099                                 │   │
 │  └──────────────────────────────────────────────────────────┘   │
 │                                                                  │
 └──────────────────────────────────────────────────────────────────┘

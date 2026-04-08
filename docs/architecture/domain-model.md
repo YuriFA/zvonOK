@@ -15,6 +15,7 @@ erDiagram
         int failedLoginAttempts
         datetime lockedUntil
         int tokenVersion
+        enum role
         datetime createdAt
         datetime updatedAt
     }
@@ -53,6 +54,7 @@ erDiagram
 │ email               UK               │
 │ username            UK               │
 │ passwordHash                         │
+│ role                USER|HOST|ADMIN  │
 │ refreshTokenHash    (nullable)       │
 │ failedLoginAttempts (default 0)      │
 │ lockedUntil         (nullable)       │
@@ -95,7 +97,7 @@ erDiagram
 
 | Entity | Table | Description |
 |--------|-------|-------------|
-| **User** | `User` | Registered account. Stores hashed password and hashed refresh token. Owns rooms. |
+| **User** | `User` | Registered account. Stores hashed password and hashed refresh token. Role: USER / HOST / ADMIN. Owns rooms. |
 | **Room** | `Room` | Video call room identified by a unique slug. Owned by one User. Status: `active` or `ended`. |
 | **Message** | `Message` | *(Planned — Stage 9)* Chat messages per room. |
 
