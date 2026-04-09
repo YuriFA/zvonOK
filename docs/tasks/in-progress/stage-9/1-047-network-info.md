@@ -1,6 +1,6 @@
 # TASK-047 — Network Quality Metrics Display
 
-> **Status:** in-progress
+> **Status:** completed
 > **Priority:** low
 > **Created:** 2026-02-08
 > **Updated:** 2026-04-08
