@@ -92,8 +92,8 @@ COPY --from=builder /app/apps/server/src/generated ./apps/server/src/generated
 # Copy built application from builder
 COPY --from=builder /app/apps/server/dist ./apps/server/dist
 
-# Copy package.json so version.ts can read it at runtime (resolves to dist/package.json)
-COPY --from=builder /app/apps/server/package.json ./apps/server/dist/package.json
+# Copy package.json so version.ts can read it at runtime (process.cwd() = /app/apps/server)
+COPY --from=builder /app/apps/server/package.json ./apps/server/package.json
 
 ENV MEDIASOUP_WORKER_BIN=/app/mediasoup-worker
 ENV NODE_ENV=production
