@@ -36,7 +36,11 @@ export interface SfuEventHandlers {
   onPeerLeft(payload: { userId: string }): void;
   onKicked(payload: SfuKickedPayload): void;
   onRoomEnded(payload: SfuRoomEndedPayload): void;
+  onReconnectFailed(): void;
 }
+
+/** A registered socket listener that can be selectively removed. */
+type RegisteredListener = { event: string; handler: (...args: unknown[]) => unknown };
 
 /**
  * Routes socket events to handler methods.
@@ -44,6 +48,7 @@ export interface SfuEventHandlers {
 export class SfuEventRouter {
   private getSocket: () => Socket | null;
   private handlers: SfuEventHandlers;
+  private registeredListeners: RegisteredListener[] = [];
 
   constructor(getSocket: () => Socket | null, handlers: SfuEventHandlers) {
     this.getSocket = getSocket;
@@ -57,47 +62,66 @@ export class SfuEventRouter {
     const socket = this.getSocket();
     if (!socket) return;
 
-    socket.on("connect", () => this.handlers.onConnected());
-    socket.on("disconnect", () => this.handlers.onDisconnected());
-    socket.on("sfu:joined", (payload: SfuJoinedPayload) => this.handlers.onJoined(payload));
-    socket.on("sfu:transport-created", (payload: SfuTransportCreatedPayload) =>
-      this.handlers.onTransportCreated(payload),
+    const register = (event: string, handler: (...args: unknown[]) => unknown) => {
+      socket.on(event, handler);
+      this.registeredListeners.push({ event, handler });
+    };
+
+    register("connect", () => this.handlers.onConnected());
+    register("disconnect", () => this.handlers.onDisconnected());
+    register("sfu:joined", (payload: unknown) =>
+      this.handlers.onJoined(payload as SfuJoinedPayload),
     );
-    socket.on("sfu:transport-connected", (payload: { transportId: string }) =>
-      this.handlers.onTransportConnected(payload),
+    register("sfu:transport-created", (payload: unknown) =>
+      this.handlers.onTransportCreated(payload as SfuTransportCreatedPayload),
     );
-    socket.on("sfu:producer-created", (payload: SfuProducerCreatedPayload) =>
-      this.handlers.onProducerCreated(payload),
+    register("sfu:transport-connected", (payload: unknown) =>
+      this.handlers.onTransportConnected(payload as { transportId: string }),
     );
-    socket.on("sfu:peer-joined", (payload: SfuPeerJoinedPayload) =>
-      this.handlers.onPeerJoined(payload),
+    register("sfu:producer-created", (payload: unknown) =>
+      this.handlers.onProducerCreated(payload as SfuProducerCreatedPayload),
     );
-    socket.on("sfu:existing-peers", (payload: SfuExistingPeersPayload[]) =>
-      this.handlers.onExistingPeers(payload),
+    register("sfu:peer-joined", (payload: unknown) =>
+      this.handlers.onPeerJoined(payload as SfuPeerJoinedPayload),
     );
-    socket.on("sfu:new-producer", (payload: SfuNewProducerPayload) =>
-      this.handlers.onNewProducer(payload),
+    register("sfu:existing-peers", (payload: unknown) =>
+      this.handlers.onExistingPeers(payload as SfuExistingPeersPayload[]),
     );
-    socket.on("sfu:consumer-created", (payload: SfuConsumerCreatedPayload) =>
-      this.handlers.onConsumerCreated(payload),
+    register("sfu:new-producer", (payload: unknown) =>
+      this.handlers.onNewProducer(payload as SfuNewProducerPayload),
     );
-    socket.on("sfu:producer-state-changed", (payload: SfuProducerStateChangedPayload) =>
-      this.handlers.onProducerStateChanged(payload),
+    register("sfu:consumer-created", (payload: unknown) =>
+      this.handlers.onConsumerCreated(payload as SfuConsumerCreatedPayload),
     );
-    socket.on("sfu:peer-left", (payload: { userId: string }) => this.handlers.onPeerLeft(payload));
-    socket.on("sfu:kicked", (payload: SfuKickedPayload) => this.handlers.onKicked(payload));
-    socket.on("sfu:room-ended", (payload: SfuRoomEndedPayload) =>
-      this.handlers.onRoomEnded(payload),
+    register("sfu:producer-state-changed", (payload: unknown) =>
+      this.handlers.onProducerStateChanged(payload as SfuProducerStateChangedPayload),
     );
+    register("sfu:peer-left", (payload: unknown) =>
+      this.handlers.onPeerLeft(payload as { userId: string }),
+    );
+    register("sfu:kicked", (payload: unknown) =>
+      this.handlers.onKicked(payload as SfuKickedPayload),
+    );
+    register("sfu:room-ended", (payload: unknown) =>
+      this.handlers.onRoomEnded(payload as SfuRoomEndedPayload),
+    );
+    register("reconnect_failed", () => this.handlers.onReconnectFailed());
   }
 
   /**
-   * Remove all event listeners.
+   * Remove only the listeners registered by this router.
+   * Does not affect any other listeners on the socket.
    */
   teardown(): void {
     const socket = this.getSocket();
-    if (!socket) return;
+    if (!socket) {
+      this.registeredListeners = [];
+      return;
+    }
 
-    socket.removeAllListeners();
+    for (const { event, handler } of this.registeredListeners) {
+      socket.off(event, handler);
+    }
+    this.registeredListeners = [];
   }
 }

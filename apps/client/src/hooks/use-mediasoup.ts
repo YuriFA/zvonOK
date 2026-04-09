@@ -86,6 +86,10 @@ export function useMediasoup({
       return;
     }
 
+    // Snapshot the Set object at effect setup time. Using the snapshot (rather
+    // than producedKindsRef.current) in callbacks and cleanup avoids the
+    // exhaustive-deps lint warning about accessing .current inside cleanup.
+    // The snapshot is safe because we only call .clear() — never reassign the ref.
     const producedKinds = producedKindsRef.current;
 
     const unsubscribeState = sfuManager.onStateChange((nextState) => {
@@ -93,6 +97,7 @@ export function useMediasoup({
 
       if (nextState.connectionState !== "connected") {
         joinedRef.current = false;
+        producedKinds.clear();
       }
     });
 

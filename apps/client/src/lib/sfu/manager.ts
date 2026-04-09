@@ -106,6 +106,7 @@ export class SfuManager implements ISfuManager {
     return {
       onConnected: () => this.handleConnected(),
       onDisconnected: () => this.handleDisconnected(),
+      onReconnectFailed: () => this.handleReconnectFailed(),
       onJoined: (p) => this.handleJoined(p),
       onTransportCreated: (p) => this.handleTransportCreated(p),
       onTransportConnected: (p) => this.handleTransportConnected(p),
@@ -123,7 +124,13 @@ export class SfuManager implements ISfuManager {
 
   // ISfuConnection
   connect(): void {
-    if (this.connection.isConnected()) return;
+    // Guard against duplicate calls while already connecting or connected.
+    // socket.io's on() appends listeners, so calling teardown+setup twice
+    // would double-register every handler.
+    if (this.connection.isConnected() || this.state.connectionState === "connecting") return;
+    // Tear down before re-registering to clear any stale listeners left from a
+    // previous cycle (e.g. after disconnect → reconnect).
+    this.eventRouter.teardown();
     this.updateState({ connectionState: "connecting" });
     this.connection.connect();
     this.eventRouter.setup();
@@ -381,8 +388,23 @@ export class SfuManager implements ISfuManager {
 
   private handleDisconnected(): void {
     console.log("[SFU] Disconnected");
+    // Reset device-level flags before closeAll() so the intermediate state
+    // notification from closeAll() never has isSendTransportCreated=true while
+    // the send transport is already null (which would trigger spurious produce
+    // attempts in consumers of onStateChange).
+    this.updateState({
+      connectionState: "connecting",
+      isDeviceLoaded: false,
+      isSendTransportCreated: false,
+    });
     this.closeAll();
-    this.updateState({ connectionState: "disconnected" });
+    this.device = null;
+    this.pendingNewProducers = [];
+  }
+
+  private handleReconnectFailed(): void {
+    console.log("[SFU] Reconnect failed");
+    this.updateState({ connectionState: "failed" });
   }
 
   private async handleJoined(payload: SfuJoinedPayload): Promise<void> {

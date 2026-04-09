@@ -287,4 +287,77 @@ describe("SfuManager", () => {
     expect(replaced).toBe(true);
     expect(testContext.mockProducer.replaceTrack).toHaveBeenCalledWith({ track: nextTrack });
   });
+
+  describe("handleDisconnected", () => {
+    it("transitions connectionState to 'connecting' (not 'disconnected') on socket disconnect", async () => {
+      const stateCallback = vi.fn();
+      manager.onStateChange(stateCallback);
+      manager.connect();
+
+      testContext.mockSocket.connected = true;
+      await testContext.emitSocketEvent("connect");
+
+      stateCallback.mockClear();
+      testContext.mockSocket.connected = false;
+      await testContext.emitSocketEvent("disconnect");
+
+      expect(stateCallback).toHaveBeenCalledWith(
+        expect.objectContaining({ connectionState: "connecting" }),
+      );
+      expect(stateCallback).not.toHaveBeenCalledWith(
+        expect.objectContaining({ connectionState: "disconnected" }),
+      );
+    });
+
+    it("resets isDeviceLoaded and isSendTransportCreated on disconnect", async () => {
+      const stateCallback = vi.fn();
+      manager.connect();
+
+      testContext.mockSocket.connected = true;
+      await testContext.emitSocketEvent("connect");
+      await testContext.emitSocketEvent("sfu:joined", { routerRtpCapabilities: { codecs: [] } });
+      await testContext.emitSocketEvent("sfu:transport-created", {
+        ...transportPayload,
+        direction: "send",
+        transportId: "send-transport",
+      });
+
+      manager.onStateChange(stateCallback);
+      stateCallback.mockClear();
+
+      testContext.mockSocket.connected = false;
+      await testContext.emitSocketEvent("disconnect");
+
+      expect(stateCallback).toHaveBeenCalledWith(
+        expect.objectContaining({ isDeviceLoaded: false, isSendTransportCreated: false }),
+      );
+    });
+
+    it("sets connectionState to 'failed' when reconnect_failed fires", async () => {
+      const stateCallback = vi.fn();
+      manager.onStateChange(stateCallback);
+      manager.connect();
+
+      testContext.mockSocket.connected = true;
+      await testContext.emitSocketEvent("connect");
+
+      stateCallback.mockClear();
+      await testContext.emitSocketEvent("reconnect_failed");
+
+      expect(stateCallback).toHaveBeenCalledWith(
+        expect.objectContaining({ connectionState: "failed" }),
+      );
+    });
+  });
+
+  it("connect() is a no-op while already in connecting state", async () => {
+    manager.connect();
+    const onCallCount = testContext.mockSocket.on.mock.calls.length;
+
+    // Call connect() again while still in connecting state (not yet connected)
+    manager.connect();
+
+    // No additional listeners should have been registered
+    expect(testContext.mockSocket.on.mock.calls.length).toBe(onCallCount);
+  });
 });

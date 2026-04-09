@@ -26,10 +26,12 @@ describe("SfuEventRouter", () => {
       onPeerLeft: vi.fn(),
       onKicked: vi.fn(),
       onRoomEnded: vi.fn(),
+      onReconnectFailed: vi.fn(),
     };
 
     socket = {
       on: vi.fn(),
+      off: vi.fn(),
       removeAllListeners: vi.fn(),
     };
 
@@ -62,7 +64,8 @@ describe("SfuEventRouter", () => {
     expect(events).toContain("sfu:producer-state-changed");
     expect(events).toContain("sfu:kicked");
     expect(events).toContain("sfu:room-ended");
-    expect(events).toHaveLength(14);
+    expect(events).toContain("reconnect_failed");
+    expect(events).toHaveLength(15);
   });
 
   it("routes connect event to onConnected", () => {
@@ -106,12 +109,41 @@ describe("SfuEventRouter", () => {
     getSocket = () => null;
     router = new SfuEventRouter(getSocket, handlers);
     router.teardown();
+    expect(socket.off).not.toHaveBeenCalled();
     expect(socket.removeAllListeners).not.toHaveBeenCalled();
   });
 
-  it("removes all listeners on teardown", () => {
+  it("routes reconnect_failed event to onReconnectFailed", () => {
+    router.setup();
+    const handler = socket.on.mock.calls.find(
+      (call: [string, ...unknown[]]) => call[0] === "reconnect_failed",
+    )?.[1] as () => void;
+    handler();
+    expect(handlers.onReconnectFailed).toHaveBeenCalled();
+  });
+
+  it("removes only registered listeners on teardown without touching other listeners", () => {
+    router.setup();
+
+    const registeredEvents = socket.on.mock.calls.map((call: [string, ...unknown[]]) => call[0]);
+    router.teardown();
+
+    // off() called once per registered listener
+    expect(socket.off).toHaveBeenCalledTimes(registeredEvents.length);
+    // removeAllListeners never called
+    expect(socket.removeAllListeners).not.toHaveBeenCalled();
+
+    // Each off() call matches a registered event+handler pair
+    const offEvents = socket.off.mock.calls.map((call: [string, ...unknown[]]) => call[0]);
+    expect(offEvents.sort()).toEqual(registeredEvents.sort());
+  });
+
+  it("clears registered listeners so a second teardown is a no-op", () => {
     router.setup();
     router.teardown();
-    expect(socket.removeAllListeners).toHaveBeenCalled();
+    socket.off.mockClear();
+
+    router.teardown();
+    expect(socket.off).not.toHaveBeenCalled();
   });
 });
