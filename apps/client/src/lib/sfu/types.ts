@@ -182,3 +182,12 @@ export interface PeerQualityStats {
 }
 
 export type QualityStatsCallback = (stats: Map<string, PeerQualityStats>) => void;
+
+// Simulcast spatial layer (0 = low, 1 = mid, 2 = high)
+export type SimulcastSpatialLayer = 0 | 1 | 2;
+
+// Payload sent to server to request a simulcast layer switch
+export interface SfuSetPreferredLayersPayload {
+  consumerId: string;
+  spatialLayer: SimulcastSpatialLayer;
+}

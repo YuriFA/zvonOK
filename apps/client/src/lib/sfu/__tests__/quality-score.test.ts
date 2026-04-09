@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { calculateQualityScore } from "../quality-score";
+import { calculateQualityScore, qualityToSpatialLayer } from "../quality-score";
 
 describe("calculateQualityScore", () => {
   it("returns excellent for perfect stats", () => {
@@ -237,5 +237,23 @@ describe("calculateQualityScore", () => {
       fps: 30,
     });
     expect(baseline.score).toBe(noJitter.score);
+  });
+});
+
+describe("qualityToSpatialLayer", () => {
+  it("returns 2 (high) for excellent quality", () => {
+    expect(qualityToSpatialLayer("excellent")).toBe(2);
+  });
+
+  it("returns 2 (high) for good quality", () => {
+    expect(qualityToSpatialLayer("good")).toBe(2);
+  });
+
+  it("returns 1 (mid) for fair quality", () => {
+    expect(qualityToSpatialLayer("fair")).toBe(1);
+  });
+
+  it("returns 0 (low) for poor quality", () => {
+    expect(qualityToSpatialLayer("poor")).toBe(0);
   });
 });

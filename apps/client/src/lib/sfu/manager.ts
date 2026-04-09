@@ -10,6 +10,7 @@ import type {
   MediaKind,
   Producer,
   RtpCapabilities,
+  RtpEncodingParameters,
   RtpParameters,
   Transport,
 } from "mediasoup-client/types";
@@ -38,7 +39,18 @@ import type {
   SfuTrackCallback,
   SfuPeerCallback,
   SfuProducerStateCallback,
+  SimulcastSpatialLayer,
 } from "./types";
+
+/**
+ * Simulcast encoding layers sent to the SFU for video producers.
+ * Mirrors SIMULCAST_ENCODINGS in apps/server/src/sfu/config/mediasoup.config.ts.
+ */
+const SIMULCAST_ENCODINGS: RtpEncodingParameters[] = [
+  { rid: "low", maxBitrate: 150_000, scaleResolutionDownBy: 4, maxFramerate: 15 },
+  { rid: "mid", maxBitrate: 500_000, scaleResolutionDownBy: 2, maxFramerate: 24 },
+  { rid: "high", maxBitrate: 2_000_000 },
+];
 
 /**
  * Facade for SFU management.
@@ -204,9 +216,13 @@ export class SfuManager implements ISfuManager {
     if (!this.sendTransport) return null;
 
     try {
+      const isVideo = track.kind === "video";
       const producer = await this.sendTransport.produce({
         track,
-        codecOptions: track.kind === "video" ? { videoGoogleStartBitrate: 1000 } : undefined,
+        encodings: isVideo ? SIMULCAST_ENCODINGS : undefined,
+        codecOptions: isVideo
+          ? { videoGoogleStartBitrate: 1000 }
+          : { opusStereo: true, opusDtx: true },
       });
 
       this.producers.set(producer.id, producer);
@@ -271,6 +287,30 @@ export class SfuManager implements ISfuManager {
     for (const producer of this.producers.values()) {
       if (producer.kind === kind) {
         return producer;
+      }
+    }
+    return undefined;
+  }
+
+  /**
+   * Emit sfu:set-preferred-layers to the server to request a simulcast layer switch.
+   * Should only be called for video consumers.
+   */
+  setPreferredLayers(consumerId: string, spatialLayer: SimulcastSpatialLayer): void {
+    this.connection.getSocket()?.emit("sfu:set-preferred-layers", { consumerId, spatialLayer });
+  }
+
+  /**
+   * Look up the consumer ID for the video stream of a given remote peer.
+   * Returns undefined if no video consumer exists for that peer.
+   */
+  getVideoConsumerIdForUserId(userId: string): string | undefined {
+    const peer = this.peers.get(userId);
+    if (!peer) return undefined;
+
+    for (const [consumerId, consumer] of this.consumers) {
+      if (consumer.kind === "video" && peer.producers.has(consumer.producerId)) {
+        return consumerId;
       }
     }
     return undefined;
@@ -497,7 +537,9 @@ export class SfuManager implements ISfuManager {
         peer.username = payload.username;
       }
     }
-    this.peerJoinedCallbacks.forEach((callback) => callback(peer!));
+    this.peerJoinedCallbacks.forEach((callback) => {
+      callback(peer!);
+    });
   }
 
   private handleExistingPeers(peers: SfuExistingPeersPayload[]): void {
@@ -516,7 +558,9 @@ export class SfuManager implements ISfuManager {
           peer.username = peerData.username;
         }
       }
-      this.peerJoinedCallbacks.forEach((callback) => callback(peer!));
+      this.peerJoinedCallbacks.forEach((callback) => {
+        callback(peer!);
+      });
     }
   }
 
@@ -588,7 +632,9 @@ export class SfuManager implements ISfuManager {
       payload.kind,
       payload.paused ? "paused" : "resumed",
     );
-    this.producerStateCallbacks.forEach((callback) => callback(payload));
+    this.producerStateCallbacks.forEach((callback) => {
+      callback(payload);
+    });
   }
 
   private handlePeerLeft(payload: { userId: string }): void {
@@ -604,19 +650,25 @@ export class SfuManager implements ISfuManager {
       }
       this.peers.delete(payload.userId);
     }
-    this.peerLeftCallbacks.forEach((callback) => callback(payload.userId));
+    this.peerLeftCallbacks.forEach((callback) => {
+      callback(payload.userId);
+    });
   }
 
   private handleKicked(payload: SfuKickedPayload): void {
     console.log("[SFU] Kicked from room:", payload.roomId);
-    this.kickedCallbacks.forEach((callback) => callback(payload));
+    this.kickedCallbacks.forEach((callback) => {
+      callback(payload);
+    });
     this.closeAll();
     this.updateState({ connectionState: "disconnected" });
   }
 
   private handleRoomEnded(payload: SfuRoomEndedPayload): void {
     console.log("[SFU] Room ended:", payload.roomId);
-    this.roomEndedCallbacks.forEach((callback) => callback(payload));
+    this.roomEndedCallbacks.forEach((callback) => {
+      callback(payload);
+    });
     this.closeAll();
     this.updateState({ connectionState: "disconnected" });
   }
@@ -661,7 +713,9 @@ export class SfuManager implements ISfuManager {
         producers: new Map(),
       };
       this.peers.set(payload.userId, peer);
-      this.peerJoinedCallbacks.forEach((callback) => callback(peer!));
+      this.peerJoinedCallbacks.forEach((callback) => {
+        callback(peer!);
+      });
     }
     peer.producers.set(payload.producerId, { kind: payload.kind, paused: payload.paused });
 
@@ -682,8 +736,12 @@ export class SfuManager implements ISfuManager {
   }
 
   private closeAll(): void {
-    this.producers.forEach((producer) => producer.close());
-    this.consumers.forEach((consumer) => consumer.close());
+    this.producers.forEach((producer) => {
+      producer.close();
+    });
+    this.consumers.forEach((consumer) => {
+      consumer.close();
+    });
     this.producers.clear();
     this.consumers.clear();
     this.producingInProgress.clear();
@@ -727,7 +785,9 @@ export class SfuManager implements ISfuManager {
   }
 
   private notifyStateChange(): void {
-    this.stateCallbacks.forEach((callback) => callback(this.getState()));
+    this.stateCallbacks.forEach((callback) => {
+      callback(this.getState());
+    });
   }
 }
 

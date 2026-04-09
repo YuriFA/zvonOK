@@ -3,7 +3,7 @@
  * Pure functions for calculating stream quality based on WebRTC stats.
  */
 
-import type { QualityStats, QualityScore, QualityLevel } from "./types";
+import type { QualityStats, QualityScore, QualityLevel, SimulcastSpatialLayer } from "./types";
 
 /**
  * Get quality level from score.
@@ -77,4 +77,22 @@ export function calculateQualityScore(stats: QualityStats): QualityScore {
   const level: QualityLevel = getQualityLevel(score);
 
   return { level, score };
+}
+
+/**
+ * Map a QualityLevel to a simulcast spatial layer index.
+ *   excellent / good → 2 (high)
+ *   fair             → 1 (mid)
+ *   poor             → 0 (low)
+ */
+export function qualityToSpatialLayer(level: QualityLevel): SimulcastSpatialLayer {
+  switch (level) {
+    case "excellent":
+    case "good":
+      return 2;
+    case "fair":
+      return 1;
+    case "poor":
+      return 0;
+  }
 }

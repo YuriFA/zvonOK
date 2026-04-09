@@ -447,6 +447,33 @@ export class SfuService implements OnModuleDestroy {
   }
 
   /**
+   * Set preferred simulcast layers for a consumer owned by the requesting peer.
+   * Returns false if the consumer is not found or not owned by the socket.
+   */
+  async setPreferredLayers(
+    socket: Socket,
+    consumerId: string,
+    spatialLayer: number,
+  ): Promise<boolean> {
+    const peer = this.getPeer(socket.id);
+    if (!peer) {
+      this.logger.warn(`setPreferredLayers: peer ${socket.id} not found`);
+      return false;
+    }
+
+    const consumer = this.getConsumer(peer, consumerId);
+    if (!consumer) {
+      this.logger.warn(
+        `setPreferredLayers: consumer ${consumerId} not owned by peer ${socket.id}`,
+      );
+      return false;
+    }
+
+    await consumer.setPreferredLayers({ spatialLayer, temporalLayer: 2 });
+    return true;
+  }
+
+  /**
    * End a room: notify all peers with `sfu:room-ended`, clean up their
    * transports, and tear down the mediasoup Router.
    */

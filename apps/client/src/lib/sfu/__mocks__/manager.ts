@@ -43,6 +43,7 @@ export function createMockSfuManager(config: MockSfuManagerConfig = {}): ISfuMan
   simulateDisconnection(): void;
   simulatePeerJoined(peer: SfuPeerInfo): void;
   simulatePeerLeft(userId: string): void;
+  emitQualityStats(stats: Map<string, PeerQualityStats>): void;
   simulateTrackReceived(track: MediaStreamTrack, kind: "audio" | "video", userId: string): void;
   simulateKicked(roomId: string): void;
   simulateRoomEnded(roomId: string): void;
@@ -54,7 +55,9 @@ export function createMockSfuManager(config: MockSfuManagerConfig = {}): ISfuMan
   let state: SfuState = { ...DEFAULT_STATE, ...initialState };
 
   const peers = new Map<string, SfuPeerInfo>();
-  initialPeers.forEach((peer) => peers.set(peer.userId, peer));
+  initialPeers.forEach((peer) => {
+    peers.set(peer.userId, peer);
+  });
 
   const stateCallbacks = new Set<SfuStateCallback>();
   const trackCallbacks = new Set<SfuTrackCallback>();
@@ -72,7 +75,9 @@ export function createMockSfuManager(config: MockSfuManagerConfig = {}): ISfuMan
   let statsInterval: ReturnType<typeof setInterval> | null = null;
 
   const notifyStateChange = () => {
-    stateCallbacks.forEach((cb) => cb(state));
+    stateCallbacks.forEach((cb) => {
+      cb(state);
+    });
   };
 
   const createMockQualityScore = (): QualityScore => ({
@@ -179,6 +184,23 @@ export function createMockSfuManager(config: MockSfuManagerConfig = {}): ISfuMan
       return producers.get(kind);
     },
 
+    setPreferredLayers(): void {},
+
+    getVideoConsumerIdForUserId(userId: string): string | undefined {
+      const peer = peers.get(userId);
+      if (!peer) {
+        return undefined;
+      }
+
+      for (const [consumerId, producer] of peer.producers) {
+        if (producer.kind === "video") {
+          return consumerId;
+        }
+      }
+
+      return undefined;
+    },
+
     // ISfuPeerRegistry
     getPeers(): Map<string, SfuPeerInfo> {
       return new Map(peers);
@@ -212,6 +234,7 @@ export function createMockSfuManager(config: MockSfuManagerConfig = {}): ISfuMan
               bitrate: 1000,
               packetLoss: 0,
               rtt: 10,
+              jitter: 5,
               width: 1280,
               height: 720,
               fps: 30,
@@ -219,7 +242,9 @@ export function createMockSfuManager(config: MockSfuManagerConfig = {}): ISfuMan
             score: createMockQualityScore(),
           });
         });
-        qualityStatsCallbacks.forEach((cb) => cb(stats));
+        qualityStatsCallbacks.forEach((cb) => {
+          cb(stats);
+        });
       }, intervalMs);
     },
 
@@ -244,6 +269,7 @@ export function createMockSfuManager(config: MockSfuManagerConfig = {}): ISfuMan
             bitrate: 1000,
             packetLoss: 0,
             rtt: 10,
+            jitter: 5,
             width: 1280,
             height: 720,
             fps: 30,
@@ -292,24 +318,40 @@ export function createMockSfuManager(config: MockSfuManagerConfig = {}): ISfuMan
 
     simulatePeerJoined(peer: SfuPeerInfo): void {
       peers.set(peer.userId, peer);
-      peerJoinedCallbacks.forEach((cb) => cb(peer));
+      peerJoinedCallbacks.forEach((cb) => {
+        cb(peer);
+      });
     },
 
     simulatePeerLeft(userId: string): void {
       peers.delete(userId);
-      peerLeftCallbacks.forEach((cb) => cb(userId));
+      peerLeftCallbacks.forEach((cb) => {
+        cb(userId);
+      });
+    },
+
+    emitQualityStats(stats: Map<string, PeerQualityStats>): void {
+      qualityStatsCallbacks.forEach((cb) => {
+        cb(new Map(stats));
+      });
     },
 
     simulateTrackReceived(track: MediaStreamTrack, kind: "audio" | "video", userId: string): void {
-      trackCallbacks.forEach((cb) => cb(track, kind, userId));
+      trackCallbacks.forEach((cb) => {
+        cb(track, kind, userId);
+      });
     },
 
     simulateKicked(roomId: string): void {
-      kickedCallbacks.forEach((cb) => cb({ roomId }));
+      kickedCallbacks.forEach((cb) => {
+        cb({ roomId });
+      });
     },
 
     simulateRoomEnded(roomId: string): void {
-      roomEndedCallbacks.forEach((cb) => cb({ roomId }));
+      roomEndedCallbacks.forEach((cb) => {
+        cb({ roomId });
+      });
     },
 
     getJoinRoomCalls(): SfuJoinPayload[] {

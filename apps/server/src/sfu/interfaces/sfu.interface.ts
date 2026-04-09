@@ -111,3 +111,9 @@ export interface SfuExistingPeerPayload {
   userId: string;
   username: string;
 }
+
+// Payload for sfu:set-preferred-layers (client → server)
+export interface SfuSetPreferredLayersPayload {
+  consumerId: string;
+  spatialLayer: number;
+}

@@ -107,6 +107,7 @@ vi.mock("@/features/sfu/contexts/sfu-manager.context", () => ({
     getProducerByKind: () => undefined,
     replaceTrack: vi.fn(),
     onQualityStats: () => () => {},
+    onPeerLeft: () => () => {},
     startStatsCollection: vi.fn(),
     stopStatsCollection: vi.fn(),
   }),

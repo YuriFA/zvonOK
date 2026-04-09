@@ -19,6 +19,7 @@ import type {
   QualityStatsCallback,
   PeerQualityStats,
   SfuProducerStateCallback,
+  SimulcastSpatialLayer,
 } from "./types";
 
 /**
@@ -70,6 +71,10 @@ interface ISfuProducerManager {
   replaceTrack(kind: "audio" | "video", track: MediaStreamTrack | null): Promise<boolean>;
   /** Get producer by kind */
   getProducerByKind(kind: "audio" | "video"): Producer | undefined;
+  /** Request a simulcast spatial layer switch for a consumer */
+  setPreferredLayers(consumerId: string, spatialLayer: SimulcastSpatialLayer): void;
+  /** Get the video consumer ID for a remote peer, if one exists */
+  getVideoConsumerIdForUserId(userId: string): string | undefined;
 }
 
 /**

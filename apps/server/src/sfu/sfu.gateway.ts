@@ -18,6 +18,7 @@ import type {
   SfuConsumePayload,
   SfuResumeConsumerPayload,
   SfuKickPeerPayload,
+  SfuSetPreferredLayersPayload,
 } from './interfaces/sfu.interface';
 import { OnGatewayInit } from '@nestjs/websockets';
 
@@ -148,5 +149,20 @@ export class SfuGateway
   ): Promise<void> {
     this.logger.log(`Kick peer ${payload.userId} requested by ${client.id}`);
     await this.sfuService.kickPeer(client, payload.userId);
+  }
+
+  @SubscribeMessage('sfu:set-preferred-layers')
+  async handleSetPreferredLayers(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: SfuSetPreferredLayersPayload,
+  ): Promise<void> {
+    this.logger.log(
+      `Set preferred layers for consumer ${payload.consumerId} to spatial ${payload.spatialLayer} by ${client.id}`,
+    );
+    await this.sfuService.setPreferredLayers(
+      client,
+      payload.consumerId,
+      payload.spatialLayer,
+    );
   }
 }

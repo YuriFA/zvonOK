@@ -5,6 +5,35 @@ import type {
 } from 'mediasoup/types';
 
 /**
+ * Simulcast encoding layers for video producers.
+ * Clients pass these when creating a video producer so the SFU receives
+ * three spatial layers: low (quarter resolution, 15 fps), mid (half, 24 fps),
+ * and high (full resolution, up to 2 Mbps).
+ */
+export interface SimulcastEncoding {
+  rid: string;
+  maxBitrate: number;
+  scaleResolutionDownBy?: number;
+  maxFramerate?: number;
+}
+
+export const SIMULCAST_ENCODINGS: SimulcastEncoding[] = [
+  {
+    rid: 'low',
+    maxBitrate: 150_000,
+    scaleResolutionDownBy: 4,
+    maxFramerate: 15,
+  },
+  {
+    rid: 'mid',
+    maxBitrate: 500_000,
+    scaleResolutionDownBy: 2,
+    maxFramerate: 24,
+  },
+  { rid: 'high', maxBitrate: 2_000_000 },
+];
+
+/**
  * ICE server entry sent to clients for RTCPeerConnection configuration.
  * Matches the browser RTCIceServer interface.
  */
