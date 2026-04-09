@@ -229,7 +229,7 @@ export class SfuManager implements ISfuManager {
         encodings: isVideo ? SIMULCAST_ENCODINGS : undefined,
         codecOptions: isVideo
           ? { videoGoogleStartBitrate: 1000 }
-          : { opusStereo: true, opusDtx: true },
+          : { opusStereo: true, opusFec: true },
       });
 
       this.producers.set(producer.id, producer);
@@ -605,8 +605,14 @@ export class SfuManager implements ISfuManager {
       this.consumers.set(consumer.id, consumer);
       console.log("[SFU] Consumer ready:", payload.kind, consumer.id);
 
-      // Resume the consumer
-      this.connection.getSocket()?.emit("sfu:resume-consumer", { consumerId: consumer.id });
+      // Resume the consumer — delay for audio to let jitter buffer initialise
+      if (payload.kind === "audio") {
+        setTimeout(() => {
+          this.connection.getSocket()?.emit("sfu:resume-consumer", { consumerId: consumer.id });
+        }, 150);
+      } else {
+        this.connection.getSocket()?.emit("sfu:resume-consumer", { consumerId: consumer.id });
+      }
 
       // Find the peer userId for this consumer
       let userId = "";
