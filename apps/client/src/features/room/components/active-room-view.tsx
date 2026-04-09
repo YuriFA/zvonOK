@@ -1,5 +1,6 @@
 import { computeLayout } from "@zvonok/video-layout";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { ParticipantsList } from "@/components/room/participants-list";
 import { VideoGrid } from "@/components/video-grid";
@@ -7,10 +8,14 @@ import { RoomCenterControls } from "@/features/room/components/room-center-contr
 import { RoomVideo } from "@/features/room/components/room-video";
 import type { UseRoomSessionResult } from "@/features/room/hooks/use-room-session";
 import type { Room } from "@/features/room/types/room.types";
+import type { ScreenShareError, ScreenShareState } from "@/hooks/use-screen-share";
+import { useScreenShare } from "@/hooks/use-screen-share";
 import { cn } from "@/lib/utils";
 
 import { RoomRemoteAudio } from "./room-remote-audio";
 import { RoomRightControls } from "./room-right-controls";
+
+
 
 interface ActiveRoomViewProps {
   session: UseRoomSessionResult;
@@ -90,6 +95,44 @@ export function ActiveRoomView({
 
   const [isParticipantsVisible, setIsParticipantsVisible] = useState(false);
 
+  const { isSharing, startScreenShare, stopScreenShare } = useScreenShare();
+  const [screenShareState, setScreenShareState] = useState<ScreenShareState>("idle");
+
+  const isScreenShareSupported =
+    typeof navigator !== "undefined" &&
+    typeof navigator.mediaDevices?.getDisplayMedia === "function";
+
+  const handleToggleScreenShare = useCallback(async () => {
+    if (isSharing) {
+      await stopScreenShare();
+      setScreenShareState("idle");
+      return;
+    }
+
+    setScreenShareState("starting");
+    try {
+      await startScreenShare();
+      setScreenShareState("sharing");
+    } catch (error) {
+      const kind = error as ScreenShareError;
+      setScreenShareState("idle");
+      if (kind === "unsupported") {
+        // Button will be hidden — no toast needed
+        return;
+      }
+      // "denied" covers both user cancellation and permission denial.
+      // Show a dismissible toast so the user knows what happened.
+      toast.error("Screen share was not started");
+    }
+  }, [isSharing, startScreenShare, stopScreenShare]);
+
+  // Sync screenShareState with isSharing (auto-stop via track.ended)
+  useEffect(() => {
+    if (!isSharing && screenShareState === "sharing") {
+      setScreenShareState("idle");
+    }
+  }, [isSharing, screenShareState]);
+
   return (
     <main className="flex flex-1 flex-col overflow-hidden">
       <div className="flex min-h-0 flex-1 p-4">
@@ -162,6 +205,10 @@ export function ActiveRoomView({
           audioCaptureState={mediaControls.audioCaptureState}
           onToggleVideo={handleToggleVideo}
           onToggleAudio={handleToggleAudio}
+          isScreenSharing={isSharing}
+          isScreenShareSupported={isScreenShareSupported}
+          screenShareState={screenShareState}
+          onToggleScreenShare={handleToggleScreenShare}
         />
 
         <RoomRightControls

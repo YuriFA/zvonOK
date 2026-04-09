@@ -1,9 +1,20 @@
-import { Video, VideoOff, Mic, MicOff, AlertTriangle, Loader2, PhoneOff } from "lucide-react";
+import {
+  Video,
+  VideoOff,
+  Mic,
+  MicOff,
+  AlertTriangle,
+  Loader2,
+  PhoneOff,
+  Monitor,
+  MonitorOff,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import type { ScreenShareState } from "@/hooks/use-screen-share";
 import { CaptureState, getCaptureStateDisplay } from "@/lib/media/capture-state";
 import { cn } from "@/lib/utils";
 
@@ -14,6 +25,10 @@ interface Props {
   audioCaptureState: CaptureState;
   onToggleVideo: () => void;
   onToggleAudio: () => void;
+  isScreenSharing: boolean;
+  isScreenShareSupported: boolean;
+  screenShareState: ScreenShareState;
+  onToggleScreenShare: () => Promise<void>;
   className?: string;
 }
 
@@ -24,10 +39,17 @@ export function RoomCenterControls({
   audioCaptureState,
   onToggleVideo,
   onToggleAudio,
+  isScreenSharing,
+  isScreenShareSupported,
+  screenShareState,
+  onToggleScreenShare,
   className,
 }: Props) {
   const videoDisplay = getCaptureStateDisplay(videoCaptureState, "video");
   const audioDisplay = getCaptureStateDisplay(audioCaptureState, "audio");
+
+  const screenShareTooltip = isScreenSharing ? "Stop screen share" : "Share screen";
+  const isScreenShareLoading = screenShareState === "starting";
 
   return (
     <div className={cn("flex gap-2", className)}>
@@ -86,6 +108,34 @@ export function RoomCenterControls({
         </TooltipTrigger>
         <TooltipContent>{audioDisplay.tooltip}</TooltipContent>
       </Tooltip>
+
+      {isScreenShareSupported && (
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                type="button"
+                variant={isScreenSharing ? "secondary" : "outline"}
+                className="relative"
+                size="icon"
+                onClick={() => void onToggleScreenShare()}
+                disabled={isScreenShareLoading}
+                aria-label={screenShareTooltip}
+                aria-pressed={isScreenSharing}
+              />
+            }
+          >
+            {isScreenShareLoading ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : isScreenSharing ? (
+              <MonitorOff className="size-4" />
+            ) : (
+              <Monitor className="size-4" />
+            )}
+          </TooltipTrigger>
+          <TooltipContent>{screenShareTooltip}</TooltipContent>
+        </Tooltip>
+      )}
 
       <LinkButton to="/" variant="destructive" size="icon" className="ml-2" aria-label="Leave room">
         <PhoneOff className="size-4" />
