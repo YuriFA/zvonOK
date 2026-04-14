@@ -1,4 +1,4 @@
-import type { GridLayout, LayoutOptions, VideoTile } from './types';
+import type { GridLayout, LayoutOptions, SpotlightArea, VideoTile } from './types';
 
 function computeGridDimensions(
   count: number,
@@ -39,6 +39,10 @@ function computeGridDimensions(
 }
 
 export function computeLayout(options: LayoutOptions): GridLayout {
+  if (options.spotlight) {
+    return computeSpotlightLayout(options);
+  }
+
   const {
     containerWidth,
     containerHeight,
@@ -94,4 +98,116 @@ export function computeLayout(options: LayoutOptions): GridLayout {
   }
 
   return { tiles, rows, cols, tileWidth, tileHeight };
+}
+
+/**
+ * Spotlight layout: reserves most of the container for a screen-share area,
+ * then fits participant tiles in a strip on one side.
+ *
+ * Strip position is chosen automatically:
+ *   containerWidth / containerHeight > 1.5  →  strip on the right (vertical column)
+ *   otherwise                               →  strip on the bottom (horizontal row)
+ */
+function computeSpotlightLayout(options: LayoutOptions): GridLayout {
+  const {
+    containerWidth,
+    containerHeight,
+    participantCount,
+    gap = 8,
+    aspectRatio = 16 / 9,
+  } = options;
+
+  if (containerWidth <= 0 || containerHeight <= 0) {
+    return { tiles: [], rows: 0, cols: 0, tileWidth: 0, tileHeight: 0 };
+  }
+
+  // Strip size: 160 px wide (right) or 96 px tall (bottom), minimum 1 tile
+  const STRIP_WIDTH = 160;
+  const STRIP_HEIGHT = 96;
+
+  const isWide = containerWidth / containerHeight > 1.5;
+  const stripPosition = isWide ? 'right' : 'bottom';
+
+  let spotlightArea: SpotlightArea;
+  let stripX: number;
+  let stripY: number;
+  let stripAvailableWidth: number;
+  let stripAvailableHeight: number;
+
+  if (stripPosition === 'right') {
+    const spotW = containerWidth - STRIP_WIDTH - gap;
+    spotlightArea = { x: 0, y: 0, width: spotW, height: containerHeight };
+    stripX = spotW + gap;
+    stripY = 0;
+    stripAvailableWidth = STRIP_WIDTH;
+    stripAvailableHeight = containerHeight;
+  } else {
+    const spotH = containerHeight - STRIP_HEIGHT - gap;
+    spotlightArea = { x: 0, y: 0, width: containerWidth, height: spotH };
+    stripX = 0;
+    stripY = spotH + gap;
+    stripAvailableWidth = containerWidth;
+    stripAvailableHeight = STRIP_HEIGHT;
+  }
+
+  // If there are no participants at all, return just spotlight with no tiles
+  if (participantCount <= 0) {
+    return {
+      tiles: [],
+      rows: 0,
+      cols: 0,
+      tileWidth: 0,
+      tileHeight: 0,
+      spotlightArea,
+      stripPosition,
+    };
+  }
+
+  // Compute tile dimensions that fit in the strip
+  let tileWidth: number;
+  let tileHeight: number;
+  let rows: number;
+  let cols: number;
+
+  if (stripPosition === 'right') {
+    // All tiles stack vertically in the column
+    tileWidth = stripAvailableWidth;
+    const totalGaps = (participantCount - 1) * gap;
+    tileHeight = Math.max(
+      1,
+      (stripAvailableHeight - totalGaps) / participantCount,
+    );
+    // Honour aspect ratio: shrink height if tile would be taller than wide
+    const maxHeightByAspect = tileWidth / aspectRatio;
+    if (tileHeight > maxHeightByAspect) {
+      tileHeight = maxHeightByAspect;
+    }
+    rows = participantCount;
+    cols = 1;
+  } else {
+    // All tiles sit in a horizontal row
+    tileHeight = stripAvailableHeight;
+    tileWidth = tileHeight * aspectRatio;
+    rows = 1;
+    cols = participantCount;
+  }
+
+  const tiles: VideoTile[] = [];
+
+  for (let i = 0; i < participantCount; i++) {
+    let x: number;
+    let y: number;
+
+    if (stripPosition === 'right') {
+      x = stripX;
+      y = stripY + i * (tileHeight + gap);
+    } else {
+      x = stripX + i * (tileWidth + gap);
+      y = stripY;
+    }
+
+    tiles.push({ id: String(i), x, y, width: tileWidth, height: tileHeight });
+  }
+
+  return { tiles, rows, cols, tileWidth, tileHeight, spotlightArea, stripPosition };
 }

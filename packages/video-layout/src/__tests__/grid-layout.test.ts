@@ -133,3 +133,125 @@ describe('computeLayout', () => {
     }
   });
 });
+
+describe('computeLayout (spotlight mode)', () => {
+  it('returns spotlightArea when spotlight is true', () => {
+    const result = computeLayout({
+      containerWidth: 1920,
+      containerHeight: 1080,
+      participantCount: 2,
+      spotlight: true,
+    });
+    expect(result.spotlightArea).toBeDefined();
+    expect(result.spotlightArea!.width).toBeGreaterThan(0);
+    expect(result.spotlightArea!.height).toBeGreaterThan(0);
+  });
+
+  it('places strip on the right for wide containers (ratio > 1.5)', () => {
+    // 1920x1080 ratio = 1.78 > 1.5 → right strip
+    const result = computeLayout({
+      containerWidth: 1920,
+      containerHeight: 1080,
+      participantCount: 3,
+      spotlight: true,
+    });
+    expect(result.stripPosition).toBe('right');
+    // Spotlight area should span full height and stop before the strip
+    expect(result.spotlightArea!.height).toBe(1080);
+    expect(result.spotlightArea!.x).toBe(0);
+    expect(result.spotlightArea!.y).toBe(0);
+  });
+
+  it('places strip on the bottom for narrow/square containers (ratio <= 1.5)', () => {
+    // 800x800 ratio = 1.0 <= 1.5 → bottom strip
+    const result = computeLayout({
+      containerWidth: 800,
+      containerHeight: 800,
+      participantCount: 2,
+      spotlight: true,
+    });
+    expect(result.stripPosition).toBe('bottom');
+    expect(result.spotlightArea!.width).toBe(800);
+    expect(result.spotlightArea!.x).toBe(0);
+    expect(result.spotlightArea!.y).toBe(0);
+  });
+
+  it('creates correct number of participant tiles', () => {
+    const participantCount = 4;
+    const result = computeLayout({
+      containerWidth: 1920,
+      containerHeight: 1080,
+      participantCount,
+      spotlight: true,
+    });
+    expect(result.tiles).toHaveLength(participantCount);
+  });
+
+  it('spotlight area and participant tiles do not overlap (right strip)', () => {
+    const result = computeLayout({
+      containerWidth: 1920,
+      containerHeight: 1080,
+      participantCount: 3,
+      spotlight: true,
+    });
+    const sa = result.spotlightArea!;
+    const spotlightRight = sa.x + sa.width;
+    for (const tile of result.tiles) {
+      // All participant tiles must start to the right of the spotlight area
+      expect(tile.x).toBeGreaterThanOrEqual(spotlightRight);
+    }
+  });
+
+  it('spotlight area and participant tiles do not overlap (bottom strip)', () => {
+    const result = computeLayout({
+      containerWidth: 800,
+      containerHeight: 800,
+      participantCount: 2,
+      spotlight: true,
+    });
+    const sa = result.spotlightArea!;
+    const spotlightBottom = sa.y + sa.height;
+    for (const tile of result.tiles) {
+      // All participant tiles must start below the spotlight area
+      expect(tile.y).toBeGreaterThanOrEqual(spotlightBottom);
+    }
+  });
+
+  it('returns empty tiles with spotlight area for zero participants', () => {
+    const result = computeLayout({
+      containerWidth: 1920,
+      containerHeight: 1080,
+      participantCount: 0,
+      spotlight: true,
+    });
+    expect(result.tiles).toHaveLength(0);
+    expect(result.spotlightArea).toBeDefined();
+    expect(result.spotlightArea!.width).toBeGreaterThan(0);
+  });
+
+  it('returns empty layout for invalid container dimensions', () => {
+    const result = computeLayout({
+      containerWidth: 0,
+      containerHeight: 0,
+      participantCount: 2,
+      spotlight: true,
+    });
+    expect(result.tiles).toHaveLength(0);
+    expect(result.spotlightArea).toBeUndefined();
+  });
+
+  it('tile dimensions respect aspect ratio in right-strip mode', () => {
+    const aspectRatio = 16 / 9;
+    const result = computeLayout({
+      containerWidth: 1920,
+      containerHeight: 1080,
+      participantCount: 1,
+      spotlight: true,
+      aspectRatio,
+    });
+    // In right-strip the height is capped by width/aspectRatio
+    const tile = result.tiles[0];
+    expect(tile.width / tile.height).toBeCloseTo(aspectRatio, 1);
+  });
+});
+
