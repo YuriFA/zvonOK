@@ -108,6 +108,7 @@ vi.mock("@/features/sfu/contexts/sfu-manager.context", () => ({
     replaceTrack: vi.fn(),
     onQualityStats: () => () => {},
     onPeerLeft: () => () => {},
+    onStateChange: () => () => {},
     startStatsCollection: vi.fn(),
     stopStatsCollection: vi.fn(),
   }),

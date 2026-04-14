@@ -27,6 +27,7 @@ interface Props {
   onToggleAudio: () => void;
   isScreenSharing: boolean;
   isScreenShareSupported: boolean;
+  isScreenShareBlocked: boolean;
   screenShareState: ScreenShareState;
   onToggleScreenShare: () => Promise<void>;
   className?: string;
@@ -41,6 +42,7 @@ export function RoomCenterControls({
   onToggleAudio,
   isScreenSharing,
   isScreenShareSupported,
+  isScreenShareBlocked,
   screenShareState,
   onToggleScreenShare,
   className,
@@ -48,8 +50,13 @@ export function RoomCenterControls({
   const videoDisplay = getCaptureStateDisplay(videoCaptureState, "video");
   const audioDisplay = getCaptureStateDisplay(audioCaptureState, "audio");
 
-  const screenShareTooltip = isScreenSharing ? "Stop screen share" : "Share screen";
+  const screenShareTooltip = isScreenSharing
+    ? "Stop screen share"
+    : isScreenShareBlocked
+      ? "Another participant is sharing their screen"
+      : "Share screen";
   const isScreenShareLoading = screenShareState === "starting";
+  const isScreenShareDisabled = isScreenShareLoading || (isScreenShareBlocked && !isScreenSharing);
 
   return (
     <div className={cn("flex gap-2", className)}>
@@ -119,7 +126,7 @@ export function RoomCenterControls({
                 className="relative"
                 size="icon"
                 onClick={() => void onToggleScreenShare()}
-                disabled={isScreenShareLoading}
+                disabled={isScreenShareDisabled}
                 aria-label={screenShareTooltip}
                 aria-pressed={isScreenSharing}
               />

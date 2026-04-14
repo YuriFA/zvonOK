@@ -13,7 +13,7 @@ interface UseRemoteAudioReturn {
 }
 
 function getAudioTrack(peer: RemotePeerMedia): MediaStreamTrack | null {
-  const tracks = peer.stream.getAudioTracks();
+  const tracks = peer.audioStream.getAudioTracks();
   return tracks[0] ?? null;
 }
 

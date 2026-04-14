@@ -1,32 +1,44 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-import { useCaptureTrackProvider } from "@/features/media/contexts/media-manager.context";
 import { useSfuManager } from "@/features/sfu/contexts/sfu-manager.context";
+import { SfuProduceError } from "@/lib/sfu/types";
 
-export type ScreenShareError = "cancelled" | "denied" | "unsupported";
+export type ScreenShareError = "cancelled" | "denied" | "unsupported" | "blocked";
 
 export type ScreenShareState = "idle" | "starting" | "sharing";
 
 export interface UseScreenShareResult {
   isSharing: boolean;
-  /** Resolves normally on success. Throws `ScreenShareError` string on failure. */
+  screenStream: MediaStream | null;
+  isScreenShareBlocked: boolean;
   startScreenShare: () => Promise<void>;
   stopScreenShare: () => Promise<void>;
 }
 
 export function useScreenShare(): UseScreenShareResult {
   const sfuManager = useSfuManager();
-  const videoTrackProvider = useCaptureTrackProvider("video");
   const [isSharing, setIsSharing] = useState(false);
+  const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
+  const [isScreenShareBlocked, setIsScreenShareBlocked] = useState(false);
+
+  // Keep isScreenShareBlocked in sync with SfuManager state changes.
+  useEffect(() => {
+    const unsubscribe = sfuManager.onStateChange((state) => {
+      setIsScreenShareBlocked(state.isScreenShareBlocked);
+    });
+    return unsubscribe;
+  }, [sfuManager]);
 
   const stopScreenShare = useCallback(async () => {
-    const cameraTrack = videoTrackProvider.getTrack();
-    const success = await sfuManager.replaceTrack("video", cameraTrack ?? null);
-    if (!success) {
-      throw "denied" satisfies ScreenShareError;
-    }
+    sfuManager.closeScreenProducer();
+    setScreenStream((current) => {
+      for (const track of current?.getTracks() ?? []) {
+        track.stop();
+      }
+      return null;
+    });
     setIsSharing(false);
-  }, [sfuManager, videoTrackProvider]);
+  }, [sfuManager]);
 
   const startScreenShare = useCallback(async () => {
     let stream: MediaStream;
@@ -41,11 +53,8 @@ export function useScreenShare(): UseScreenShareResult {
         if (error.name === "NotSupportedError") {
           throw "unsupported" satisfies ScreenShareError;
         }
-        // NotAllowedError covers both user-cancel and permission-denied.
-        // We surface it as "denied" so callers can show appropriate UI.
         throw "denied" satisfies ScreenShareError;
       }
-      // Unknown errors — surface as denied to avoid silent failures
       throw "denied" satisfies ScreenShareError;
     }
 
@@ -54,17 +63,27 @@ export function useScreenShare(): UseScreenShareResult {
       return;
     }
 
-    const success = await sfuManager.replaceTrack("video", screenTrack);
-    if (!success) {
+    let producer: Awaited<ReturnType<typeof sfuManager.produceScreen>>;
+    try {
+      producer = await sfuManager.produceScreen(screenTrack);
+    } catch (error) {
+      screenTrack.stop();
+      if (error instanceof SfuProduceError && error.code === "SCREEN_SHARE_ALREADY_ACTIVE") {
+        throw "blocked" satisfies ScreenShareError;
+      }
+      throw "denied" satisfies ScreenShareError;
+    }
+
+    if (!producer) {
       screenTrack.stop();
       throw "denied" satisfies ScreenShareError;
     }
 
     setIsSharing(true);
+    setScreenStream(stream);
 
-    // Auto-stop when the user clicks the browser's built-in "Stop sharing" button
     screenTrack.addEventListener("ended", () => void stopScreenShare(), { once: true });
   }, [sfuManager, stopScreenShare]);
 
-  return { isSharing, startScreenShare, stopScreenShare };
+  return { isSharing, screenStream, isScreenShareBlocked, startScreenShare, stopScreenShare };
 }

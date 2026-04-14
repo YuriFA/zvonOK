@@ -20,6 +20,8 @@ import type {
   PeerQualityStats,
   SfuProducerStateCallback,
   SimulcastSpatialLayer,
+  SfuProduceErrorCode,
+  SfuScreenShareStoppedCallback,
 } from "./types";
 
 /**
@@ -61,6 +63,10 @@ interface ISfuRoomMembership {
 interface ISfuProducerManager {
   /** Produce a local track */
   produce(track: MediaStreamTrack): Promise<Producer | null>;
+  /** Produce a screen share track */
+  produceScreen(track: MediaStreamTrack): Promise<Producer | null>;
+  /** Close the screen share producer */
+  closeScreenProducer(): void;
   /** Pause a producer */
   pauseProducer(producerId: string): void;
   /** Resume a producer */
@@ -75,6 +81,10 @@ interface ISfuProducerManager {
   setPreferredLayers(consumerId: string, spatialLayer: SimulcastSpatialLayer): void;
   /** Get the video consumer ID for a remote peer, if one exists */
   getVideoConsumerIdForUserId(userId: string): string | undefined;
+  /** Check if screen share is blocked by another participant */
+  isScreenShareBlocked(): boolean;
+  /** Subscribe to produce errors */
+  onProduceError(callback: (code: SfuProduceErrorCode) => void): () => void;
 }
 
 /**
@@ -120,6 +130,8 @@ interface ISfuStateNotifier {
   onStateChange(callback: SfuStateCallback): () => void;
   /** Subscribe to remote track events */
   onTrack(callback: SfuTrackCallback): () => void;
+  /** Subscribe to screen share stopped events (remote peer stopped sharing) */
+  onScreenShareStopped(callback: SfuScreenShareStoppedCallback): () => void;
 }
 
 /**

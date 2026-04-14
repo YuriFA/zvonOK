@@ -15,6 +15,10 @@ import type {
   SfuKickedPayload,
   SfuRoomEndedPayload,
   SfuProducerStateChangedPayload,
+  SfuProduceErrorPayload,
+  SfuScreenShareStartedPayload,
+  SfuScreenShareStoppedPayload,
+  SfuConsumerClosedPayload,
 } from "./types";
 import type { SfuExistingPeersPayload } from "./types";
 
@@ -28,15 +32,19 @@ export interface SfuEventHandlers {
   onTransportCreated(payload: SfuTransportCreatedPayload): Promise<void>;
   onTransportConnected(payload: { transportId: string }): void;
   onProducerCreated(payload: SfuProducerCreatedPayload): void;
+  onProduceError(payload: SfuProduceErrorPayload): void;
   onPeerJoined(payload: SfuPeerJoinedPayload): void;
   onExistingPeers(payload: SfuExistingPeersPayload[]): void;
   onNewProducer(payload: SfuNewProducerPayload): void;
   onConsumerCreated(payload: SfuConsumerCreatedPayload): Promise<void>;
+  onConsumerClosed(payload: SfuConsumerClosedPayload): void;
   onProducerStateChanged(payload: SfuProducerStateChangedPayload): void;
   onPeerLeft(payload: { userId: string }): void;
   onKicked(payload: SfuKickedPayload): void;
   onRoomEnded(payload: SfuRoomEndedPayload): void;
   onReconnectFailed(): void;
+  onScreenShareStarted(payload: SfuScreenShareStartedPayload): void;
+  onScreenShareStopped(payload: SfuScreenShareStoppedPayload): void;
 }
 
 /** A registered socket listener that can be selectively removed. */
@@ -81,6 +89,9 @@ export class SfuEventRouter {
     register("sfu:producer-created", (payload: unknown) =>
       this.handlers.onProducerCreated(payload as SfuProducerCreatedPayload),
     );
+    register("sfu:produce-error", (payload: unknown) =>
+      this.handlers.onProduceError(payload as SfuProduceErrorPayload),
+    );
     register("sfu:peer-joined", (payload: unknown) =>
       this.handlers.onPeerJoined(payload as SfuPeerJoinedPayload),
     );
@@ -93,6 +104,9 @@ export class SfuEventRouter {
     register("sfu:consumer-created", (payload: unknown) =>
       this.handlers.onConsumerCreated(payload as SfuConsumerCreatedPayload),
     );
+    register("sfu:consumer-closed", (payload: unknown) =>
+      this.handlers.onConsumerClosed(payload as SfuConsumerClosedPayload),
+    );
     register("sfu:producer-state-changed", (payload: unknown) =>
       this.handlers.onProducerStateChanged(payload as SfuProducerStateChangedPayload),
     );
@@ -104,6 +118,12 @@ export class SfuEventRouter {
     );
     register("sfu:room-ended", (payload: unknown) =>
       this.handlers.onRoomEnded(payload as SfuRoomEndedPayload),
+    );
+    register("sfu:screen-share-started", (payload: unknown) =>
+      this.handlers.onScreenShareStarted(payload as SfuScreenShareStartedPayload),
+    );
+    register("sfu:screen-share-stopped", (payload: unknown) =>
+      this.handlers.onScreenShareStopped(payload as SfuScreenShareStoppedPayload),
     );
     register("reconnect_failed", () => this.handlers.onReconnectFailed());
   }

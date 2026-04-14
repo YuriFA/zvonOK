@@ -18,15 +18,19 @@ describe("SfuEventRouter", () => {
       onTransportCreated: vi.fn().mockResolvedValue(undefined),
       onTransportConnected: vi.fn(),
       onProducerCreated: vi.fn(),
+      onProduceError: vi.fn(),
       onPeerJoined: vi.fn(),
       onExistingPeers: vi.fn(),
       onNewProducer: vi.fn(),
       onConsumerCreated: vi.fn().mockResolvedValue(undefined),
+      onConsumerClosed: vi.fn(),
       onProducerStateChanged: vi.fn(),
       onPeerLeft: vi.fn(),
       onKicked: vi.fn(),
       onRoomEnded: vi.fn(),
       onReconnectFailed: vi.fn(),
+      onScreenShareStarted: vi.fn(),
+      onScreenShareStopped: vi.fn(),
     };
 
     socket = {
@@ -60,12 +64,16 @@ describe("SfuEventRouter", () => {
     expect(events).toContain("sfu:existing-peers");
     expect(events).toContain("sfu:new-producer");
     expect(events).toContain("sfu:consumer-created");
+    expect(events).toContain("sfu:consumer-closed");
     expect(events).toContain("sfu:peer-left");
     expect(events).toContain("sfu:producer-state-changed");
     expect(events).toContain("sfu:kicked");
     expect(events).toContain("sfu:room-ended");
     expect(events).toContain("reconnect_failed");
-    expect(events).toHaveLength(15);
+    expect(events).toContain("sfu:produce-error");
+    expect(events).toContain("sfu:screen-share-started");
+    expect(events).toContain("sfu:screen-share-stopped");
+    expect(events).toHaveLength(19);
   });
 
   it("routes connect event to onConnected", () => {

@@ -6,6 +6,7 @@ import { ParticipantsList } from "@/components/room/participants-list";
 import { VideoGrid } from "@/components/video-grid";
 import { RoomCenterControls } from "@/features/room/components/room-center-controls";
 import { RoomVideo } from "@/features/room/components/room-video";
+import { ScreenShareSpotlight } from "@/features/room/components/screen-share-spotlight";
 import type { UseRoomSessionResult } from "@/features/room/hooks/use-room-session";
 import type { Room } from "@/features/room/types/room.types";
 import type { ScreenShareError, ScreenShareState } from "@/hooks/use-screen-share";
@@ -15,7 +16,12 @@ import { cn } from "@/lib/utils";
 import { RoomRemoteAudio } from "./room-remote-audio";
 import { RoomRightControls } from "./room-right-controls";
 
-
+interface ActiveScreenShare {
+  userId: string;
+  sharerName: string;
+  stream: MediaStream;
+  isLocal: boolean;
+}
 
 interface ActiveRoomViewProps {
   session: UseRoomSessionResult;
@@ -44,14 +50,51 @@ export function ActiveRoomView({
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
+  const { isSharing, screenStream, isScreenShareBlocked, startScreenShare, stopScreenShare } =
+    useScreenShare();
+  const [screenShareState, setScreenShareState] = useState<ScreenShareState>("idle");
+
+  const isScreenShareSupported =
+    typeof navigator !== "undefined" &&
+    typeof navigator.mediaDevices?.getDisplayMedia === "function";
+
+  // Derive the active screen share: local takes priority, then first remote sharer
+  const activeScreenShare = useMemo((): ActiveScreenShare | null => {
+    if (isSharing && screenStream) {
+      return {
+        userId: localUserId,
+        sharerName: currentUsername ?? "You",
+        stream: screenStream,
+        isLocal: true,
+      };
+    }
+
+    const remotePeer = remotePeers.find(
+      (peer) => peer.isScreenSharing && peer.screenStream !== null,
+    );
+    if (remotePeer?.screenStream) {
+      return {
+        userId: remotePeer.userId,
+        sharerName: remotePeer.username,
+        stream: remotePeer.screenStream,
+        isLocal: false,
+      };
+    }
+
+    return null;
+  }, [isSharing, screenStream, localUserId, currentUsername, remotePeers]);
+
+  const isSpotlightMode = activeScreenShare !== null;
+
   const layout = useMemo(
     () =>
       computeLayout({
         containerWidth: dimensions.width,
         containerHeight: dimensions.height,
         participantCount: remotePeers.length + 1,
+        spotlight: isSpotlightMode,
       }),
-    [dimensions.height, dimensions.width, remotePeers.length],
+    [dimensions.height, dimensions.width, remotePeers.length, isSpotlightMode],
   );
 
   useEffect(() => {
@@ -74,7 +117,6 @@ export function ActiveRoomView({
 
     observer.observe(element);
 
-    // Get initial dimensions
     setDimensions({
       width: element.clientWidth,
       height: element.clientHeight,
@@ -95,13 +137,6 @@ export function ActiveRoomView({
 
   const [isParticipantsVisible, setIsParticipantsVisible] = useState(false);
 
-  const { isSharing, startScreenShare, stopScreenShare } = useScreenShare();
-  const [screenShareState, setScreenShareState] = useState<ScreenShareState>("idle");
-
-  const isScreenShareSupported =
-    typeof navigator !== "undefined" &&
-    typeof navigator.mediaDevices?.getDisplayMedia === "function";
-
   const handleToggleScreenShare = useCallback(async () => {
     if (isSharing) {
       await stopScreenShare();
@@ -117,11 +152,12 @@ export function ActiveRoomView({
       const kind = error as ScreenShareError;
       setScreenShareState("idle");
       if (kind === "unsupported") {
-        // Button will be hidden — no toast needed
         return;
       }
-      // "denied" covers both user cancellation and permission denial.
-      // Show a dismissible toast so the user knows what happened.
+      if (kind === "blocked") {
+        toast.error("Another participant is already sharing");
+        return;
+      }
       toast.error("Screen share was not started");
     }
   }, [isSharing, startScreenShare, stopScreenShare]);
@@ -133,21 +169,41 @@ export function ActiveRoomView({
     }
   }, [isSharing, screenShareState]);
 
+  const hasValidDimensions = dimensions.width > 0 && dimensions.height > 0;
+
   return (
     <main className="flex flex-1 flex-col overflow-hidden">
       <div className="flex min-h-0 flex-1 p-4">
         <VideoGrid ref={containerRef}>
-          {dimensions.width > 0 && dimensions.height > 0 && (
+          {hasValidDimensions && (
             <>
+              {/* Screen share spotlight — rendered only in spotlight mode */}
+              {isSpotlightMode && layout.spotlightArea && (
+                <ScreenShareSpotlight
+                  key={activeScreenShare.userId}
+                  stream={activeScreenShare.stream}
+                  sharerName={activeScreenShare.sharerName}
+                  isLocal={activeScreenShare.isLocal}
+                  style={{
+                    position: "absolute",
+                    top: layout.spotlightArea.y,
+                    left: layout.spotlightArea.x,
+                    width: layout.spotlightArea.width,
+                    height: layout.spotlightArea.height,
+                  }}
+                />
+              )}
+
+              {/* Local participant tile */}
               <RoomVideo
                 userId={localUserId}
                 style={{
                   position: "absolute",
                   top: 0,
                   left: 0,
-                  width: layout.tileWidth,
-                  height: layout.tileHeight,
-                  transform: `translateX(${layout.tiles[0].x}px) translateY(${layout.tiles[0].y}px)`,
+                  width: layout.tiles[0]?.width ?? 0,
+                  height: layout.tiles[0]?.height ?? 0,
+                  transform: `translateX(${layout.tiles[0]?.x ?? 0}px) translateY(${layout.tiles[0]?.y ?? 0}px)`,
                 }}
                 stream={localVideoStream}
                 username={currentUsername}
@@ -155,25 +211,25 @@ export function ActiveRoomView({
                 isAudioEnabled={mediaControls.isAudioEnabled}
               />
 
-              {remotePeers.length > 0 &&
-                remotePeers.map((peer, index) => (
-                  <RoomVideo
-                    key={peer.userId}
-                    userId={peer.userId}
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: layout.tileWidth,
-                      height: layout.tileHeight,
-                      transform: `translateX(${layout.tiles[index + 1].x}px) translateY(${layout.tiles[index + 1].y}px)`,
-                    }}
-                    stream={peer.stream}
-                    username={peer.username}
-                    isVideoEnabled={peer.isVideoEnabled}
-                    isAudioEnabled={peer.isAudioEnabled}
-                  />
-                ))}
+              {/* Remote participant tiles */}
+              {remotePeers.map((peer, index) => (
+                <RoomVideo
+                  key={peer.userId}
+                  userId={peer.userId}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: layout.tiles[index + 1]?.width ?? 0,
+                    height: layout.tiles[index + 1]?.height ?? 0,
+                    transform: `translateX(${layout.tiles[index + 1]?.x ?? 0}px) translateY(${layout.tiles[index + 1]?.y ?? 0}px)`,
+                  }}
+                  stream={peer.cameraStream}
+                  username={peer.username}
+                  isVideoEnabled={peer.isCameraEnabled}
+                  isAudioEnabled={peer.isAudioEnabled}
+                />
+              ))}
             </>
           )}
         </VideoGrid>
@@ -207,6 +263,7 @@ export function ActiveRoomView({
           onToggleAudio={handleToggleAudio}
           isScreenSharing={isSharing}
           isScreenShareSupported={isScreenShareSupported}
+          isScreenShareBlocked={isScreenShareBlocked}
           screenShareState={screenShareState}
           onToggleScreenShare={handleToggleScreenShare}
         />

@@ -40,7 +40,13 @@ import type {
   SfuPeerCallback,
   SfuProducerStateCallback,
   SimulcastSpatialLayer,
+  SfuProduceErrorCode,
+  SfuMediaSource,
+  SfuConsumerClosedPayload,
+  SfuScreenShareStoppedPayload,
+  SfuScreenShareStoppedCallback,
 } from "./types";
+import { SfuProduceError } from "./types";
 
 /**
  * Simulcast encoding layers sent to the SFU for video producers.
@@ -69,6 +75,11 @@ export class SfuManager implements ISfuManager {
   private peers = new Map<string, SfuPeerInfo>();
   private pendingNewProducers: SfuNewProducerPayload[] = [];
   private producingInProgress = new Map<string, Promise<Producer | null>>();
+  private pendingProduceRequests = new Map<
+    string,
+    { resolve: (id: string) => void; reject: (error: Error) => void; source: SfuMediaSource }
+  >();
+  private localUserId: string | null = null;
 
   // State and callbacks
   private state: SfuState = {
@@ -79,6 +90,8 @@ export class SfuManager implements ISfuManager {
     recvTransportConnected: false,
     audioProducerId: null,
     videoProducerId: null,
+    screenProducerId: null,
+    isScreenShareBlocked: false,
   };
   private stateCallbacks = new Set<SfuStateCallback>();
   private trackCallbacks = new Set<SfuTrackCallback>();
@@ -87,6 +100,8 @@ export class SfuManager implements ISfuManager {
   private kickedCallbacks = new Set<(payload: SfuKickedPayload) => void>();
   private roomEndedCallbacks = new Set<(payload: SfuRoomEndedPayload) => void>();
   private producerStateCallbacks = new Set<SfuProducerStateCallback>();
+  private produceErrorCallbacks = new Set<(code: SfuProduceErrorCode) => void>();
+  private screenShareStoppedCallbacks = new Set<SfuScreenShareStoppedCallback>();
 
   // Event router
   private eventRouter = new SfuEventRouter(
@@ -111,14 +126,18 @@ export class SfuManager implements ISfuManager {
       onTransportCreated: (p) => this.handleTransportCreated(p),
       onTransportConnected: (p) => this.handleTransportConnected(p),
       onProducerCreated: (p) => this.handleProducerCreated(p),
+      onProduceError: (p) => this.handleProduceError(p),
       onPeerJoined: (p) => this.handlePeerJoined(p),
       onExistingPeers: (p) => this.handleExistingPeers(p),
       onNewProducer: (p) => this.handleNewProducer(p),
       onConsumerCreated: (p) => this.handleConsumerCreated(p),
+      onConsumerClosed: (p) => this.handleConsumerClosed(p),
       onProducerStateChanged: (p) => this.handleProducerStateChanged(p),
       onPeerLeft: (p) => this.handlePeerLeft(p),
       onKicked: (p) => this.handleKicked(p),
       onRoomEnded: (p) => this.handleRoomEnded(p),
+      onScreenShareStarted: (p) => this.handleScreenShareStarted(p),
+      onScreenShareStopped: (p) => this.handleScreenShareStopped(p),
     };
   }
 
@@ -158,6 +177,7 @@ export class SfuManager implements ISfuManager {
     if (!socket) {
       throw new Error("Socket not connected");
     }
+    this.localUserId = payload.userId;
     socket.emit("sfu:join", payload);
   }
 
@@ -188,52 +208,75 @@ export class SfuManager implements ISfuManager {
 
   // ISfuProducerManager
   async produce(track: MediaStreamTrack): Promise<Producer | null> {
+    return this.produceWithSource(track, track.kind === "video" ? "camera" : undefined);
+  }
+
+  async produceScreen(track: MediaStreamTrack): Promise<Producer | null> {
+    return this.produceWithSource(track, "screen");
+  }
+
+  private async produceWithSource(
+    track: MediaStreamTrack,
+    source?: SfuMediaSource,
+  ): Promise<Producer | null> {
     if (!this.sendTransport) {
       console.error("[SFU] Send transport not ready");
       return null;
     }
 
-    const kind = track.kind;
+    const kind = track.kind as "audio" | "video";
+    const dedupeKey = source === "screen" ? "screen" : kind;
 
-    // Guard: if a producer for this kind already exists, skip
-    if (this.getProducerByKind(kind as "audio" | "video")) {
-      console.warn("[SFU] Producer already exists for kind:", kind);
-      return this.getProducerByKind(kind as "audio" | "video") ?? null;
+    if (source !== "screen") {
+      const existing = this.getProducerByKind(kind);
+      if (existing) {
+        console.warn("[SFU] Producer already exists for kind:", kind);
+        return existing;
+      }
+    } else {
+      const existing = this.getScreenProducer();
+      if (existing) {
+        console.warn("[SFU] Screen producer already exists");
+        return existing;
+      }
     }
 
-    // Guard: if a produce call for this kind is already in-flight, return
-    // the pending promise to deduplicate concurrent callers
-    const pending = this.producingInProgress.get(kind);
+    const pending = this.producingInProgress.get(dedupeKey);
     if (pending) {
-      console.warn("[SFU] Produce already in-flight for kind:", kind);
+      console.warn("[SFU] Produce already in-flight for:", dedupeKey);
       return pending;
     }
 
-    const producePromise = this.doProduceTrack(track);
-    this.producingInProgress.set(kind, producePromise);
+    const producePromise = this.doProduceTrack(track, source);
+    this.producingInProgress.set(dedupeKey, producePromise);
 
     try {
       return await producePromise;
     } finally {
-      this.producingInProgress.delete(kind);
+      this.producingInProgress.delete(dedupeKey);
     }
   }
 
-  private async doProduceTrack(track: MediaStreamTrack): Promise<Producer | null> {
+  private async doProduceTrack(
+    track: MediaStreamTrack,
+    source?: SfuMediaSource,
+  ): Promise<Producer | null> {
     if (!this.sendTransport) return null;
 
     try {
       const isVideo = track.kind === "video";
+      const isScreen = source === "screen";
       const producer = await this.sendTransport.produce({
         track,
-        encodings: isVideo ? SIMULCAST_ENCODINGS : undefined,
+        encodings: isVideo && !isScreen ? SIMULCAST_ENCODINGS : undefined,
         codecOptions: isVideo
           ? { videoGoogleStartBitrate: 1000 }
           : { opusStereo: true, opusFec: true },
+        appData: { source: source ?? (isVideo ? "camera" : undefined) },
       });
 
       this.producers.set(producer.id, producer);
-      console.log("[SFU] Produced track:", track.kind, producer.id);
+      console.log("[SFU] Produced track:", track.kind, producer.id, source ?? "");
 
       producer.on("transportclose", () => {
         this.producers.delete(producer.id);
@@ -242,8 +285,44 @@ export class SfuManager implements ISfuManager {
       return producer;
     } catch (error) {
       console.error("[SFU] Failed to produce track:", error);
+      // Re-throw structured produce errors so callers can inspect the code.
+      // For all other errors, return null to preserve existing behaviour.
+      if (error instanceof SfuProduceError) {
+        throw error;
+      }
       return null;
     }
+  }
+
+  closeScreenProducer(): void {
+    const producer = this.getScreenProducer();
+    if (!producer) return;
+
+    producer.close();
+    this.producers.delete(producer.id);
+    this.connection.getSocket()?.emit("sfu:close-producer", { producerId: producer.id });
+    this.updateState({ screenProducerId: null });
+  }
+
+  isScreenShareBlocked(): boolean {
+    return this.state.isScreenShareBlocked;
+  }
+
+  onProduceError(callback: (code: SfuProduceErrorCode) => void): () => void {
+    this.produceErrorCallbacks.add(callback);
+    return () => this.produceErrorCallbacks.delete(callback);
+  }
+
+  private getScreenProducer(): Producer | undefined {
+    for (const producer of this.producers.values()) {
+      if (
+        producer.kind === "video" &&
+        (producer.appData as Record<string, unknown> | undefined)?.source === "screen"
+      ) {
+        return producer;
+      }
+    }
+    return undefined;
   }
 
   pauseProducer(producerId: string): void {
@@ -292,9 +371,14 @@ export class SfuManager implements ISfuManager {
 
   getProducerByKind(kind: "audio" | "video"): Producer | undefined {
     for (const producer of this.producers.values()) {
-      if (producer.kind === kind) {
-        return producer;
+      if (producer.kind !== kind) continue;
+      if (
+        kind === "video" &&
+        (producer.appData as Record<string, unknown> | undefined)?.source === "screen"
+      ) {
+        continue;
       }
+      return producer;
     }
     return undefined;
   }
@@ -308,17 +392,21 @@ export class SfuManager implements ISfuManager {
   }
 
   /**
-   * Look up the consumer ID for the video stream of a given remote peer.
-   * Returns undefined if no video consumer exists for that peer.
+   * Look up the consumer ID for the camera video stream of a given remote peer.
+   * Returns undefined if no camera video consumer exists for that peer.
+   * Skips screen-share consumers even if they are video kind.
    */
   getVideoConsumerIdForUserId(userId: string): string | undefined {
     const peer = this.peers.get(userId);
     if (!peer) return undefined;
 
     for (const [consumerId, consumer] of this.consumers) {
-      if (consumer.kind === "video" && peer.producers.has(consumer.producerId)) {
-        return consumerId;
-      }
+      if (consumer.kind !== "video") continue;
+      const producerInfo = peer.producers.get(consumer.producerId);
+      if (!producerInfo) continue;
+      // Only return camera consumers, not screen-share consumers.
+      if (producerInfo.source === "screen") continue;
+      return consumerId;
     }
     return undefined;
   }
@@ -356,6 +444,11 @@ export class SfuManager implements ISfuManager {
   onTrack(callback: SfuTrackCallback): () => void {
     this.trackCallbacks.add(callback);
     return () => this.trackCallbacks.delete(callback);
+  }
+
+  onScreenShareStopped(callback: SfuScreenShareStoppedCallback): () => void {
+    this.screenShareStoppedCallbacks.add(callback);
+    return () => this.screenShareStoppedCallbacks.delete(callback);
   }
 
   onProducerStateChange(callback: SfuProducerStateCallback): () => void {
@@ -460,7 +553,11 @@ export class SfuManager implements ISfuManager {
       this.sendTransport.on(
         "produce",
         async (
-          { kind, rtpParameters }: { kind: MediaKind; rtpParameters: RtpParameters },
+          {
+            kind,
+            rtpParameters,
+            appData,
+          }: { kind: MediaKind; rtpParameters: RtpParameters; appData?: Record<string, unknown> },
           callback: ({ id }: { id: string }) => void,
           errback: (error: Error) => void,
         ) => {
@@ -470,19 +567,29 @@ export class SfuManager implements ISfuManager {
               throw new Error("Send transport not ready");
             }
 
+            const requestId = crypto.randomUUID();
+            const source = appData?.source as SfuMediaSource | undefined;
+
+            const promise = new Promise<string>((resolve, reject) => {
+              this.pendingProduceRequests.set(requestId, {
+                resolve,
+                reject,
+                source: source ?? "camera",
+              });
+            });
+
             this.connection.getSocket()?.emit("sfu:produce", {
+              requestId,
               transportId: sendTransport.id,
               kind,
               rtpParameters,
+              appData: appData
+                ? { source: appData.source as SfuMediaSource | undefined }
+                : undefined,
             });
 
-            const handler = (response: SfuProducerCreatedPayload) => {
-              if (response.kind === kind) {
-                this.connection.getSocket()?.off("sfu:producer-created", handler);
-                callback({ id: response.producerId });
-              }
-            };
-            this.connection.getSocket()?.on("sfu:producer-created", handler);
+            const producerId = await promise;
+            callback({ id: producerId });
           } catch (error) {
             errback(error as Error);
           }
@@ -536,11 +643,41 @@ export class SfuManager implements ISfuManager {
   }
 
   private handleProducerCreated(payload: SfuProducerCreatedPayload): void {
-    console.log("[SFU] Producer created:", payload.kind, payload.producerId);
-    if (payload.kind === "audio") {
-      this.updateState({ audioProducerId: payload.producerId });
+    const { requestId, producerId, kind, appData } = payload;
+    const source = appData?.source;
+
+    console.log("[SFU] Producer created:", kind, producerId, source ?? "");
+
+    const pending = this.pendingProduceRequests.get(requestId);
+    if (pending) {
+      pending.resolve(producerId);
+      this.pendingProduceRequests.delete(requestId);
+    }
+
+    if (kind === "audio") {
+      this.updateState({ audioProducerId: producerId });
+    } else if (source === "screen") {
+      this.updateState({ screenProducerId: producerId });
     } else {
-      this.updateState({ videoProducerId: payload.producerId });
+      this.updateState({ videoProducerId: producerId });
+    }
+  }
+
+  private handleProduceError(payload: {
+    requestId: string;
+    code: SfuProduceErrorCode;
+    message: string;
+  }): void {
+    console.error("[SFU] Produce error:", payload.code, payload.message);
+
+    const pending = this.pendingProduceRequests.get(payload.requestId);
+    if (pending) {
+      this.pendingProduceRequests.delete(payload.requestId);
+      pending.reject(new SfuProduceError(payload.code, payload.message));
+    }
+
+    for (const cb of this.produceErrorCallbacks) {
+      cb(payload.code);
     }
   }
 
@@ -588,6 +725,10 @@ export class SfuManager implements ISfuManager {
 
   private handleNewProducer(payload: SfuNewProducerPayload): void {
     console.log("[SFU] New producer:", payload.userId, payload.kind);
+    // A screen-share producer from another peer means the room is blocked for us.
+    if (payload.appData?.source === "screen" && payload.userId !== this.localUserId) {
+      this.updateState({ isScreenShareBlocked: true });
+    }
     void this.consumeProducer(payload);
   }
 
@@ -616,17 +757,20 @@ export class SfuManager implements ISfuManager {
 
       // Find the peer userId for this consumer
       let userId = "";
+      let source: SfuMediaSource | undefined;
       for (const [uid, peer] of this.peers) {
-        if (peer.producers.has(payload.producerId)) {
+        const producerInfo = peer.producers.get(payload.producerId);
+        if (producerInfo) {
           userId = uid;
+          source = producerInfo.source;
           break;
         }
       }
 
       // Notify track callback
-      this.trackCallbacks.forEach((callback) => {
-        callback(consumer.track, payload.kind, userId);
-      });
+      for (const callback of this.trackCallbacks) {
+        callback(consumer.track, payload.kind, userId, source);
+      }
 
       const producerInfo = this.peers.get(userId)?.producers.get(payload.producerId);
       if (producerInfo?.paused) {
@@ -694,11 +838,38 @@ export class SfuManager implements ISfuManager {
 
   private handleRoomEnded(payload: SfuRoomEndedPayload): void {
     console.log("[SFU] Room ended:", payload.roomId);
-    this.roomEndedCallbacks.forEach((callback) => {
+    for (const callback of this.roomEndedCallbacks) {
       callback(payload);
-    });
+    }
     this.closeAll();
     this.updateState({ connectionState: "disconnected" });
+  }
+
+  private handleScreenShareStarted(payload: { userId: string }): void {
+    console.log("[SFU] Screen share started:", payload.userId);
+    if (payload.userId !== this.localUserId) {
+      this.updateState({ isScreenShareBlocked: true });
+    }
+  }
+
+  private handleScreenShareStopped(payload: SfuScreenShareStoppedPayload): void {
+    console.log("[SFU] Screen share stopped:", payload.userId);
+    if (payload.userId !== this.localUserId) {
+      this.updateState({ isScreenShareBlocked: false });
+      // Notify subscribers so they can clear the remote peer's screen state
+      // immediately, without waiting for track.onended.
+      for (const cb of this.screenShareStoppedCallbacks) {
+        cb(payload);
+      }
+    }
+  }
+
+  private handleConsumerClosed(payload: SfuConsumerClosedPayload): void {
+    console.log("[SFU] Consumer closed by server:", payload.consumerId);
+    const consumer = this.consumers.get(payload.consumerId);
+    if (!consumer) return;
+    consumer.close();
+    this.consumers.delete(payload.consumerId);
   }
 
   // Private helpers
@@ -745,7 +916,11 @@ export class SfuManager implements ISfuManager {
         callback(peer!);
       });
     }
-    peer.producers.set(payload.producerId, { kind: payload.kind, paused: payload.paused });
+    peer.producers.set(payload.producerId, {
+      kind: payload.kind,
+      paused: payload.paused,
+      source: payload.appData?.source,
+    });
 
     // Request to consume
     this.connection.getSocket()!.emit("sfu:consume", {
@@ -773,6 +948,10 @@ export class SfuManager implements ISfuManager {
     this.producers.clear();
     this.consumers.clear();
     this.producingInProgress.clear();
+    for (const pending of this.pendingProduceRequests.values()) {
+      pending.reject(new Error("Transport closed"));
+    }
+    this.pendingProduceRequests.clear();
     this.sendTransport?.close();
     this.recvTransport?.close();
     this.sendTransport = null;
@@ -783,6 +962,8 @@ export class SfuManager implements ISfuManager {
       recvTransportConnected: false,
       audioProducerId: null,
       videoProducerId: null,
+      screenProducerId: null,
+      isScreenShareBlocked: false,
     });
   }
 
@@ -793,8 +974,13 @@ export class SfuManager implements ISfuManager {
     this.producers.clear();
     this.consumers.clear();
     this.producingInProgress.clear();
+    for (const pending of this.pendingProduceRequests.values()) {
+      pending.reject(new Error("Disconnected"));
+    }
+    this.pendingProduceRequests.clear();
     this.peers.clear();
     this.pendingNewProducers = [];
+    this.localUserId = null;
     this.state = {
       connectionState: "disconnected",
       isDeviceLoaded: false,
@@ -803,6 +989,8 @@ export class SfuManager implements ISfuManager {
       recvTransportConnected: false,
       audioProducerId: null,
       videoProducerId: null,
+      screenProducerId: null,
+      isScreenShareBlocked: false,
     };
     this.notifyStateChange();
   }

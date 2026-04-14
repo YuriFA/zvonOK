@@ -316,10 +316,13 @@ HTTP 200 OK
 | `sfu:transport-created` | Server → Client | `{ direction, transportId, iceParameters, iceCandidates, dtlsParameters, iceServers }` | Transport parameters ready for the client |
 | `sfu:connect-transport` | Client → Server | `{ transportId, dtlsParameters }` | Complete DTLS handshake for a transport |
 | `sfu:transport-connected` | Server → Client | `{ transportId }` | Transport handshake completed |
-| `sfu:produce` | Client → Server | `{ transportId, kind, rtpParameters }` | Create producer |
-| `sfu:producer-created` | Server → Client | `{ producerId, userId, kind }` | New producer |
-| `sfu:new-producer` | Server → Client | `{ producerId, userId, username, kind, paused }` | Notify peers that a consumable producer is available |
+| `sfu:produce` | Client → Server | `{ requestId, transportId, kind, rtpParameters, appData? }` | Create producer |
+| `sfu:producer-created` | Server → Client | `{ requestId, producerId, userId, kind, appData? }` | New producer |
+| `sfu:produce-error` | Server → Client | `{ requestId, code, message }` | Producer creation failed or rejected |
+| `sfu:new-producer` | Server → Client | `{ producerId, userId, username, kind, paused, appData? }` | Notify peers about a consumable producer |
 | `sfu:close-producer` | Client → Server | `{ producerId }` | Close and dispose a producer |
+| `sfu:screen-share-started` | Server → Room | `{ userId }` | A participant started screen sharing |
+| `sfu:screen-share-stopped` | Server → Room | `{ userId }` | Screen sharing stopped |
 | `sfu:producer-state-changed` | Server → Client | `{ producerId, kind, userId, paused }` | Broadcast when a producer is paused/resumed |
 | `sfu:consume` | Client → Server | `{ producerId, rtpCapabilities }` | Create consumer |
 | `sfu:consumer-created` | Server → Client | `{ consumerId, producerId, kind, rtpParameters }` | Consumer created in paused state |

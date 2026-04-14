@@ -1,6 +1,6 @@
 # TASK-106 — Screen Share as Separate SFU Producer
 
-> **Status:** planned
+> **Status:** in-progress
 > **Priority:** high
 > **Created:** 2026-04-10
 

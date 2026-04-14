@@ -52,6 +52,24 @@ Selective Forwarding Unit for scalable group video calls using mediasoup. Routes
 - Broadcasts `sfu:room-ended` to all peers
 - Closes all transports and Router
 
+### 10. Screen Share
+- A peer may have at most one `video` producer with `appData.source: 'screen'`
+- A room may have at most one active `source: 'screen'` producer across all peers
+- Server tracks active screen sharer per room (`roomScreenShare: Map<roomId, socketId>`)
+- If a second peer attempts screen share while one is active, server emits `sfu:produce-error` with `code: 'SCREEN_SHARE_ALREADY_ACTIVE'`
+- When screen share starts, server emits `sfu:screen-share-started` to all other room peers
+- When screen share stops (via `sfu:close-producer`, disconnect, leave, or kick), server emits `sfu:screen-share-stopped`
+- `sfu:new-producer` and `sfu:producer-created` include `appData.source` to distinguish camera vs screen
+
+#### Produce error codes
+
+| Code | Meaning |
+|------|---------|
+| `SCREEN_SHARE_ALREADY_ACTIVE` | Another participant is already sharing |
+| `SEND_TRANSPORT_NOT_READY` | Peer has no send transport |
+| `TRANSPORT_NOT_FOUND` | Specified transport ID does not match |
+| `PRODUCE_FAILED` | mediasoup producer creation failed |
+
 ---
 
 ## mediasoup Hierarchy
@@ -86,10 +104,13 @@ WorkerManager (singleton)
 | `sfu:transport-created` | Server → Client | `{ direction, transportId, iceParameters, iceCandidates, dtlsParameters, iceServers }` | Transport parameters ready |
 | `sfu:connect-transport` | Client → Server | `{ transportId, dtlsParameters }` | Complete DTLS handshake |
 | `sfu:transport-connected` | Server → Client | `{ transportId }` | Transport handshake completed |
-| `sfu:produce` | Client → Server | `{ transportId, kind, rtpParameters }` | Create producer |
-| `sfu:producer-created` | Server → Client | `{ producerId, userId, kind }` | Producer created |
-| `sfu:new-producer` | Server → Client | `{ producerId, userId, username, kind, paused }` | Notify peers about consumable producer |
+| `sfu:produce` | Client → Server | `{ requestId, transportId, kind, rtpParameters, appData? }` | Create producer |
+| `sfu:producer-created` | Server → Client | `{ requestId, producerId, userId, kind, appData? }` | Producer created |
+| `sfu:produce-error` | Server → Client | `{ requestId, code, message }` | Producer creation failed or rejected |
+| `sfu:new-producer` | Server → Client | `{ producerId, userId, username, kind, paused, appData? }` | Notify peers about consumable producer |
 | `sfu:close-producer` | Client → Server | `{ producerId }` | Close and dispose a producer |
+| `sfu:screen-share-started` | Server → Room | `{ userId }` | A participant started screen sharing |
+| `sfu:screen-share-stopped` | Server → Room | `{ userId }` | Screen sharing stopped |
 | `sfu:consume` | Client → Server | `{ producerId, rtpCapabilities }` | Create consumer |
 | `sfu:consumer-created` | Server → Client | `{ consumerId, producerId, kind, rtpParameters }` | Consumer created (paused state) |
 | `sfu:resume-consumer` | Client → Server | `{ consumerId }` | Resume a paused consumer |

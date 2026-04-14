@@ -21,8 +21,11 @@ export interface UseMediasoupOptions {
 export interface RemotePeerMedia {
   userId: string;
   username: string;
-  stream: MediaStream;
-  isVideoEnabled: boolean;
+  cameraStream: MediaStream;
+  screenStream: MediaStream | null;
+  audioStream: MediaStream;
+  isCameraEnabled: boolean;
+  isScreenSharing: boolean;
   isAudioEnabled: boolean;
 }
 
@@ -49,8 +52,11 @@ function updateRemotePeer(
   const current = next.get(userId) ?? {
     userId,
     username: "Participant",
-    stream: new MediaStream(),
-    isVideoEnabled: false,
+    cameraStream: new MediaStream(),
+    screenStream: null,
+    audioStream: new MediaStream(),
+    isCameraEnabled: false,
+    isScreenSharing: false,
     isAudioEnabled: false,
   };
 
@@ -110,19 +116,43 @@ export function useMediasoup({
       );
     });
 
-    const unsubscribeTrack = sfuManager.onTrack((track, kind, userId) => {
+    const unsubscribeTrack = sfuManager.onTrack((track, kind, userId, source) => {
       setRemotePeers((prev) =>
         updateRemotePeer(prev, userId, (current) => {
-          const stream = new MediaStream(
-            current.stream.getTracks().filter((existingTrack) => existingTrack.kind !== kind),
-          );
-          stream.addTrack(track);
+          if (kind === "video" && source === "screen") {
+            const screenStream = new MediaStream(
+              current.screenStream
+                ? current.screenStream.getTracks().filter((t) => t.id !== track.id)
+                : [],
+            );
+            screenStream.addTrack(track);
+            return {
+              ...current,
+              screenStream,
+              isScreenSharing: true,
+            };
+          }
 
+          if (kind === "video") {
+            const cameraStream = new MediaStream(
+              current.cameraStream.getTracks().filter((t) => t.kind !== "video"),
+            );
+            cameraStream.addTrack(track);
+            return {
+              ...current,
+              cameraStream,
+              isCameraEnabled: track.enabled,
+            };
+          }
+
+          const audioStream = new MediaStream(
+            current.audioStream.getTracks().filter((t) => t.kind !== "audio"),
+          );
+          audioStream.addTrack(track);
           return {
             ...current,
-            stream,
-            isVideoEnabled: kind === "video" ? track.enabled : current.isVideoEnabled,
-            isAudioEnabled: kind === "audio" ? track.enabled : current.isAudioEnabled,
+            audioStream,
+            isAudioEnabled: track.enabled,
           };
         }),
       );
@@ -132,7 +162,10 @@ export function useMediasoup({
         setRemotePeers((prev) =>
           updateRemotePeer(prev, userId, (current) => ({
             ...current,
-            isVideoEnabled: kind === "video" ? false : current.isVideoEnabled,
+            isCameraEnabled:
+              kind === "video" && source !== "screen" ? false : current.isCameraEnabled,
+            isScreenSharing:
+              kind === "video" && source === "screen" ? false : current.isScreenSharing,
             isAudioEnabled: kind === "audio" ? false : current.isAudioEnabled,
           })),
         );
@@ -143,7 +176,10 @@ export function useMediasoup({
         setRemotePeers((prev) =>
           updateRemotePeer(prev, userId, (current) => ({
             ...current,
-            isVideoEnabled: kind === "video" ? true : current.isVideoEnabled,
+            isCameraEnabled:
+              kind === "video" && source !== "screen" ? true : current.isCameraEnabled,
+            isScreenSharing:
+              kind === "video" && source === "screen" ? true : current.isScreenSharing,
             isAudioEnabled: kind === "audio" ? true : current.isAudioEnabled,
           })),
         );
@@ -158,16 +194,34 @@ export function useMediasoup({
             return prev;
           }
 
-          const stream = new MediaStream(
-            current.stream.getTracks().filter((existingTrack) => existingTrack.id !== track.id),
-          );
-
-          next.set(userId, {
-            ...current,
-            stream,
-            isVideoEnabled: kind === "video" ? false : current.isVideoEnabled,
-            isAudioEnabled: kind === "audio" ? false : current.isAudioEnabled,
-          });
+          if (kind === "video" && source === "screen") {
+            const screenStream = current.screenStream
+              ? new MediaStream(current.screenStream.getTracks().filter((t) => t.id !== track.id))
+              : new MediaStream();
+            next.set(userId, {
+              ...current,
+              screenStream: screenStream.getTracks().length > 0 ? screenStream : null,
+              isScreenSharing: false,
+            });
+          } else if (kind === "video") {
+            const cameraStream = new MediaStream(
+              current.cameraStream.getTracks().filter((t) => t.id !== track.id),
+            );
+            next.set(userId, {
+              ...current,
+              cameraStream,
+              isCameraEnabled: false,
+            });
+          } else {
+            const audioStream = new MediaStream(
+              current.audioStream.getTracks().filter((t) => t.id !== track.id),
+            );
+            next.set(userId, {
+              ...current,
+              audioStream,
+              isAudioEnabled: false,
+            });
+          }
 
           return next;
         });
@@ -175,11 +229,12 @@ export function useMediasoup({
     });
 
     const unsubscribeProducerState = sfuManager.onProducerStateChange((payload) => {
-      const { userId, kind, paused } = payload;
+      const { userId, kind, paused, source } = payload;
       setRemotePeers((prev) =>
         updateRemotePeer(prev, userId, (current) => ({
           ...current,
-          isVideoEnabled: kind === "video" ? !paused : current.isVideoEnabled,
+          isCameraEnabled:
+            kind === "video" && source !== "screen" ? !paused : current.isCameraEnabled,
           isAudioEnabled: kind === "audio" ? !paused : current.isAudioEnabled,
         })),
       );
@@ -191,6 +246,16 @@ export function useMediasoup({
         next.delete(userId);
         return next;
       });
+    });
+
+    const unsubscribeScreenShareStopped = sfuManager.onScreenShareStopped(({ userId }) => {
+      setRemotePeers((prev) =>
+        updateRemotePeer(prev, userId, (current) => ({
+          ...current,
+          isScreenSharing: false,
+          screenStream: null,
+        })),
+      );
     });
 
     const unsubscribeKicked = sfuManager.onKicked(() => {
@@ -207,6 +272,7 @@ export function useMediasoup({
       unsubscribeTrack();
       unsubscribeProducerState();
       unsubscribePeerLeft();
+      unsubscribeScreenShareStopped();
       unsubscribeKicked();
       producedKinds.clear();
       joinedRef.current = false;

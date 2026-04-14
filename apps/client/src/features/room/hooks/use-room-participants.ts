@@ -40,7 +40,7 @@ export function useRoomParticipants({
         userId: peer.userId,
         username: peer.username,
         isMuted: !peer.isAudioEnabled,
-        isVideoOff: !peer.isVideoEnabled,
+        isVideoOff: !peer.isCameraEnabled,
         isConnected: true,
       };
     });

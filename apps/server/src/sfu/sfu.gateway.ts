@@ -19,6 +19,7 @@ import type {
   SfuResumeConsumerPayload,
   SfuKickPeerPayload,
   SfuSetPreferredLayersPayload,
+  SfuCloseProducerPayload,
 } from './interfaces/sfu.interface';
 import { OnGatewayInit } from '@nestjs/websockets';
 
@@ -164,5 +165,14 @@ export class SfuGateway
       payload.consumerId,
       payload.spatialLayer,
     );
+  }
+
+  @SubscribeMessage('sfu:close-producer')
+  handleCloseProducer(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: SfuCloseProducerPayload,
+  ): void {
+    this.logger.log(`Closing producer ${payload.producerId} for ${client.id}`);
+    this.sfuService.closeProducer(client.id, payload.producerId);
   }
 }

@@ -60,16 +60,50 @@ export interface SfuTransportConnectedPayload {
   transportId: string;
 }
 
+export type SfuMediaSource = 'camera' | 'screen';
+
+export type SfuProduceErrorCode =
+  | 'SCREEN_SHARE_ALREADY_ACTIVE'
+  | 'SEND_TRANSPORT_NOT_READY'
+  | 'TRANSPORT_NOT_FOUND'
+  | 'PRODUCE_FAILED';
+
+export interface SfuProduceAppData {
+  source?: SfuMediaSource;
+}
+
 export interface SfuProducePayload {
+  requestId: string;
   transportId: string;
   kind: 'audio' | 'video';
   rtpParameters: RtpParameters;
+  appData?: SfuProduceAppData;
 }
 
 export interface SfuProducerCreatedPayload {
+  requestId: string;
   producerId: string;
   userId: string;
   kind: 'audio' | 'video';
+  appData?: SfuProduceAppData;
+}
+
+export interface SfuProduceErrorPayload {
+  requestId: string;
+  code: SfuProduceErrorCode;
+  message: string;
+}
+
+export interface SfuCloseProducerPayload {
+  producerId: string;
+}
+
+export interface SfuScreenShareStartedPayload {
+  userId: string;
+}
+
+export interface SfuScreenShareStoppedPayload {
+  userId: string;
 }
 
 export interface SfuConsumePayload {

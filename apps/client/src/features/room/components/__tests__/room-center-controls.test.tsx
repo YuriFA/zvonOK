@@ -20,6 +20,7 @@ function renderControls(overrides?: Partial<React.ComponentProps<typeof RoomCent
           onToggleAudio={vi.fn()}
           isScreenSharing={false}
           isScreenShareSupported={true}
+          isScreenShareBlocked={false}
           screenShareState="idle"
           onToggleScreenShare={vi.fn().mockResolvedValue(undefined)}
           {...overrides}
@@ -57,6 +58,22 @@ describe("RoomCenterControls — screen share button", () => {
   it("disables button during starting state", () => {
     renderControls({ isScreenSharing: false, screenShareState: "starting" });
     expect(screen.getByRole("button", { name: "Share screen" })).toBeDisabled();
+  });
+
+  it("disables button when isScreenShareBlocked is true and not sharing", () => {
+    renderControls({ isScreenShareBlocked: true, screenShareState: "idle" });
+    expect(
+      screen.getByRole("button", { name: "Another participant is sharing their screen" }),
+    ).toBeDisabled();
+  });
+
+  it("does not disable button for the active sharer", () => {
+    renderControls({
+      isScreenSharing: true,
+      isScreenShareBlocked: false,
+      screenShareState: "sharing",
+    });
+    expect(screen.getByRole("button", { name: "Stop screen share" })).not.toBeDisabled();
   });
 
   it("calls onToggleScreenShare when button is clicked", () => {

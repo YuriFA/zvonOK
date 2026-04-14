@@ -10,6 +10,7 @@ import type {
   SfuProducePayload,
   SfuConsumePayload,
   SfuExistingPeerPayload,
+  SfuMediaSource,
 } from './interfaces/sfu.interface';
 import type { Consumer, Producer, WebRtcTransport } from 'mediasoup/types';
 import { config, getIceServers } from './config/mediasoup.config';
@@ -20,6 +21,7 @@ export class SfuService implements OnModuleDestroy {
   private peers: Map<string, Peer> = new Map();
   private rooms: Map<string, Set<string>> = new Map();
   private roomOwners: Map<string, string> = new Map();
+  private roomScreenShare: Map<string, string> = new Map();
 
   constructor(private readonly workerManager: WorkerManager) {
     void WorkerManager;
@@ -90,6 +92,7 @@ export class SfuService implements OnModuleDestroy {
       username: peer.username,
       kind: producer.kind,
       paused: producer.paused,
+      appData: producer.appData as Record<string, unknown> | undefined,
     });
   }
 
@@ -124,6 +127,50 @@ export class SfuService implements OnModuleDestroy {
     return peer.consumers.get(consumerId);
   }
 
+  private closeProducerForPeer(
+    socketId: string,
+    producerId: string,
+  ): { roomId: string; peer: Peer; producer: Producer } | null {
+    const peer = this.getPeer(socketId);
+    const roomId = this.getRoomIdBySocketId(socketId);
+    if (!peer || !roomId) return null;
+
+    const producer = peer.producers.get(producerId);
+    if (!producer) return null;
+
+    const source = (producer.appData as Record<string, unknown> | undefined)
+      ?.source as SfuMediaSource | undefined;
+
+    producer.close();
+    peer.producers.delete(producerId);
+
+    if (source === 'screen') {
+      const currentSharer = this.roomScreenShare.get(roomId);
+      if (currentSharer === socketId) {
+        this.roomScreenShare.delete(roomId);
+        for (const roomPeer of this.getRoomPeers(roomId)) {
+          if (roomPeer.id !== socketId) {
+            // Close the consumer that was consuming this screen-share producer
+            // and notify the client so it can clean up its state immediately.
+            for (const [consumerId, consumer] of roomPeer.consumers) {
+              if (consumer.producerId === producerId) {
+                consumer.close();
+                roomPeer.consumers.delete(consumerId);
+                roomPeer.socket.emit('sfu:consumer-closed', { consumerId });
+                break;
+              }
+            }
+            roomPeer.socket.emit('sfu:screen-share-stopped', {
+              userId: peer.userId,
+            });
+          }
+        }
+      }
+    }
+
+    return { roomId, peer, producer };
+  }
+
   private async removePeer(
     socketId: string,
   ): Promise<{ roomId: string; userId: string } | null> {
@@ -132,6 +179,26 @@ export class SfuService implements OnModuleDestroy {
 
     if (!peer || !roomId) {
       return null;
+    }
+
+    // Close all producers through the shared path so screen-share lock is
+    // released and peers are notified consistently.
+    for (const producerId of Array.from(peer.producers.keys())) {
+      this.closeProducerForPeer(socketId, producerId);
+    }
+
+    // Fallback: if the screen-share lock is still held (e.g. producers map was
+    // not populated), release it directly so the room state stays consistent.
+    const currentSharer = this.roomScreenShare.get(roomId);
+    if (currentSharer === socketId) {
+      this.roomScreenShare.delete(roomId);
+      for (const roomPeer of this.getRoomPeers(roomId)) {
+        if (roomPeer.id !== socketId) {
+          roomPeer.socket.emit('sfu:screen-share-stopped', {
+            userId: peer.userId,
+          });
+        }
+      }
     }
 
     this.rooms.get(roomId)?.delete(socketId);
@@ -300,27 +367,83 @@ export class SfuService implements OnModuleDestroy {
     payload: SfuProducePayload,
   ): Promise<void> {
     const peer = this.getPeer(socket.id);
-    if (!peer?.sendTransport) {
-      this.logger.error(`No send transport for peer ${socket.id}`);
+    const roomId = this.getRoomId(socket);
+    if (!peer?.sendTransport || !roomId) {
+      socket.emit('sfu:produce-error', {
+        requestId: payload.requestId,
+        code: 'SEND_TRANSPORT_NOT_READY',
+        message: 'No send transport or room found',
+      });
       return;
     }
 
-    const { transportId, kind, rtpParameters } = payload;
+    const { transportId, kind, rtpParameters, requestId } = payload;
     if (peer.sendTransport.id !== transportId) {
-      this.logger.error(`Transport ${transportId} not found`);
+      socket.emit('sfu:produce-error', {
+        requestId,
+        code: 'TRANSPORT_NOT_FOUND',
+        message: `Transport ${transportId} not found`,
+      });
       return;
     }
 
-    const producer = await peer.sendTransport.produce({ kind, rtpParameters });
+    const source: SfuMediaSource =
+      (payload.appData?.source as SfuMediaSource) ?? 'camera';
+
+    if (source === 'screen') {
+      const existingSharer = this.roomScreenShare.get(roomId);
+      if (existingSharer && existingSharer !== socket.id) {
+        socket.emit('sfu:produce-error', {
+          requestId,
+          code: 'SCREEN_SHARE_ALREADY_ACTIVE',
+          message: 'Another participant is already sharing',
+        });
+        return;
+      }
+    }
+
+    let producer: Producer;
+    try {
+      producer = await peer.sendTransport.produce({
+        kind,
+        rtpParameters,
+        appData: { source },
+      });
+    } catch {
+      socket.emit('sfu:produce-error', {
+        requestId,
+        code: 'PRODUCE_FAILED',
+        message: 'Failed to create producer',
+      });
+      return;
+    }
+
     peer.producers.set(producer.id, producer);
 
+    if (source === 'screen') {
+      this.roomScreenShare.set(roomId, socket.id);
+      for (const roomPeer of this.getRoomPeers(roomId)) {
+        if (roomPeer.id !== socket.id) {
+          roomPeer.socket.emit('sfu:screen-share-started', {
+            userId: peer.userId,
+          });
+        }
+      }
+    }
+
     socket.emit('sfu:producer-created', {
+      requestId,
       producerId: producer.id,
       userId: peer.userId,
       kind,
+      appData: { source },
     });
 
     this.notifyPeersToConsume(socket, producer);
+  }
+
+  closeProducer(socketId: string, producerId: string): void {
+    this.closeProducerForPeer(socketId, producerId);
   }
 
   async createConsumer(
@@ -497,6 +620,7 @@ export class SfuService implements OnModuleDestroy {
 
     this.rooms.delete(roomId);
     this.roomOwners.delete(roomId);
+    this.roomScreenShare.delete(roomId);
     await this.workerManager.closeRouter(roomId);
     this.logger.log(`Room ${roomId} ended — all peers notified and cleaned up`);
   }
@@ -510,6 +634,9 @@ export class SfuService implements OnModuleDestroy {
     const roomId = this.getRoomId(socket);
     if (!roomId) return;
 
+    const source = (producer.appData as Record<string, unknown> | undefined)
+      ?.source as SfuMediaSource | undefined;
+
     for (const roomPeer of this.getRoomPeers(roomId)) {
       if (roomPeer.id !== socket.id) {
         roomPeer.socket.emit('sfu:producer-state-changed', {
@@ -517,6 +644,7 @@ export class SfuService implements OnModuleDestroy {
           kind: producer.kind,
           userId: peer.userId,
           paused,
+          source,
         });
       }
     }

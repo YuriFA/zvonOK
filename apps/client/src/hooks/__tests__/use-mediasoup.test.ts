@@ -37,6 +37,8 @@ const testContext = vi.hoisted(() => ({
     recvTransportConnected: false,
     audioProducerId: null,
     videoProducerId: null,
+    screenProducerId: null,
+    isScreenShareBlocked: false,
   } as SfuState,
 }));
 
@@ -46,7 +48,12 @@ const sfuMock = vi.hoisted(() => {
   let currentState = { ...baseState };
   const stateListeners = new Set<(state: typeof baseState) => void>();
   const trackListeners = new Set<
-    (track: MediaStreamTrack, kind: "audio" | "video", userId: string) => void
+    (
+      track: MediaStreamTrack,
+      kind: "audio" | "video",
+      userId: string,
+      source?: "camera" | "screen",
+    ) => void
   >();
   const peerJoinedListeners = new Set<
     (peer: {
@@ -60,6 +67,7 @@ const sfuMock = vi.hoisted(() => {
   const producerStateChangeListeners = new Set<
     (payload: { userId: string; kind: "audio" | "video"; paused: boolean }) => void
   >();
+  const screenShareStoppedListeners = new Set<(payload: { userId: string }) => void>();
 
   return {
     connect: vi.fn(),
@@ -71,6 +79,13 @@ const sfuMock = vi.hoisted(() => {
       id: `${track.kind}-producer`,
       kind: track.kind,
     })),
+    produceScreen: vi.fn().mockImplementation(async (_track: MediaStreamTrack) => ({
+      id: "screen-producer",
+      kind: "video",
+    })),
+    closeScreenProducer: vi.fn(),
+    isScreenShareBlocked: vi.fn(() => false),
+    onProduceError: vi.fn(() => () => {}),
     pauseProducer: vi.fn(),
     resumeProducer: vi.fn(),
     replaceTrack: vi.fn().mockResolvedValue(true),
@@ -82,7 +97,14 @@ const sfuMock = vi.hoisted(() => {
       return () => stateListeners.delete(callback);
     }),
     onTrack: vi.fn(
-      (callback: (track: MediaStreamTrack, kind: "audio" | "video", userId: string) => void) => {
+      (
+        callback: (
+          track: MediaStreamTrack,
+          kind: "audio" | "video",
+          userId: string,
+          source?: "camera" | "screen",
+        ) => void,
+      ) => {
         trackListeners.add(callback);
         return () => trackListeners.delete(callback);
       },
@@ -115,15 +137,24 @@ const sfuMock = vi.hoisted(() => {
         return () => producerStateChangeListeners.delete(callback);
       },
     ),
+    onScreenShareStopped: vi.fn((callback: (payload: { userId: string }) => void) => {
+      screenShareStoppedListeners.add(callback);
+      return () => screenShareStoppedListeners.delete(callback);
+    }),
     emitState(state: typeof baseState) {
       currentState = state;
       stateListeners.forEach((callback) => {
         callback(state);
       });
     },
-    emitTrack(track: MediaStreamTrack, kind: "audio" | "video", userId: string) {
+    emitTrack(
+      track: MediaStreamTrack,
+      kind: "audio" | "video",
+      userId: string,
+      source?: "camera" | "screen",
+    ) {
       trackListeners.forEach((callback) => {
-        callback(track, kind, userId);
+        callback(track, kind, userId, source);
       });
     },
     emitPeerJoined(peer: {
@@ -150,6 +181,11 @@ const sfuMock = vi.hoisted(() => {
         callback(payload);
       });
     },
+    emitScreenShareStopped(payload: { userId: string }) {
+      screenShareStoppedListeners.forEach((callback) => {
+        callback(payload);
+      });
+    },
     reset() {
       currentState = { ...baseState };
       stateListeners.clear();
@@ -158,12 +194,16 @@ const sfuMock = vi.hoisted(() => {
       peerLeftListeners.clear();
       kickedListeners.clear();
       producerStateChangeListeners.clear();
+      screenShareStoppedListeners.clear();
       this.connect.mockClear();
       this.disconnect.mockClear();
       this.leaveRoom.mockClear();
       this.kickPeer.mockClear();
       this.joinRoom.mockClear();
       this.produce.mockClear();
+      this.produceScreen.mockClear();
+      this.closeScreenProducer.mockClear();
+      this.isScreenShareBlocked.mockImplementation(() => false);
       this.pauseProducer.mockClear();
       this.resumeProducer.mockClear();
       this.replaceTrack.mockReset();
@@ -176,6 +216,7 @@ const sfuMock = vi.hoisted(() => {
       this.onPeerLeft.mockClear();
       this.onKicked.mockClear();
       this.onProducerStateChange.mockClear();
+      this.onScreenShareStopped.mockClear();
     },
   };
 });
@@ -297,7 +338,8 @@ describe("useMediasoup", () => {
     });
 
     expect(result.current.remotePeers[0]?.username).toBe("bob");
-    expect(result.current.remotePeers[0]?.stream.getTracks()).toHaveLength(2);
+    expect(result.current.remotePeers[0]?.cameraStream.getTracks()).toHaveLength(1);
+    expect(result.current.remotePeers[0]?.audioStream.getTracks()).toHaveLength(1);
 
     act(() => {
       sfuMock.emitPeerLeft("user-2");

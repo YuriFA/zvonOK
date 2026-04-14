@@ -3,16 +3,21 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // --- mocks (hoisted before imports) ---
 
-const mockReplaceTrack = vi.hoisted(() => vi.fn().mockResolvedValue(true));
-const mockGetTrack = vi.hoisted(() => vi.fn().mockReturnValue(null));
+const mockProduceScreen = vi.hoisted(() =>
+  vi.fn().mockResolvedValue({ id: "screen-producer", kind: "video" }),
+);
+const mockCloseScreenProducer = vi.hoisted(() => vi.fn());
+const mockIsScreenShareBlocked = vi.hoisted(() => vi.fn(() => false));
+const mockOnStateChange = vi.hoisted(() => vi.fn(() => () => {}));
 const mockGetDisplayMedia = vi.hoisted(() => vi.fn());
 
 vi.mock("@/features/sfu/contexts/sfu-manager.context", () => ({
-  useSfuManager: () => ({ replaceTrack: mockReplaceTrack }),
-}));
-
-vi.mock("@/features/media/contexts/media-manager.context", () => ({
-  useCaptureTrackProvider: () => ({ getTrack: mockGetTrack }),
+  useSfuManager: () => ({
+    produceScreen: mockProduceScreen,
+    closeScreenProducer: mockCloseScreenProducer,
+    isScreenShareBlocked: mockIsScreenShareBlocked,
+    onStateChange: mockOnStateChange,
+  }),
 }));
 
 // jsdom does not define navigator.mediaDevices — stub it globally
@@ -24,6 +29,7 @@ vi.stubGlobal("navigator", {
 
 // --- subject ---
 
+import { SfuProduceError } from "@/lib/sfu/types";
 import { useScreenShare } from "../use-screen-share";
 
 // --- helpers ---
@@ -52,15 +58,19 @@ function makeVideoTrack(): MediaStreamTrack {
 function makeDisplayMediaStream(track: MediaStreamTrack): MediaStream {
   return {
     getVideoTracks: () => [track],
+    getTracks: () => [track],
   } as unknown as MediaStream;
 }
 
 describe("useScreenShare", () => {
   beforeEach(() => {
-    mockReplaceTrack.mockClear();
-    mockReplaceTrack.mockResolvedValue(true);
-    mockGetTrack.mockReset();
-    mockGetTrack.mockReturnValue(null);
+    mockProduceScreen.mockClear();
+    mockProduceScreen.mockResolvedValue({ id: "screen-producer", kind: "video" });
+    mockCloseScreenProducer.mockClear();
+    mockIsScreenShareBlocked.mockClear();
+    mockIsScreenShareBlocked.mockReturnValue(false);
+    mockOnStateChange.mockClear();
+    mockOnStateChange.mockReturnValue(() => {});
     mockGetDisplayMedia.mockReset();
   });
 
@@ -71,7 +81,12 @@ describe("useScreenShare", () => {
     expect(result.current.isSharing).toBe(false);
   });
 
-  it("startScreenShare: replaces SFU track and sets isSharing=true", async () => {
+  it("starts with screenStream=null", () => {
+    const { result } = renderHook(() => useScreenShare());
+    expect(result.current.screenStream).toBeNull();
+  });
+
+  it("startScreenShare: creates screen producer and sets isSharing=true", async () => {
     const screenTrack = makeVideoTrack();
     mockGetDisplayMedia.mockResolvedValue(makeDisplayMediaStream(screenTrack));
 
@@ -85,16 +100,27 @@ describe("useScreenShare", () => {
       video: { cursor: "always" },
       audio: false,
     });
-    expect(mockReplaceTrack).toHaveBeenCalledWith("video", screenTrack);
+    expect(mockProduceScreen).toHaveBeenCalledWith(screenTrack);
     expect(result.current.isSharing).toBe(true);
   });
 
-  it("stopScreenShare: restores camera track and sets isSharing=false", async () => {
+  it("startScreenShare: sets screenStream to the display media stream", async () => {
     const screenTrack = makeVideoTrack();
-    const cameraTrack = makeVideoTrack();
+    const stream = makeDisplayMediaStream(screenTrack);
+    mockGetDisplayMedia.mockResolvedValue(stream);
 
+    const { result } = renderHook(() => useScreenShare());
+
+    await act(async () => {
+      await result.current.startScreenShare();
+    });
+
+    expect(result.current.screenStream).toBe(stream);
+  });
+
+  it("stopScreenShare: closes screen producer and sets isSharing=false", async () => {
+    const screenTrack = makeVideoTrack();
     mockGetDisplayMedia.mockResolvedValue(makeDisplayMediaStream(screenTrack));
-    mockGetTrack.mockReturnValue(cameraTrack);
 
     const { result } = renderHook(() => useScreenShare());
 
@@ -108,32 +134,14 @@ describe("useScreenShare", () => {
       await result.current.stopScreenShare();
     });
 
-    expect(mockReplaceTrack).toHaveBeenLastCalledWith("video", cameraTrack);
+    expect(mockCloseScreenProducer).toHaveBeenCalled();
     expect(result.current.isSharing).toBe(false);
-  });
-
-  it("stopScreenShare: passes null when camera track is not available", async () => {
-    const screenTrack = makeVideoTrack();
-    mockGetDisplayMedia.mockResolvedValue(makeDisplayMediaStream(screenTrack));
-    mockGetTrack.mockReturnValue(null);
-
-    const { result } = renderHook(() => useScreenShare());
-
-    await act(async () => {
-      await result.current.startScreenShare();
-      await result.current.stopScreenShare();
-    });
-
-    expect(mockReplaceTrack).toHaveBeenLastCalledWith("video", null);
-    expect(result.current.isSharing).toBe(false);
+    expect(result.current.screenStream).toBeNull();
   });
 
   it("auto-stop: track.ended event triggers stopScreenShare", async () => {
     const screenTrack = makeVideoTrack();
-    const cameraTrack = makeVideoTrack();
-
     mockGetDisplayMedia.mockResolvedValue(makeDisplayMediaStream(screenTrack));
-    mockGetTrack.mockReturnValue(cameraTrack);
 
     const { result } = renderHook(() => useScreenShare());
 
@@ -143,13 +151,13 @@ describe("useScreenShare", () => {
 
     expect(result.current.isSharing).toBe(true);
 
-    // Simulate browser "Stop sharing" button
     await act(async () => {
       screenTrack.dispatchEvent(new Event("ended"));
     });
 
-    expect(mockReplaceTrack).toHaveBeenLastCalledWith("video", cameraTrack);
+    expect(mockCloseScreenProducer).toHaveBeenCalled();
     expect(result.current.isSharing).toBe(false);
+    expect(result.current.screenStream).toBeNull();
   });
 
   // --- error handling ---
@@ -165,7 +173,7 @@ describe("useScreenShare", () => {
       }),
     ).rejects.toBe("denied");
 
-    expect(mockReplaceTrack).not.toHaveBeenCalled();
+    expect(mockProduceScreen).not.toHaveBeenCalled();
     expect(result.current.isSharing).toBe(false);
   });
 
@@ -197,12 +205,12 @@ describe("useScreenShare", () => {
     expect(result.current.isSharing).toBe(false);
   });
 
-  // --- replaceTrack failure ---
+  // --- produceScreen failure ---
 
-  it("startScreenShare: throws 'denied' and stops track when replaceTrack returns false", async () => {
+  it("startScreenShare: throws 'denied' and stops track when produceScreen returns null", async () => {
     const screenTrack = makeVideoTrack();
     mockGetDisplayMedia.mockResolvedValue(makeDisplayMediaStream(screenTrack));
-    mockReplaceTrack.mockResolvedValue(false);
+    mockProduceScreen.mockResolvedValue(null);
 
     const { result } = renderHook(() => useScreenShare());
 
@@ -220,27 +228,26 @@ describe("useScreenShare", () => {
     expect(result.current.isSharing).toBe(false);
   });
 
-  it("stopScreenShare: throws 'denied' and does not clear isSharing when replaceTrack returns false", async () => {
+  it("startScreenShare: throws 'blocked' when produceScreen rejects with blocked message", async () => {
     const screenTrack = makeVideoTrack();
     mockGetDisplayMedia.mockResolvedValue(makeDisplayMediaStream(screenTrack));
+    mockProduceScreen.mockRejectedValue(
+      new SfuProduceError("SCREEN_SHARE_ALREADY_ACTIVE", "Another participant is already sharing"),
+    );
 
     const { result } = renderHook(() => useScreenShare());
 
-    // Start successfully first
+    let thrown: unknown;
     await act(async () => {
-      await result.current.startScreenShare();
+      try {
+        await result.current.startScreenShare();
+      } catch (e) {
+        thrown = e;
+      }
     });
-    expect(result.current.isSharing).toBe(true);
 
-    // Now fail the stop
-    mockReplaceTrack.mockResolvedValue(false);
-
-    await expect(
-      act(async () => {
-        await result.current.stopScreenShare();
-      }),
-    ).rejects.toBe("denied");
-
-    expect(result.current.isSharing).toBe(true);
+    expect(thrown).toBe("blocked");
+    expect(screenTrack.stop).toHaveBeenCalled();
+    expect(result.current.isSharing).toBe(false);
   });
 });
