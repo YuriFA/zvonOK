@@ -14,7 +14,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { ScreenShareState } from "@/hooks/use-screen-share";
 import { CaptureState, getCaptureStateDisplay } from "@/lib/media/capture-state";
 import { cn } from "@/lib/utils";
 
@@ -28,7 +27,7 @@ interface Props {
   isScreenSharing: boolean;
   isScreenShareSupported: boolean;
   isScreenShareBlocked: boolean;
-  screenShareState: ScreenShareState;
+  screenShareState: "idle" | "starting" | "sharing";
   onToggleScreenShare: () => Promise<void>;
   className?: string;
 }

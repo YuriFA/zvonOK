@@ -9,11 +9,10 @@ import { RoomVideo } from "@/features/room/components/room-video";
 import { ScreenShareSpotlight } from "@/features/room/components/screen-share-spotlight";
 import type { UseRoomSessionResult } from "@/features/room/hooks/use-room-session";
 import type { Room } from "@/features/room/types/room.types";
-import type { ScreenShareError, ScreenShareState } from "@/hooks/use-screen-share";
+import type { ScreenShareError } from "@/hooks/use-screen-share";
 import { useScreenShare } from "@/hooks/use-screen-share";
 import { cn } from "@/lib/utils";
 
-import { RoomRemoteAudio } from "./room-remote-audio";
 import { RoomRightControls } from "./room-right-controls";
 
 interface ActiveScreenShare {
@@ -52,7 +51,7 @@ export function ActiveRoomView({
 
   const { isSharing, screenStream, isScreenShareBlocked, startScreenShare, stopScreenShare } =
     useScreenShare();
-  const [screenShareState, setScreenShareState] = useState<ScreenShareState>("idle");
+  const [screenShareState, setScreenShareState] = useState<"idle" | "starting" | "sharing">("idle");
 
   const isScreenShareSupported =
     typeof navigator !== "undefined" &&
@@ -139,7 +138,7 @@ export function ActiveRoomView({
 
   const handleToggleScreenShare = useCallback(async () => {
     if (isSharing) {
-      await stopScreenShare();
+      stopScreenShare();
       setScreenShareState("idle");
       return;
     }
@@ -233,8 +232,6 @@ export function ActiveRoomView({
             </>
           )}
         </VideoGrid>
-
-        <RoomRemoteAudio />
 
         <aside
           className={cn(

@@ -509,7 +509,11 @@ describe("SfuManager", () => {
       });
 
       // Register screen producer for user-2 (second video consumer).
-      const screenConsumer = { ...testContext.mockConsumer, id: "screen-consumer", producerId: "screen-producer" };
+      const screenConsumer = {
+        ...testContext.mockConsumer,
+        id: "screen-consumer",
+        producerId: "screen-producer",
+      };
       testContext.mockRecvTransport.consume.mockResolvedValueOnce(screenConsumer);
 
       await testContext.emitSocketEvent("sfu:new-producer", {

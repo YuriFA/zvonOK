@@ -4,6 +4,7 @@
  */
 
 import type { Producer } from "mediasoup-client/types";
+import type { Socket } from "socket.io-client";
 
 import type { ISfuManager } from "../interfaces";
 import type {
@@ -19,6 +20,8 @@ import type {
   PeerQualityStats,
   QualityScore,
   SfuProducerStateCallback,
+  SfuProduceErrorCode,
+  SfuScreenShareStoppedCallback,
 } from "../types";
 
 export interface MockSfuManagerConfig {
@@ -30,10 +33,12 @@ const DEFAULT_STATE: SfuState = {
   connectionState: "disconnected",
   isDeviceLoaded: false,
   isSendTransportCreated: false,
+  isScreenShareBlocked: false,
   sendTransportConnected: false,
   recvTransportConnected: false,
   audioProducerId: null,
   videoProducerId: null,
+  screenProducerId: null,
 };
 
 export function createMockSfuManager(config: MockSfuManagerConfig = {}): ISfuManager & {
@@ -101,7 +106,7 @@ export function createMockSfuManager(config: MockSfuManagerConfig = {}): ISfuMan
       return state.connectionState === "connected";
     },
 
-    getSocket(): null {
+    getSocket(): Socket | null {
       return null;
     },
 
@@ -154,6 +159,26 @@ export function createMockSfuManager(config: MockSfuManagerConfig = {}): ISfuMan
       return producer;
     },
 
+    async produceScreen(track: MediaStreamTrack): Promise<Producer | null> {
+      produceCalls.push(track);
+      const producer = {
+        id: `producer-screen-${Date.now()}`,
+        kind: track.kind as "audio" | "video",
+        track,
+        pause: () => {},
+        resume: () => {},
+        close: () => {},
+      } as unknown as Producer;
+      state = { ...state, screenProducerId: producer.id };
+      notifyStateChange();
+      return producer;
+    },
+
+    closeScreenProducer(): void {
+      state = { ...state, screenProducerId: null };
+      notifyStateChange();
+    },
+
     pauseProducer(producerId: string): void {
       const producer = Array.from(producers.values()).find((p) => p.id === producerId);
       producer?.pause();
@@ -199,6 +224,16 @@ export function createMockSfuManager(config: MockSfuManagerConfig = {}): ISfuMan
       }
 
       return undefined;
+    },
+
+    isScreenShareBlocked(): boolean {
+      return state.isScreenShareBlocked;
+    },
+
+    onProduceError(callback: (code: SfuProduceErrorCode) => void): () => void {
+      const produceErrorCallbacks = new Set<(code: SfuProduceErrorCode) => void>();
+      produceErrorCallbacks.add(callback);
+      return () => produceErrorCallbacks.delete(callback);
     },
 
     // ISfuPeerRegistry
@@ -293,6 +328,12 @@ export function createMockSfuManager(config: MockSfuManagerConfig = {}): ISfuMan
     onTrack(callback: SfuTrackCallback): () => void {
       trackCallbacks.add(callback);
       return () => trackCallbacks.delete(callback);
+    },
+
+    onScreenShareStopped(callback: SfuScreenShareStoppedCallback): () => void {
+      const screenShareStoppedCallbacks = new Set<SfuScreenShareStoppedCallback>();
+      screenShareStoppedCallbacks.add(callback);
+      return () => screenShareStoppedCallbacks.delete(callback);
     },
 
     onProducerStateChange(callback: SfuProducerStateCallback): () => void {

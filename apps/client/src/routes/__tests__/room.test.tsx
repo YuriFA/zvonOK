@@ -102,16 +102,18 @@ vi.mock("@/lib/sfu/manager", () => ({
   },
 }));
 
+const mockSfuManagerValue = {
+  getProducerByKind: () => undefined,
+  replaceTrack: vi.fn(),
+  onQualityStats: () => () => {},
+  onPeerLeft: () => () => {},
+  onStateChange: () => () => {},
+  startStatsCollection: vi.fn(),
+  stopStatsCollection: vi.fn(),
+};
+
 vi.mock("@/features/sfu/contexts/sfu-manager.context", () => ({
-  useSfuManager: () => ({
-    getProducerByKind: () => undefined,
-    replaceTrack: vi.fn(),
-    onQualityStats: () => () => {},
-    onPeerLeft: () => () => {},
-    onStateChange: () => () => {},
-    startStatsCollection: vi.fn(),
-    stopStatsCollection: vi.fn(),
-  }),
+  useSfuManager: () => mockSfuManagerValue,
   SfuManagerProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 

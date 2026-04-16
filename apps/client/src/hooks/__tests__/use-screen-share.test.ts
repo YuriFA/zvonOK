@@ -11,13 +11,15 @@ const mockIsScreenShareBlocked = vi.hoisted(() => vi.fn(() => false));
 const mockOnStateChange = vi.hoisted(() => vi.fn(() => () => {}));
 const mockGetDisplayMedia = vi.hoisted(() => vi.fn());
 
+const mockSfuManager = {
+  produceScreen: mockProduceScreen,
+  closeScreenProducer: mockCloseScreenProducer,
+  isScreenShareBlocked: mockIsScreenShareBlocked,
+  onStateChange: mockOnStateChange,
+};
+
 vi.mock("@/features/sfu/contexts/sfu-manager.context", () => ({
-  useSfuManager: () => ({
-    produceScreen: mockProduceScreen,
-    closeScreenProducer: mockCloseScreenProducer,
-    isScreenShareBlocked: mockIsScreenShareBlocked,
-    onStateChange: mockOnStateChange,
-  }),
+  useSfuManager: () => mockSfuManager,
 }));
 
 // jsdom does not define navigator.mediaDevices — stub it globally
@@ -30,6 +32,7 @@ vi.stubGlobal("navigator", {
 // --- subject ---
 
 import { SfuProduceError } from "@/lib/sfu/types";
+
 import { useScreenShare } from "../use-screen-share";
 
 // --- helpers ---
