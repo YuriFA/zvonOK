@@ -1,9 +1,17 @@
 import type { Socket } from 'socket.io';
-import type { RtpCapabilities, WebRtcTransport } from 'mediasoup/types';
+import type {
+  AppData,
+  Producer,
+  Router,
+  RtpCapabilities,
+  RtpParameters,
+  WebRtcTransport,
+} from 'mediasoup/types';
 import { Test } from '@nestjs/testing';
 import type { TestingModule } from '@nestjs/testing';
 import { SfuService } from './sfu.service';
 import { WorkerManager } from './worker-manager';
+import { Peer } from './interfaces/sfu.interface';
 
 type SfuServiceState = {
   peers: Map<string, unknown>;
@@ -47,7 +55,7 @@ describe('SfuService', () => {
 
   it('joins a room and emits RTP capabilities', async () => {
     const routerRtpCapabilities = { codecs: [] } as unknown as RtpCapabilities;
-    workerManager.createRouter.mockResolvedValue({} as never);
+    workerManager.createRouter.mockResolvedValue({} as Router<AppData>);
     workerManager.getRtpCapabilities.mockReturnValue(routerRtpCapabilities);
 
     await service.joinRoom(socket, {
@@ -78,11 +86,13 @@ describe('SfuService', () => {
       createWebRtcTransport: jest.fn().mockResolvedValue(transport),
     } as { createWebRtcTransport: jest.Mock };
 
-    workerManager.createRouter.mockResolvedValue({} as never);
+    workerManager.createRouter.mockResolvedValue({} as Router<AppData>);
     workerManager.getRtpCapabilities.mockReturnValue(
       {} as unknown as RtpCapabilities,
     );
-    workerManager.getRouter.mockReturnValue(router as never);
+    workerManager.getRouter.mockReturnValue(
+      router as unknown as Router<AppData>,
+    );
 
     await service.joinRoom(socket, {
       roomId: 'room-1',
@@ -119,17 +129,17 @@ describe('SfuService', () => {
       userId: 'user-1',
       username: 'alice',
       socket,
-      sendTransport: { id: 'send-1', connect },
+      sendTransport: { id: 'send-1', connect } as unknown as WebRtcTransport,
       producers: new Map(),
       consumers: new Map(),
-    } as never;
+    } satisfies Peer;
 
     const serviceState = service as unknown as SfuServiceState;
     serviceState.peers.set(socket.id, peer);
 
     await service.connectTransport(socket, {
       transportId: 'send-1',
-      dtlsParameters: { fingerprints: [], role: 'client' } as never,
+      dtlsParameters: { fingerprints: [], role: 'client' },
     });
 
     expect(connect).toHaveBeenCalledWith({
@@ -149,7 +159,7 @@ describe('SfuService', () => {
       socket,
       producers: new Map(),
       consumers: new Map([['consumer-1', { resume }]]),
-    } as never;
+    };
 
     const serviceState = service as unknown as SfuServiceState;
     serviceState.peers.set(socket.id, peer);
@@ -168,7 +178,7 @@ describe('SfuService', () => {
       kind: 'video',
       paused: false,
       appData: {},
-    } as never;
+    };
     const recvTransport = {
       id: 'recv-1',
       iceParameters: {
@@ -210,11 +220,13 @@ describe('SfuService', () => {
       consumers: new Map(),
     });
 
-    workerManager.createRouter.mockResolvedValue({} as never);
+    workerManager.createRouter.mockResolvedValue({} as Router<AppData>);
     workerManager.getRtpCapabilities.mockReturnValue(
       {} as unknown as RtpCapabilities,
     );
-    workerManager.getRouter.mockReturnValue(router as never);
+    workerManager.getRouter.mockReturnValue(
+      router as unknown as Router<AppData>,
+    );
 
     await service.joinRoom(socket, {
       roomId: 'room-1',
@@ -365,8 +377,8 @@ describe('SfuService', () => {
       userId: 'user-1',
       username: 'alice',
       socket: socket1,
-      sendTransport: { close: sendClose1 } as never,
-      recvTransport: { close: recvClose1 } as never,
+      sendTransport: { close: sendClose1 },
+      recvTransport: { close: recvClose1 },
       producers: new Map(),
       consumers: new Map(),
     });
@@ -375,7 +387,7 @@ describe('SfuService', () => {
       userId: 'user-2',
       username: 'bob',
       socket: socket2,
-      sendTransport: { close: sendClose2 } as never,
+      sendTransport: { close: sendClose2 },
       producers: new Map(),
       consumers: new Map(),
     });
@@ -409,22 +421,7 @@ describe('SfuService', () => {
   describe('screen share', () => {
     const serviceState = () =>
       service as unknown as {
-        peers: Map<
-          string,
-          {
-            id: string;
-            userId: string;
-            username: string;
-            socket: Socket;
-            sendTransport?: {
-              id: string;
-              produce: jest.Mock;
-              close?: jest.Mock;
-            };
-            producers: Map<string, unknown>;
-            consumers: Map<string, unknown>;
-          }
-        >;
+        peers: Map<string, Peer>;
         rooms: Map<string, Set<string>>;
         roomOwners: Map<string, string>;
         roomScreenShare: Map<string, string>;
@@ -446,7 +443,7 @@ describe('SfuService', () => {
         userId: 'user-1',
         username: 'alice',
         socket,
-        sendTransport: { id: 'send-1', produce },
+        sendTransport: { id: 'send-1', produce } as unknown as WebRtcTransport,
         producers: new Map(),
         consumers: new Map(),
       });
@@ -464,7 +461,7 @@ describe('SfuService', () => {
         requestId: 'req-1',
         transportId: 'send-1',
         kind: 'video',
-        rtpParameters: {} as never,
+        rtpParameters: {} as unknown as RtpParameters,
         appData: { source: 'screen' },
       });
 
@@ -498,7 +495,10 @@ describe('SfuService', () => {
         userId: 'user-1',
         username: 'alice',
         socket,
-        sendTransport: { id: 'send-1', produce: jest.fn() },
+        sendTransport: {
+          id: 'send-1',
+          produce: jest.fn(),
+        } as unknown as WebRtcTransport,
         producers: new Map(),
         consumers: new Map(),
       });
@@ -507,7 +507,10 @@ describe('SfuService', () => {
         userId: 'user-2',
         username: 'bob',
         socket: socket2,
-        sendTransport: { id: 'send-1', produce: jest.fn() },
+        sendTransport: {
+          id: 'send-1',
+          produce: jest.fn(),
+        } as unknown as WebRtcTransport,
         producers: new Map(),
         consumers: new Map(),
       });
@@ -518,7 +521,7 @@ describe('SfuService', () => {
         requestId: 'req-2',
         transportId: 'send-1',
         kind: 'video',
-        rtpParameters: {} as never,
+        rtpParameters: {} as unknown as RtpParameters,
         appData: { source: 'screen' },
       });
 
@@ -547,7 +550,7 @@ describe('SfuService', () => {
               kind: 'video',
               appData: { source: 'screen' },
               close,
-            },
+            } as unknown as Producer,
           ],
         ]),
         consumers: new Map(),
@@ -584,7 +587,7 @@ describe('SfuService', () => {
         userId: 'user-1',
         username: 'alice',
         socket,
-        sendTransport: { close: jest.fn() },
+        sendTransport: { close: jest.fn() } as unknown as WebRtcTransport,
         producers: new Map(),
         consumers: new Map(),
       });
@@ -623,7 +626,7 @@ describe('SfuService', () => {
         userId: 'user-1',
         username: 'alice',
         socket: ownerSocket,
-        sendTransport: { close: jest.fn() },
+        sendTransport: { close: jest.fn() } as unknown as WebRtcTransport,
         producers: new Map(),
         consumers: new Map(),
       });
@@ -632,7 +635,7 @@ describe('SfuService', () => {
         userId: 'user-2',
         username: 'bob',
         socket: targetSocket,
-        sendTransport: { close: jest.fn() },
+        sendTransport: { close: jest.fn() } as unknown as WebRtcTransport,
         producers: new Map(),
         consumers: new Map(),
       });
@@ -667,7 +670,7 @@ describe('SfuService', () => {
         userId: 'user-1',
         username: 'alice',
         socket,
-        sendTransport: { id: 'send-1', produce },
+        sendTransport: { id: 'send-1', produce } as unknown as WebRtcTransport,
         producers: new Map(),
         consumers: new Map(),
       });
@@ -676,7 +679,7 @@ describe('SfuService', () => {
         userId: 'user-2',
         username: 'bob',
         socket: otherSocket,
-        recvTransport: { id: 'recv-1' } as never,
+        recvTransport: { id: 'recv-1' } as unknown as WebRtcTransport,
         producers: new Map(),
         consumers: new Map(),
       });
@@ -686,7 +689,7 @@ describe('SfuService', () => {
         requestId: 'req-cam',
         transportId: 'send-1',
         kind: 'video',
-        rtpParameters: {} as never,
+        rtpParameters: {} as unknown as RtpParameters,
         appData: { source: 'camera' },
       });
 
