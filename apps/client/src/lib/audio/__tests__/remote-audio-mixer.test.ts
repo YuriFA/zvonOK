@@ -13,6 +13,20 @@ class MockMediaStream {
   getTracks() {
     return this.tracks;
   }
+  getAudioTracks() {
+    return this.tracks.filter((t) => t.kind === "audio");
+  }
+}
+
+function makeMockAudioElement() {
+  return {
+    autoplay: false,
+    style: { display: "" },
+    srcObject: null as unknown,
+    play: vi.fn().mockResolvedValue(undefined),
+    pause: vi.fn(),
+    remove: vi.fn(),
+  };
 }
 
 function createMockAudioContext() {
@@ -25,56 +39,51 @@ function createMockAudioContext() {
     frequencyBinCount: 128,
   };
   const sourceNode = { connect: vi.fn(), disconnect: vi.fn() };
-  const destStream = new MockMediaStream();
-  const destination = {
-    connect: vi.fn(),
-    disconnect: vi.fn(),
-    stream: destStream,
-  };
-  const audioElement = {
-    autoplay: false,
-    style: { display: "" },
-    srcObject: null as unknown,
-    remove: vi.fn(),
-  };
+  const analysisSourceNode = { connect: vi.fn(), disconnect: vi.fn() };
 
   const ctx = {
     resume: vi.fn(),
     close: vi.fn(),
-    createMediaStreamSource: vi.fn(() => sourceNode),
+    createMediaElementSource: vi.fn(() => sourceNode),
+    createMediaStreamSource: vi.fn(() => analysisSourceNode),
     createGain: vi.fn(() => gainNode),
     createAnalyser: vi.fn(() => analyserNode),
-    createMediaStreamDestination: vi.fn(() => destination),
+    destination: {},
     state: "running",
     _sourceNode: sourceNode,
+    _analysisSourceNode: analysisSourceNode,
     _gainNode: gainNode,
     _analyserNode: analyserNode,
-    _destination: destination,
-    _audioElement: audioElement,
   };
 
   return ctx;
 }
 
 let mockCtx: ReturnType<typeof createMockAudioContext>;
+let audioElementsCreated: ReturnType<typeof makeMockAudioElement>[];
+
+const originalCreateElement = document.createElement.bind(document);
+
+vi.stubGlobal("MediaStream", MockMediaStream);
 
 class StubAudioContext {
   resume = mockCtx.resume;
   close = mockCtx.close;
+  createMediaElementSource = mockCtx.createMediaElementSource;
   createMediaStreamSource = mockCtx.createMediaStreamSource;
   createGain = mockCtx.createGain;
   createAnalyser = mockCtx.createAnalyser;
-  createMediaStreamDestination = mockCtx.createMediaStreamDestination;
+  destination = mockCtx.destination;
   state = "running";
 }
 
-const originalCreateElement = document.createElement.bind(document);
-
 vi.stubGlobal("AudioContext", StubAudioContext);
-vi.stubGlobal("MediaStream", MockMediaStream);
+
 vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
   if (tag === "audio") {
-    return mockCtx._audioElement as unknown as HTMLAudioElement;
+    const el = makeMockAudioElement();
+    audioElementsCreated.push(el);
+    return el as unknown as HTMLAudioElement;
   }
   return originalCreateElement(tag);
 });
@@ -84,6 +93,23 @@ describe("RemoteAudioMixer", () => {
 
   beforeEach(async () => {
     mockCtx = createMockAudioContext();
+    audioElementsCreated = [];
+
+    // Re-stub with fresh mockCtx so StubAudioContext methods point to new mock
+    vi.stubGlobal(
+      "AudioContext",
+      class {
+        resume = mockCtx.resume;
+        close = mockCtx.close;
+        createMediaElementSource = mockCtx.createMediaElementSource;
+        createMediaStreamSource = mockCtx.createMediaStreamSource;
+        createGain = mockCtx.createGain;
+        createAnalyser = mockCtx.createAnalyser;
+        destination = mockCtx.destination;
+        state = "running";
+      },
+    );
+
     const { RemoteAudioMixer } = await import("../remote-audio-mixer");
     mixer = new RemoteAudioMixer();
   });
@@ -92,40 +118,46 @@ describe("RemoteAudioMixer", () => {
     mixer.destroy();
   });
 
-  it("creates AudioContext and audio element on construction", () => {
-    expect(mockCtx.resume).toHaveBeenCalled();
-    expect(mockCtx.createMediaStreamDestination).toHaveBeenCalled();
-    expect(mockCtx._audioElement.autoplay).toBe(true);
-    expect(mockCtx._audioElement.srcObject).toBe(mockCtx._destination.stream);
+  it("creates AudioContext on construction", () => {
+    expect(mockCtx.createMediaElementSource).not.toHaveBeenCalled();
   });
 
   describe("addPeer", () => {
-    it("creates source → gain → analyser chain", () => {
+    it("creates a hidden audio element and source → gain → analyser chain", () => {
       const track = mockTrack("t1");
       mixer.addPeer("user-1", track);
 
-      expect(mockCtx.createMediaStreamSource).toHaveBeenCalled();
+      expect(audioElementsCreated).toHaveLength(1);
+      const audioEl = audioElementsCreated[0];
+      expect(audioEl.autoplay).toBe(true);
+      expect(audioEl.play).toHaveBeenCalled();
+
+      expect(mockCtx.createMediaElementSource).toHaveBeenCalled();
       expect(mockCtx.createGain).toHaveBeenCalled();
       expect(mockCtx.createAnalyser).toHaveBeenCalled();
 
-      const source = mockCtx._sourceNode;
-      expect(source.connect).toHaveBeenCalledWith(mockCtx._gainNode);
-      expect(mockCtx._gainNode.connect).toHaveBeenCalledWith(mockCtx._analyserNode);
-      expect(mockCtx._analyserNode.connect).toHaveBeenCalledWith(mockCtx._destination);
+      expect(mockCtx._sourceNode.connect).toHaveBeenCalledWith(mockCtx._gainNode);
+      expect(mockCtx._gainNode.connect).toHaveBeenCalledWith(mockCtx.destination);
+      expect(mockCtx._analysisSourceNode.connect).toHaveBeenCalledWith(mockCtx._analyserNode);
     });
 
     it("replaces existing peer if added again", () => {
       mixer.addPeer("user-1", mockTrack("t1"));
       mixer.addPeer("user-1", mockTrack("t2"));
-      expect(mockCtx.createMediaStreamSource).toHaveBeenCalledTimes(2);
+      expect(mockCtx.createMediaElementSource).toHaveBeenCalledTimes(2);
+      expect(audioElementsCreated).toHaveLength(2);
     });
   });
 
   describe("removePeer", () => {
-    it("disconnects nodes and removes peer", () => {
+    it("disconnects nodes, pauses and removes audio element", () => {
       mixer.addPeer("user-1", mockTrack("t1"));
+      const audioEl = audioElementsCreated[0];
       mixer.removePeer("user-1");
+
       expect(mockCtx._sourceNode.disconnect).toHaveBeenCalled();
+      expect(audioEl.pause).toHaveBeenCalled();
+      expect(audioEl.remove).toHaveBeenCalled();
     });
 
     it("is a no-op for unknown peer", () => {
@@ -134,17 +166,20 @@ describe("RemoteAudioMixer", () => {
   });
 
   describe("updatePeerTrack", () => {
-    it("reconnects source with new track", () => {
-      mixer.addPeer("user-1", mockTrack("t1"));
-      mixer.updatePeerTrack("user-1", mockTrack("t2"));
+    it("delegates to addPeer for a full rebuild", () => {
+      const track1 = mockTrack("t1");
+      const track2 = mockTrack("t2");
+      mixer.addPeer("user-1", track1);
+      mixer.updatePeerTrack("user-1", track2);
 
-      expect(mockCtx._sourceNode.disconnect).toHaveBeenCalled();
-      expect(mockCtx.createMediaStreamSource).toHaveBeenCalledTimes(2);
+      // addPeer is called twice (initial + rebuild), each creates a new audio element
+      expect(mockCtx.createMediaElementSource).toHaveBeenCalledTimes(2);
+      expect(audioElementsCreated).toHaveLength(2);
     });
 
     it("delegates to addPeer if peer not found", () => {
       mixer.updatePeerTrack("unknown", mockTrack("t1"));
-      expect(mockCtx.createMediaStreamSource).toHaveBeenCalled();
+      expect(mockCtx.createMediaElementSource).toHaveBeenCalled();
     });
   });
 
@@ -185,20 +220,17 @@ describe("RemoteAudioMixer", () => {
     });
   });
 
-  describe("getAudioElement", () => {
-    it("returns the audio element", () => {
-      expect(mixer.getAudioElement()).toBe(mockCtx._audioElement);
-    });
-  });
-
   describe("destroy", () => {
-    it("closes AudioContext and removes element", () => {
+    it("closes AudioContext and removes all peer audio elements", () => {
       mixer.addPeer("user-1", mockTrack("t1"));
+      mixer.addPeer("user-2", mockTrack("t2"));
+      const els = [...audioElementsCreated];
       mixer.destroy();
 
-      expect(mockCtx._destination.disconnect).toHaveBeenCalled();
       expect(mockCtx.close).toHaveBeenCalled();
-      expect(mockCtx._audioElement.remove).toHaveBeenCalled();
+      for (const el of els) {
+        expect(el.remove).toHaveBeenCalled();
+      }
     });
   });
 });

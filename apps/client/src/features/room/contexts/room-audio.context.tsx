@@ -10,7 +10,6 @@ import { RoomAudioStore } from "./room-audio.store";
 
 export interface RoomAudioContextValue {
   mixer: IRemoteAudioMixer | null;
-  audioElement: HTMLAudioElement | null;
   store: RoomAudioStore;
 }
 
@@ -33,8 +32,6 @@ export function RoomAudioContextProvider({ children, session }: Props) {
     remotePeers: session.remotePeers,
     enabled: isConnected,
   });
-
-  const audioElement = mixer?.getAudioElement() ?? null;
 
   useEffect(() => {
     const sampler = samplerRef.current;
@@ -98,9 +95,8 @@ export function RoomAudioContextProvider({ children, session }: Props) {
       detector.reset();
     };
   }, []);
-
   return (
-    <RoomAudioContext.Provider value={{ store: storeRef.current, mixer, audioElement }}>
+    <RoomAudioContext.Provider value={{ store: storeRef.current, mixer }}>
       {children}
     </RoomAudioContext.Provider>
   );

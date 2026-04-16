@@ -28,10 +28,10 @@ export function RoomVideo({
   style,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const { store } = useRoomAudioContext();
+  const { store: audioStore } = useRoomAudioContext();
   const { store: qualityStore } = usePeerQualityContext();
-  const audioLevel = useAudioLevel(store, userId);
-  const activeSpeakerId = useActiveSpeakerId(store);
+  const audioLevel = useAudioLevel(audioStore, userId);
+  const activeSpeakerId = useActiveSpeakerId(audioStore);
   const peerQuality = usePeerQuality(qualityStore, userId);
   const avatarColor = getAvatarColor(username ?? "");
 

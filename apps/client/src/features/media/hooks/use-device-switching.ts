@@ -11,8 +11,6 @@ import { isActive } from "@/lib/media/capture-state";
 export interface UseDeviceSwitchingReturn {
   switchVideoDevice: (deviceId: string) => Promise<boolean>;
   switchAudioDevice: (deviceId: string) => Promise<boolean>;
-  switchSpeakerDevice: (element: HTMLMediaElement | null, deviceId: string) => Promise<boolean>;
-  isSpeakerSwitchSupported: boolean;
 }
 
 export function useDeviceSwitching(): UseDeviceSwitchingReturn {
@@ -72,37 +70,8 @@ export function useDeviceSwitching(): UseDeviceSwitchingReturn {
     [audioController, audioStateReader],
   );
 
-  const switchSpeakerDevice = useCallback(
-    async (element: HTMLMediaElement | null, deviceId: string): Promise<boolean> => {
-      if (!element) {
-        console.error("[DeviceSwitching] Failed to switch speaker device: element is null");
-        return false;
-      }
-
-      if (!("setSinkId" in HTMLMediaElement.prototype)) {
-        console.error("[DeviceSwitching] Failed to switch speaker device: setSinkId not supported");
-        return false;
-      }
-
-      try {
-        await (
-          element as HTMLMediaElement & { setSinkId: (id: string) => Promise<void> }
-        ).setSinkId(deviceId);
-        return true;
-      } catch (error) {
-        console.error("[DeviceSwitching] Failed to switch speaker device:", error);
-        return false;
-      }
-    },
-    [],
-  );
-
-  const isSpeakerSwitchSupported = "setSinkId" in HTMLMediaElement.prototype;
-
   return {
     switchVideoDevice,
     switchAudioDevice,
-    switchSpeakerDevice,
-    isSpeakerSwitchSupported,
   };
 }

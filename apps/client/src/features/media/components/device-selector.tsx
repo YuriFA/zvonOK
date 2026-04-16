@@ -42,7 +42,7 @@ export function DeviceSelector({ className, username }: DeviceSelectorProps) {
     setSelectedSpeakerDevice,
   } = useMediaDevices();
 
-  const { switchVideoDevice, switchAudioDevice, isSpeakerSwitchSupported } = useDeviceSwitching();
+  const { switchVideoDevice, switchAudioDevice } = useDeviceSwitching();
 
   const [permissionModalOpen, setPermissionModalOpen] = useState(false);
   const [deniedDevices, setDeniedDevices] = useState({ camera: false, microphone: false });
@@ -143,7 +143,7 @@ export function DeviceSelector({ className, username }: DeviceSelectorProps) {
       )}
 
       <div className="flex items-center justify-center gap-2">
-        {isSpeakerSwitchSupported && (
+        {"setSinkId" in HTMLMediaElement.prototype && (
           <SpeakerDeviceControlGroup
             devices={speakerDevices}
             selectedDeviceId={selectedDevices.speakerDeviceId}

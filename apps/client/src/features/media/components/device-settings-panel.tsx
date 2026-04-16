@@ -1,7 +1,8 @@
 import { Settings, X, Loader2 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import type { IRemoteAudioMixer } from "@/lib/audio/remote-audio-mixer";
 import { cn } from "@/lib/utils";
 
 import { useDeviceSwitching } from "../hooks/use-device-switching";
@@ -10,21 +11,20 @@ import { ActiveDeviceDisplay } from "./active-device-display";
 import { SingleDeviceSelector } from "./single-device-selector";
 
 export interface DeviceSettingsPanelProps {
-  audioElement?: HTMLAudioElement | null;
+  mixer?: IRemoteAudioMixer | null;
   isVideoEnabled: boolean;
   isAudioEnabled: boolean;
   className?: string;
 }
 
 export function DeviceSettingsPanel({
-  audioElement,
+  mixer,
   isVideoEnabled,
   isAudioEnabled,
   className,
 }: DeviceSettingsPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isSwitching, setIsSwitching] = useState<"video" | "audio" | "speaker" | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   const {
     videoDevices,
@@ -37,10 +37,7 @@ export function DeviceSettingsPanel({
     isLoading,
   } = useMediaDevices();
 
-  const { switchVideoDevice, switchAudioDevice, switchSpeakerDevice, isSpeakerSwitchSupported } =
-    useDeviceSwitching();
-
-  const speakerElement = audioElement ?? null;
+  const { switchVideoDevice, switchAudioDevice } = useDeviceSwitching();
 
   const activeCamera =
     videoDevices.find((d) => d.deviceId === selectedDevices.videoDeviceId) ?? videoDevices[0];
@@ -49,18 +46,13 @@ export function DeviceSettingsPanel({
   const activeSpeaker =
     speakerDevices.find((d) => d.deviceId === selectedDevices.speakerDeviceId) ?? speakerDevices[0];
 
-  // Apply the saved speaker selection when a remote media element becomes available.
+  // Apply the saved speaker selection when the mixer becomes available.
   useEffect(() => {
     const speakerDeviceId = selectedDevices.speakerDeviceId;
-    if (!isSpeakerSwitchSupported || !speakerElement || !speakerDeviceId) return;
+    if (!mixer || !speakerDeviceId) return;
 
-    switchSpeakerDevice(speakerElement, speakerDeviceId).catch(() => {});
-  }, [
-    isSpeakerSwitchSupported,
-    selectedDevices.speakerDeviceId,
-    switchSpeakerDevice,
-    speakerElement,
-  ]);
+    mixer.setSink(speakerDeviceId).catch(() => {});
+  }, [selectedDevices.speakerDeviceId, mixer]);
 
   const handleVideoChange = useCallback(
     async (deviceId: string) => {
@@ -97,15 +89,14 @@ export function DeviceSettingsPanel({
       setIsSwitching("speaker");
       try {
         setSelectedSpeakerDevice(deviceId);
-
-        if (speakerElement) {
-          await switchSpeakerDevice(speakerElement, deviceId);
+        if (mixer) {
+          await mixer.setSink(deviceId);
         }
       } finally {
         setIsSwitching(null);
       }
     },
-    [switchSpeakerDevice, speakerElement, setSelectedSpeakerDevice],
+    [mixer, setSelectedSpeakerDevice],
   );
 
   const renderSelectors = () => (
@@ -141,7 +132,7 @@ export function DeviceSettingsPanel({
         disabled={isSwitching !== null}
       />
 
-      {isSpeakerSwitchSupported && (
+      {"setSinkId" in HTMLMediaElement.prototype && (
         <SingleDeviceSelector
           type="audiooutput"
           devices={speakerDevices}
@@ -161,7 +152,7 @@ export function DeviceSettingsPanel({
   );
 
   return (
-    <div ref={containerRef} className={cn("relative", className)}>
+    <div className={cn("relative", className)}>
       <Button
         variant="ghost"
         size="icon"
