@@ -1,6 +1,6 @@
 # TASK-031 — Chat Data Model
 
-> **Status:** planned
+> **Status:** done
 > **Priority:** medium
 > **Created:** 2026-02-08
 
