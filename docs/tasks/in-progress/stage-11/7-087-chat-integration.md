@@ -1,6 +1,6 @@
 # TASK-087 — Chat Integration in Room Page
 
-> **Status:** pending
+> **Status:** done
 > **Priority:** high
 > **Created:** 2026-02-09
 
