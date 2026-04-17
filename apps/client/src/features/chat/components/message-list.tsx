@@ -24,6 +24,30 @@ function shouldShowHeader(messages: Message[], index: number): boolean {
   return timeDiff > 5 * 60 * 1000;
 }
 
+function MessageSkeleton() {
+  const rows = [
+    { align: "start", header: true, width: "w-48" },
+    { align: "start", header: false, width: "w-64" },
+    { align: "end", header: true, width: "w-40" },
+    { align: "end", header: false, width: "w-56" },
+    { align: "start", header: true, width: "w-52" },
+  ];
+
+  return (
+    <div className="flex animate-pulse flex-col gap-2 px-3 py-3" aria-busy="true">
+      {rows.map((row) => (
+        <div
+          key={`${row.align}-${row.header}-${row.width}`}
+          className={cn("flex flex-col gap-1", row.align === "end" ? "items-end" : "items-start")}
+        >
+          {row.header && <div className="h-3 w-20 rounded bg-muted-foreground/20" />}
+          <div className={cn("h-7 rounded-2xl bg-muted-foreground/15", row.width)} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function MessageList({
   messages,
   currentUserId,
@@ -62,11 +86,19 @@ export function MessageList({
 
   const sortedMessages = [...messages].reverse();
 
+  if (isLoading && sortedMessages.length === 0) {
+    return (
+      <div className="flex-1 overflow-y-auto">
+        <MessageSkeleton />
+      </div>
+    );
+  }
+
   return (
     <div
       ref={containerRef}
       onScroll={checkNearBottom}
-      className={cn("flex flex-col gap-2 overflow-y-auto py-3", isLoading && "animate-pulse")}
+      className="flex flex-1 flex-col gap-2 overflow-y-auto py-3"
     >
       {hasMore && onLoadMore && (
         <button
@@ -76,9 +108,6 @@ export function MessageList({
         >
           Load earlier messages
         </button>
-      )}
-      {isLoading && (
-        <p className="text-center text-xs text-muted-foreground">Loading messages...</p>
       )}
       {!isLoading && sortedMessages.length === 0 && (
         <p className="text-center text-xs text-muted-foreground">No messages yet</p>

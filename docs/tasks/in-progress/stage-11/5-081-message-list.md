@@ -1,6 +1,6 @@
 # TASK-081 — Message List Component
 
-> **Status:** pending
+> **Status:** done
 > **Priority:** high
 > **Created:** 2026-02-09
 
@@ -67,13 +67,13 @@ interface MessageListProps {
 - Don't auto-scroll if user is reading history
 
 ## Acceptance Criteria
-- [ ] MessageList component displays messages
-- [ ] Sent messages aligned right, received aligned left
-- [ ] Message grouping by sender
-- [ ] Timestamps displayed
-- [ ] Auto-scroll to new messages
-- [ ] Loading skeleton for initial load
-- [ ] "Load more" button for history
+- [x] MessageList component displays messages
+- [x] Sent messages aligned right, received aligned left
+- [x] Message grouping by sender
+- [x] Timestamps displayed
+- [x] Auto-scroll to new messages
+- [x] Loading skeleton for initial load
+- [x] "Load more" button for history
 
 ## Definition of Done
 - Acceptance criteria satisfied
