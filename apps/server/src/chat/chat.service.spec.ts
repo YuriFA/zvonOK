@@ -113,7 +113,10 @@ describe('ChatService', () => {
     });
 
     it('throws BadRequestException when room has ended', async () => {
-      prisma.room.findUnique.mockResolvedValue({ ...baseRoom, status: 'ended' });
+      prisma.room.findUnique.mockResolvedValue({
+        ...baseRoom,
+        status: 'ended',
+      });
 
       await expect(
         service.sendMessage('user-1', {

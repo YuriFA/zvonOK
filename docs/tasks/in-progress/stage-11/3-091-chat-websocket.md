@@ -1,6 +1,6 @@
 # TASK-091 — Real-time Chat via WebSocket
 
-> **Status:** planned
+> **Status:** done
 > **Priority:** medium
 > **Created:** 2026-02-08
 
@@ -71,6 +71,14 @@ export class ChatGateway {
 - History loading functional
 
 ## Implementation Guide
+
+### Changes Made
+- **`apps/server/src/chat/chat.gateway.ts`** (new) — `ChatGateway` on `/chat` namespace with:
+  - JWT cookie/token authentication on connection (disconnects unauthenticated clients)
+  - `chat:send` — creates message via `ChatService`, broadcasts `chat:message` to room
+  - `chat:history` — joins room, returns paginated message history via `ChatService`
+  - Uses `JwtService` from `@nestjs/jwt` for JWT verification (globally registered via `AuthModule`)
+- **`apps/server/src/chat/chat.module.ts`** — registered `ChatGateway` as provider
 
 ## Related Files
 - `apps/server/src/chat/chat.gateway.ts` (new)
