@@ -1,5 +1,6 @@
 import { SendHorizontal } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 
@@ -35,7 +36,8 @@ export function MessageInput({
       await onSend(trimmed);
       setValue("");
     } catch {
-      // onSend caller handles error display
+      setValue(trimmed);
+      toast.error("Failed to send message");
     } finally {
       setSending(false);
       textareaRef.current?.focus();

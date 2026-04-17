@@ -1,6 +1,6 @@
 # TASK-084 — Message Input Component
 
-> **Status:** pending
+> **Status:** done
 > **Priority:** high
 > **Created:** 2026-02-09
 
@@ -62,14 +62,14 @@ interface MessageInputProps {
 - No whitespace-only messages
 
 ## Acceptance Criteria
-- [ ] MessageInput component created
-- [ ] Character counter displayed
-- [ ] Send button disabled when empty
-- [ ] Enter to send, Shift+Enter for newline
-- [ ] Loading state during send
-- [ ] Error handling with toast notification
-- [ ] Focus stays in input after send
-- [ ] Accessible (aria-labels)
+- [x] MessageInput component created
+- [x] Character counter displayed
+- [x] Send button disabled when empty
+- [x] Enter to send, Shift+Enter for newline
+- [x] Loading state during send
+- [x] Error handling with toast notification
+- [x] Focus stays in input after send
+- [x] Accessible (aria-labels)
 
 ## Definition of Done
 - Acceptance criteria satisfied
