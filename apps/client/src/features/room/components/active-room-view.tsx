@@ -4,6 +4,8 @@ import { toast } from "sonner";
 
 import { ParticipantsList } from "@/components/room/participants-list";
 import { VideoGrid } from "@/components/video-grid";
+import { ChatPanel } from "@/features/chat/components/chat-panel";
+import { useChat } from "@/features/chat/hooks/use-chat";
 import { RoomCenterControls } from "@/features/room/components/room-center-controls";
 import { RoomVideo } from "@/features/room/components/room-video";
 import { ScreenShareSpotlight } from "@/features/room/components/screen-share-spotlight";
@@ -136,6 +138,12 @@ export function ActiveRoomView({
 
   const [isParticipantsVisible, setIsParticipantsVisible] = useState(false);
 
+  const chat = useChat({
+    roomId: room.id,
+    currentUserId,
+    enabled: true,
+  });
+
   const handleToggleScreenShare = useCallback(async () => {
     if (isSharing) {
       stopScreenShare();
@@ -247,6 +255,17 @@ export function ActiveRoomView({
             onKickParticipant={kickPeer}
           />
         </aside>
+
+        <ChatPanel
+          messages={chat.messages}
+          currentUserId={currentUserId}
+          isOpen={chat.isOpen}
+          isLoading={chat.isLoading}
+          hasMore={chat.hasMore}
+          onSendMessage={chat.sendMessage}
+          onLoadMore={chat.loadHistory}
+          onClose={() => chat.setIsOpen(false)}
+        />
       </div>
 
       <div className="flex items-center justify-between border-t p-4">
@@ -268,6 +287,9 @@ export function ActiveRoomView({
         <RoomRightControls
           isParticipantsVisible={isParticipantsVisible}
           onToggleParticipants={() => setIsParticipantsVisible((v) => !v)}
+          isChatOpen={chat.isOpen}
+          onToggleChat={() => chat.setIsOpen((v) => !v)}
+          unreadCount={chat.unreadCount}
         />
       </div>
     </main>

@@ -1,5 +1,6 @@
-import { Users } from "lucide-react";
+import { MessageSquare, Users } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -10,6 +11,9 @@ interface Props {
   variant?: "default" | "secondary" | "destructive" | "outline" | "ghost" | "link";
   isParticipantsVisible: boolean;
   onToggleParticipants: () => void;
+  isChatOpen: boolean;
+  onToggleChat: () => void;
+  unreadCount?: number;
 }
 
 export const RoomRightControls = ({
@@ -18,6 +22,9 @@ export const RoomRightControls = ({
   variant = "outline",
   isParticipantsVisible,
   onToggleParticipants,
+  isChatOpen,
+  onToggleChat,
+  unreadCount = 0,
 }: Props) => {
   return (
     <div className={cn("flex gap-2", className)}>
@@ -36,6 +43,33 @@ export const RoomRightControls = ({
           <Users className="size-4" />
         </TooltipTrigger>
         <TooltipContent>Participants</TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Button
+              type="button"
+              variant={isChatOpen ? "secondary" : variant}
+              size={size}
+              onClick={onToggleChat}
+              aria-label="Toggle chat"
+            />
+          }
+        >
+          <div className="relative">
+            <MessageSquare className="size-4" />
+            {unreadCount > 0 && (
+              <Badge
+                variant="destructive"
+                className="absolute -top-2 -right-2 flex size-4 items-center justify-center p-0 text-[10px]"
+              >
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </Badge>
+            )}
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>Chat</TooltipContent>
       </Tooltip>
     </div>
   );
