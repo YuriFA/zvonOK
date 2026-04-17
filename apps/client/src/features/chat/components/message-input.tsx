@@ -38,7 +38,8 @@ export function MessageInput({
     try {
       await onSend(trimmed);
       setValue("");
-    } catch {
+    } catch (error) {
+      console.error("Failed to send message:", error);
       setValue(trimmed);
       toast.error("Failed to send message");
     } finally {
