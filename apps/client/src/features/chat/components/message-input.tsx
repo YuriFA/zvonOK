@@ -25,11 +25,14 @@ export function MessageInput({
   const [sending, setSending] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const charCount = value.length;
+  const isOverLimit = charCount > maxLength;
+
   const canSend = value.trim().length > 0 && !sending && !disabled && !isLoading;
 
   const handleSubmit = useCallback(async () => {
     const trimmed = value.trim();
-    if (!trimmed || sending || disabled) return;
+    if (!trimmed || sending || disabled || charCount > maxLength) return;
 
     setSending(true);
     try {
@@ -42,7 +45,7 @@ export function MessageInput({
       setSending(false);
       textareaRef.current?.focus();
     }
-  }, [value, sending, disabled, onSend]);
+  }, [value, sending, disabled, charCount, maxLength, onSend]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -53,9 +56,6 @@ export function MessageInput({
     },
     [handleSubmit],
   );
-
-  const charCount = value.length;
-  const isOverLimit = charCount > maxLength;
 
   return (
     <div className="flex flex-col gap-1 border-t px-3 pt-2 pb-3">
