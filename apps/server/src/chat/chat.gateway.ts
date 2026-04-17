@@ -106,12 +106,17 @@ export class ChatGateway
 
   private authenticate(client: Socket): string | null {
     const token = this.extractToken(client);
+    console.log(`[DEVLOG] Extracted token for client ${client.id}:`, token);
     if (!token) return null;
 
     try {
       const payload = this.jwtService.verify<{ id: string }>(token);
+      console.log(
+        `[DEVLOG] Authenticated chat client ${client.id} as user ${payload.id}`,
+      );
       return payload.id;
-    } catch {
+    } catch (error) {
+      console.error('[DEVLOG] JWT verification failed:', error);
       return null;
     }
   }
