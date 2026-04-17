@@ -1,6 +1,6 @@
 # TASK-107 — Screen Share Layout
 
-> **Status:** planned
+> **Status:** done
 > **Priority:** medium
 > **Created:** 2026-04-10
 

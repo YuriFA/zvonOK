@@ -1,6 +1,6 @@
 # TASK-108 — Fix screen share stop not updating remote peer state
 
-> **Status:** in-progress
+> **Status:** done
 > **Priority:** high
 > **Created:** 2026-04-13
 
