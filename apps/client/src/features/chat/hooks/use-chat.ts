@@ -34,6 +34,7 @@ export function useChat({ roomId, currentUserId, enabled = true }: UseChatOption
 
   const socketRef = useRef<Socket | null>(null);
   const isOpenRef = useRef(isOpen);
+  const currentPageRef = useRef(1);
 
   useEffect(() => {
     isOpenRef.current = isOpen;
@@ -57,9 +58,10 @@ export function useChat({ roomId, currentUserId, enabled = true }: UseChatOption
     socketRef.current = socket;
 
     socket.on("connect", () => {
+      currentPageRef.current = 1;
       socket.emit(
         "chat:history",
-        { roomId },
+        { roomId, page: 1 },
         (response: { data: Message[]; meta: { totalPages: number; page: number } }) => {
           if (response?.data) {
             setMessages(response.data);
@@ -93,8 +95,7 @@ export function useChat({ roomId, currentUserId, enabled = true }: UseChatOption
     async (content: string) => {
       const socket = socketRef.current;
       if (!socket?.connected) {
-        toast.error("Chat is not connected");
-        return;
+        throw new Error("Chat is not connected");
       }
       socket.emit("chat:send", { content, roomId });
     },
@@ -108,11 +109,13 @@ export function useChat({ roomId, currentUserId, enabled = true }: UseChatOption
       setIsLoading(false);
       return;
     }
+    const nextPage = currentPageRef.current + 1;
     socket.emit(
       "chat:history",
-      { roomId },
+      { roomId, page: nextPage },
       (response: { data: Message[]; meta: { totalPages: number; page: number } }) => {
         if (response?.data) {
+          currentPageRef.current = nextPage;
           setMessages((prev) => {
             const existingIds = new Set(prev.map((m) => m.id));
             const newMessages = response.data.filter((m) => !existingIds.has(m.id));
