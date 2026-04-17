@@ -80,5 +80,3 @@ interface MessageInputProps {
 - `apps/client/src/features/chat/components/MessageInput.tsx` - New component
 - 3-091-chat-websocket.md - Message sending via WebSocket
 
-## Next Task
-TASK-087 — Chat Integration in Room Page

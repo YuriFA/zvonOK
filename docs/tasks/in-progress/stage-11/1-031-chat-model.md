@@ -59,6 +59,3 @@ model Room {
 
 ## Related Files
 - `apps/server/prisma/schema.prisma`
-
-## Next Task
-TASK-033 — Chat API Endpoints

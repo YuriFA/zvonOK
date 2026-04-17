@@ -10,8 +10,8 @@
 Create REST API endpoints for chat functionality to send messages and retrieve chat history.
 
 ## Scope
-- POST /api/messages - Send message
-- GET /api/messages/:roomId - Get message history
+- POST /messages - Send message
+- GET /messages/:roomId - Get message history
 - Pagination support
 - Include user data in responses
 - Rate limiting
@@ -20,8 +20,8 @@ Create REST API endpoints for chat functionality to send messages and retrieve c
 
 ### Endpoints
 ```http
-POST   /api/messages
-GET    /api/messages/:roomId?page=1&limit=50
+POST   /messages
+GET    /messages/:roomId?page=1&limit=50
 ```
 
 ### DTOs
@@ -50,8 +50,6 @@ class SendMessageDto {
 ## Implementation Guide
 
 ## Related Files
-- `apps/server/src/chat/chat.controller.ts`
-- `apps/server/src/chat/chat.service.ts`
-
-## Next Task
-TASK-091 — Real-time Chat via WebSocket
+- `apps/server/src/chat/chat.controller.ts` (new)
+- `apps/server/src/chat/chat.service.ts` (new)
+- `apps/server/src/chat/chat.module.ts` (new)

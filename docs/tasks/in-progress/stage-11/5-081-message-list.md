@@ -85,5 +85,3 @@ interface MessageListProps {
 - `apps/client/src/features/chat/components/MessageBubble.tsx` - Message item
 - 2-033-chat-api.md - Message data source
 
-## Next Task
-TASK-084 — Message Input Component

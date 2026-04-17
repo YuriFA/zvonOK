@@ -88,8 +88,5 @@ interface ChatState {
 
 ## Related Files
 - `apps/client/src/routes/room.tsx` - RoomPage integration
-- `apps/client/src/components/ChatPanel.tsx` - Chat container
+- `apps/client/src/features/chat/components/ChatPanel.tsx` - Chat container (new)
 - `apps/client/src/features/chat/` - Chat components
-
-## Next Task
-TASK-078 — Mediasoup Worker Setup (Stage 5)
