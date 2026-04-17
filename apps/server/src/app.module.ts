@@ -4,6 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RoomModule } from './room/room.module';
+import { ChatModule } from './chat/chat.module';
 import { SfuModule } from './sfu/sfu.module';
 import { VersionController } from './version.controller';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
@@ -65,6 +66,7 @@ import { APP_GUARD } from '@nestjs/core';
     AuthModule,
     UserModule,
     RoomModule,
+    ChatModule,
     SfuModule,
   ],
   controllers: [VersionController],

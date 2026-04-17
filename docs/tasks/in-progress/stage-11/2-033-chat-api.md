@@ -1,6 +1,6 @@
 # TASK-033 — Chat API Endpoints
 
-> **Status:** planned
+> **Status:** done
 > **Priority:** medium
 > **Created:** 2026-02-08
 
@@ -49,7 +49,26 @@ class SendMessageDto {
 
 ## Implementation Guide
 
+### Files Created
+- `apps/server/src/chat/chat.module.ts` — Module registration
+- `apps/server/src/chat/chat.controller.ts` — POST /messages, GET /messages/:roomId
+- `apps/server/src/chat/chat.service.ts` — Prisma-based message CRUD + pagination
+- `apps/server/src/chat/dto/send-message.dto.ts` — Input validation (content 1-2000 chars, roomId)
+- `apps/server/src/chat/chat.service.spec.ts` — 11 service unit tests
+- `apps/server/src/chat/chat.controller.spec.ts` — 6 controller unit tests
+
+### Key Decisions
+- Rate limiting: 30 messages/min on POST (short throttle tier), GET uses global throttle
+- Pagination: default page=1, limit=50, max limit=100, ordered by createdAt desc
+- Responses include user `{ id, username }` via Prisma include
+- GET endpoint requires auth (default JwtAuthGuard); no SkipAuthGuard
+- Registered ChatModule in AppModule
+
 ## Related Files
+- `apps/server/src/chat/chat.module.ts` (new)
 - `apps/server/src/chat/chat.controller.ts` (new)
 - `apps/server/src/chat/chat.service.ts` (new)
-- `apps/server/src/chat/chat.module.ts` (new)
+- `apps/server/src/chat/dto/send-message.dto.ts` (new)
+- `apps/server/src/chat/chat.service.spec.ts` (new)
+- `apps/server/src/chat/chat.controller.spec.ts` (new)
+- `apps/server/src/app.module.ts` (modified — added ChatModule)

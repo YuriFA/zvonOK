@@ -121,6 +121,7 @@ Clients exchange media directly with the SFU (RTP/SRTP); all signalling goes ove
 | **AuthModule** | JWT authentication with refresh token rotation | `apps/server/src/auth/` |
 | **UserModule** | User role management via Prisma | `apps/server/src/user/` |
 | **RoomModule** | Room lifecycle management with cleanup | `apps/server/src/room/` |
+| **ChatModule** | Chat messaging with paginated history | `apps/server/src/chat/` |
 | **PrismaModule** | Global database service | `apps/server/src/prisma/` |
 | **SFUModule** | mediasoup for group calls (WebSocket signalling). Single Worker with per-room Routers. | `apps/server/src/sfu/` |
 | **Client App** | React 19 + Vite frontend | `apps/client/src/` |
@@ -212,7 +213,7 @@ enum RoomStatus {
 |-------|---------|---------|
 | `User` | id, email, username, passwordHash, createdAt, updatedAt, refreshTokenHash, failedLoginAttempts, lockedUntil, tokenVersion, role | email (unique), username (unique) |
 | `Room` | id, slug, name, ownerId, isPublic, maxParticipants, status, createdAt, updatedAt, endedAt, lastActivityAt | slug (unique), ownerId (FK to User, indexed), status (indexed), isPublic (indexed) |
-| `Message` | id, content, userId, roomId, createdAt | userId (FK to User), roomId (FK to Room) — *To be added in Stage 9* |
+| `Message` | id, content, userId, roomId, createdAt | userId (FK to User), roomId (FK to Room) — *Stage 11 Chat API complete* |
 
 ---
 
@@ -244,6 +245,13 @@ enum RoomStatus {
 | GET | `/rooms/:slug` | Public (`@SkipAuthGuard`) | Get room by slug → 200 |
 | PATCH | `/rooms/:id` | Protected (owner check in controller) | Update room → 200 |
 | DELETE | `/rooms/:id` | Protected (owner check in controller) | End room (soft delete + SFU cleanup) → 204 No Content |
+
+#### Chat Endpoints
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/messages` | Protected (rate: 30/min) | Send message → 201 Created |
+| GET | `/messages/:roomId?page=1&limit=50` | Protected | Get paginated message history → 200 |
 
 #### Request/Response Examples
 
@@ -423,6 +431,19 @@ HTTP 200 OK
 **Status:** Completed (Stage 5)
 
 **See:** [modules/sfu.md](./modules/sfu.md)
+
+#### ChatModule
+
+**Responsibilities:**
+- Send messages to rooms via REST
+- Retrieve paginated message history with user data
+- Rate limiting on message creation (30/min)
+
+**Key Classes:**
+- `ChatService` — Message CRUD with pagination
+- `ChatController` — REST endpoints (`POST /messages`, `GET /messages/:roomId`)
+
+**Status:** Completed (Stage 11)
 
 ### 5.2 Frontend Architecture
 
@@ -947,3 +968,4 @@ High-level steps: `POST /auth/login` → bcrypt verify → generate access + ref
 | 2.4 | 2026-04-04 | — | Stage 8 (Polish & Infrastructure) completed. Added user roles, toast notifications, prejoin redesign, display name, independent device permissions, remote audio via Web Audio API, avatar pastel colors, audio level rings, SOLID audio refactor, app versioning, CI/CD pipeline, framework-agnostic architecture, UI migration to Base UI, simplified room creation. Updated done/README.md, roadmap.md. |
 | 2.5 | 2026-04-08 | — | TASK-047: Network quality metrics complete. Added `jitter` to `QualityStats` (collected from `inbound-rtp` for audio + video, converted from seconds to ms). Jitter penalty added to `calculateQualityScore` (−5/−10/−20 pts). Jitter shown in `QualityIndicator` tooltip. Removed unused `use-quality-stats` / `use-connection-stats` hook (stats pipeline runs through `PeerQualityProvider`). |
 | 2.6 | 2026-04-09 | — | TASK-048: Adaptive video quality via simulcast. Video producer sends three spatial layers (low/mid/high) via `SIMULCAST_ENCODINGS`. Added `sfu:set-preferred-layers` WebSocket event (client → server). Server validates consumer ownership before calling `consumer.setPreferredLayers()`. `PeerQualityProvider` maps `QualityLevel` to spatial layer via `qualityToSpatialLayer()` and emits layer switches with a 3 s debounce. |
+| 2.7 | 2026-04-17 | — | TASK-033: Chat API endpoints. POST /messages (rate-limited 30/min) and GET /messages/:roomId with pagination (page/limit). ChatService with Prisma, ChatModule registered in AppModule. 17 unit tests. |
