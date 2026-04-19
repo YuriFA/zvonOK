@@ -1,5 +1,7 @@
 import { Users } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
+import type { SfuGuestJoinRequestPayload } from "@/lib/sfu/types";
 import type { QualityScore, QualityStats } from "@/lib/sfu/types";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +24,9 @@ export interface ParticipantsListProps {
   currentUserId?: string;
   roomOwnerId?: string;
   onKickParticipant?: (participantId: string) => void;
+  pendingRequests?: SfuGuestJoinRequestPayload[];
+  onApproveRequest?: (requestId: string) => Promise<void>;
+  onDenyRequest?: (requestId: string) => Promise<void>;
   className?: string;
 }
 
@@ -30,6 +35,9 @@ export function ParticipantsList({
   currentUserId,
   roomOwnerId,
   onKickParticipant,
+  pendingRequests,
+  onApproveRequest,
+  onDenyRequest,
   className,
 }: ParticipantsListProps) {
   const participantCount = participants.length;
@@ -43,6 +51,8 @@ export function ParticipantsList({
     }
     return a.username.localeCompare(b.username);
   });
+
+  const hasPendingRequests = isOwner && pendingRequests && pendingRequests.length > 0;
 
   return (
     <div className={cn("rounded-lg border bg-card", className)}>
@@ -71,6 +81,43 @@ export function ParticipantsList({
           </ul>
         )}
       </div>
+
+      {hasPendingRequests && (
+        <div className="border-t">
+          <div className="px-4 py-2">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Pending Requests
+            </span>
+          </div>
+          <ul className="space-y-1 px-2 pb-2" aria-label="Pending join requests">
+            {pendingRequests.map((req) => (
+              <li
+                key={req.requestId}
+                className="flex items-center justify-between gap-2 rounded-md px-2 py-1.5"
+              >
+                <span className="truncate text-sm">{req.displayName}</span>
+                <div className="flex shrink-0 gap-1">
+                  <Button
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => onApproveRequest?.(req.requestId)}
+                  >
+                    Approve
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => onDenyRequest?.(req.requestId)}
+                  >
+                    Deny
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

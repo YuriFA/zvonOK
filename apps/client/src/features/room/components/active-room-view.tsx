@@ -15,6 +15,7 @@ import type { ScreenShareError } from "@/hooks/use-screen-share";
 import { useScreenShare } from "@/hooks/use-screen-share";
 import { cn } from "@/lib/utils";
 
+import { useGuestRequests } from "../contexts/guest-requests.context";
 import { RoomRightControls } from "./room-right-controls";
 
 interface ActiveScreenShare {
@@ -138,6 +139,9 @@ export function ActiveRoomView({
 
   const [isParticipantsVisible, setIsParticipantsVisible] = useState(false);
 
+  const isOwner = currentUserId === room.ownerId;
+  const { pendingRequests, approveRequest, denyRequest } = useGuestRequests();
+
   const chat = useChat({
     roomId: room.id,
     currentUserId,
@@ -253,6 +257,9 @@ export function ActiveRoomView({
             currentUserId={currentUserId}
             roomOwnerId={room.ownerId}
             onKickParticipant={kickPeer}
+            pendingRequests={isOwner ? pendingRequests : undefined}
+            onApproveRequest={isOwner ? approveRequest : undefined}
+            onDenyRequest={isOwner ? denyRequest : undefined}
           />
         </aside>
 
@@ -285,6 +292,7 @@ export function ActiveRoomView({
         />
 
         <RoomRightControls
+          pendingRequestsCount={isOwner ? pendingRequests.length : undefined}
           isParticipantsVisible={isParticipantsVisible}
           onToggleParticipants={() => setIsParticipantsVisible((v) => !v)}
           isChatOpen={chat.isOpen}

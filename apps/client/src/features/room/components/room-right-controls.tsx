@@ -13,6 +13,7 @@ interface Props {
   onToggleParticipants: () => void;
   isChatOpen: boolean;
   onToggleChat: () => void;
+  pendingRequestsCount?: number;
   unreadCount?: number;
 }
 
@@ -24,6 +25,7 @@ export const RoomRightControls = ({
   onToggleParticipants,
   isChatOpen,
   onToggleChat,
+  pendingRequestsCount = 0,
   unreadCount = 0,
 }: Props) => {
   return (
@@ -40,7 +42,17 @@ export const RoomRightControls = ({
             />
           }
         >
-          <Users className="size-4" />
+          <div className="relative">
+            <Users className="size-4" />
+            {pendingRequestsCount > 0 && (
+              <Badge
+                variant="destructive"
+                className="absolute -top-2 -right-2 flex size-4 items-center justify-center p-0 text-[10px]"
+              >
+                {pendingRequestsCount > 9 ? "9+" : pendingRequestsCount}
+              </Badge>
+            )}
+          </div>
         </TooltipTrigger>
         <TooltipContent>Participants</TooltipContent>
       </Tooltip>

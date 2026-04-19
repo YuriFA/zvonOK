@@ -7,6 +7,7 @@ import { MediaManagerProvider } from "@/features/media/contexts/media-manager.co
 import { MediaStreamProvider } from "@/features/media/contexts/media-stream.context";
 import { CallEndedView } from "@/features/room/components/call-ended-view";
 import { GuestApprovalDialog } from "@/features/room/components/guest-approval-dialog";
+import { GuestRequestsProvider } from "@/features/room/contexts/guest-requests.context";
 import { PrejoinView } from "@/features/room/components/prejoin-view";
 import type { GuestState } from "@/features/room/components/prejoin-view";
 import { RoomView } from "@/features/room/components/room-view";
@@ -181,10 +182,14 @@ export const RoomPage = () => {
             />
           ) : (
             <>
-              {isOwner && (
-                <GuestApprovalDialog roomSlug={room.slug} />
+              {isOwner ? (
+                <GuestRequestsProvider roomSlug={room.slug}>
+                  <GuestApprovalDialog />
+                  <RoomView room={room} displayName={displayName} />
+                </GuestRequestsProvider>
+              ) : (
+                <RoomView room={room} displayName={displayName} />
               )}
-              <RoomView room={room} displayName={displayName} />
             </>
           )}
         </MediaStreamProvider>
