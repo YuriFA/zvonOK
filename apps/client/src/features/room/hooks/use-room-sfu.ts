@@ -16,6 +16,7 @@ import type { SfuState } from "@/lib/sfu/types";
 export interface UseRoomSfuOptions {
   roomId: string;
   roomOwnerId: string;
+  roomSlug: string;
   localVideoStream: MediaStream | null;
   localAudioStream: MediaStream | null;
   onKicked: () => void;
@@ -35,6 +36,7 @@ export interface UseRoomSfuResult {
 export function useRoomSfu({
   roomId,
   roomOwnerId,
+  roomSlug,
   localVideoStream,
   localAudioStream,
   onKicked,
@@ -60,6 +62,7 @@ export function useRoomSfu({
   } = useMediasoup({
     roomId,
     roomOwnerId,
+    roomSlug,
     localVideoStream,
     localAudioStream,
     displayName,

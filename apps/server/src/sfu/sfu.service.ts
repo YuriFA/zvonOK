@@ -22,6 +22,22 @@ export class SfuService implements OnModuleDestroy {
   private rooms: Map<string, Set<string>> = new Map();
   private roomOwners: Map<string, string> = new Map();
   private roomScreenShare: Map<string, string> = new Map();
+  private slugToRoomId: Map<string, string> = new Map();
+
+  registerSlug(slug: string, roomId: string): void {
+    this.slugToRoomId.set(slug, roomId);
+  }
+
+  getOwnerSocketId(roomSlug: string): string | null {
+    const roomId = this.slugToRoomId.get(roomSlug);
+    if (!roomId) return null;
+    const ownerId = this.roomOwners.get(roomId);
+    if (!ownerId) return null;
+    for (const peer of this.getRoomPeers(roomId)) {
+      if (peer.userId === ownerId) return peer.id;
+    }
+    return null;
+  }
 
   constructor(private readonly workerManager: WorkerManager) {
     void WorkerManager;
@@ -40,6 +56,7 @@ export class SfuService implements OnModuleDestroy {
     this.peers.clear();
     this.rooms.clear();
     this.roomOwners.clear();
+    this.slugToRoomId.clear();
     this.logger.log('SFU Service closed');
   }
 
@@ -211,6 +228,9 @@ export class SfuService implements OnModuleDestroy {
       await this.workerManager.closeRouter(roomId);
       this.rooms.delete(roomId);
       this.roomOwners.delete(roomId);
+      for (const [slug, rid] of this.slugToRoomId) {
+        if (rid === roomId) this.slugToRoomId.delete(slug);
+      }
     }
 
     return {
@@ -220,7 +240,7 @@ export class SfuService implements OnModuleDestroy {
   }
 
   async joinRoom(socket: Socket, payload: SfuJoinPayload): Promise<void> {
-    const { roomId, userId, username, roomOwnerId } = payload;
+    const { roomId, userId, username, roomOwnerId, roomSlug } = payload;
     const peerId = socket.id;
 
     const peer: Peer = {
@@ -245,6 +265,9 @@ export class SfuService implements OnModuleDestroy {
     roomPeers.add(peerId);
     if (roomOwnerId) {
       this.roomOwners.set(roomId, roomOwnerId);
+    }
+    if (roomSlug) {
+      this.slugToRoomId.set(roomSlug, roomId);
     }
     this.logger.log(`Peer ${peerId} joined SFU room ${roomId}`);
 
@@ -621,6 +644,9 @@ export class SfuService implements OnModuleDestroy {
     this.rooms.delete(roomId);
     this.roomOwners.delete(roomId);
     this.roomScreenShare.delete(roomId);
+    for (const [slug, rid] of this.slugToRoomId) {
+      if (rid === roomId) this.slugToRoomId.delete(slug);
+    }
     await this.workerManager.closeRouter(roomId);
     this.logger.log(`Room ${roomId} ended — all peers notified and cleaned up`);
   }

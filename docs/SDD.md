@@ -245,6 +245,10 @@ enum RoomStatus {
 | GET | `/rooms/:slug` | Public (`@SkipAuthGuard`) | Get room by slug → 200 |
 | PATCH | `/rooms/:id` | Protected (owner check in controller) | Update room → 200 |
 | DELETE | `/rooms/:id` | Protected (owner check in controller) | End room (soft delete + SFU cleanup) → 204 No Content |
+| POST | `/rooms/:slug/guest-request` | Public (`@SkipAuthGuard`) | Guest requests to join room → 200 `{ requestId }` |
+| POST | `/rooms/:slug/guest-approve` | Protected (owner check) | Owner approves guest → 200 `{ token }` |
+| POST | `/rooms/:slug/guest-deny` | Protected (owner check) | Owner denies guest → 204 No Content |
+| GET | `/rooms/:slug/guest-status/:requestId` | Public (`@SkipAuthGuard`) | Guest checks request status → 200 `{ status, token? }` |
 
 #### Chat Endpoints
 
@@ -314,7 +318,7 @@ HTTP 200 OK
 
 | Event | Direction | Payload | Description |
 |-------|-----------|---------|-------------|
-| `sfu:join` | Client → Server | `{ roomId, userId, username, roomOwnerId? }` | Join SFU room |
+| `sfu:join` | Client → Server | `{ roomId, userId, username, roomOwnerId?, roomSlug? }` | Join SFU room |
 | `sfu:joined` | Server → Client | `{ routerRtpCapabilities }` | SFU room joined |
 | `sfu:peer-joined` | Server → Client | `{ userId, username }` | Notify existing peers that a new participant joined |
 | `sfu:existing-peers` | Server → Client | `[{ userId, username }]` | Sent to newly joined peer listing participants already in room |
@@ -344,6 +348,9 @@ HTTP 200 OK
 | `sfu:kicked` | Server → Client | `{ roomId }` | Sent to the removed participant before disconnect |
 | `sfu:room-ended` | Server → Client | `{ roomId }` | Broadcast to all room peers when the owner ends the room |
 | `sfu:set-preferred-layers` | Client → Server | `{ consumerId, spatialLayer }` | Request a simulcast spatial layer switch for a consumer (0=low, 1=mid, 2=high) |
+| `sfu:guest-join-request` | Server → Owner | `{ requestId, displayName }` | Guest requests to join room |
+| `sfu:guest-join-approved` | Server → Guest | `{ token }` | Guest approved, guest JWT ready |
+| `sfu:guest-join-denied` | Server → Guest | `{}` | Guest denied entry |
 
 **Error Payload (Server -> Client):**
 ```json

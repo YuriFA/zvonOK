@@ -45,6 +45,7 @@ import type {
   SfuConsumerClosedPayload,
   SfuScreenShareStoppedPayload,
   SfuScreenShareStoppedCallback,
+  SfuGuestJoinRequestPayload,
 } from "./types";
 import { SfuProduceError } from "./types";
 
@@ -102,6 +103,7 @@ export class SfuManager implements ISfuManager {
   private producerStateCallbacks = new Set<SfuProducerStateCallback>();
   private produceErrorCallbacks = new Set<(code: SfuProduceErrorCode) => void>();
   private screenShareStoppedCallbacks = new Set<SfuScreenShareStoppedCallback>();
+  private guestJoinRequestCallbacks = new Set<(payload: SfuGuestJoinRequestPayload) => void>();
 
   // Event router
   private eventRouter = new SfuEventRouter(
@@ -138,6 +140,7 @@ export class SfuManager implements ISfuManager {
       onRoomEnded: (p) => this.handleRoomEnded(p),
       onScreenShareStarted: (p) => this.handleScreenShareStarted(p),
       onScreenShareStopped: (p) => this.handleScreenShareStopped(p),
+      onGuestJoinRequest: (p) => this.handleGuestJoinRequest(p),
     };
   }
 
@@ -449,6 +452,11 @@ export class SfuManager implements ISfuManager {
   onScreenShareStopped(callback: SfuScreenShareStoppedCallback): () => void {
     this.screenShareStoppedCallbacks.add(callback);
     return () => this.screenShareStoppedCallbacks.delete(callback);
+  }
+
+  onGuestJoinRequest(callback: (payload: SfuGuestJoinRequestPayload) => void): () => void {
+    this.guestJoinRequestCallbacks.add(callback);
+    return () => this.guestJoinRequestCallbacks.delete(callback);
   }
 
   onProducerStateChange(callback: SfuProducerStateCallback): () => void {
@@ -861,6 +869,12 @@ export class SfuManager implements ISfuManager {
       for (const cb of this.screenShareStoppedCallbacks) {
         cb(payload);
       }
+    }
+  }
+
+  private handleGuestJoinRequest(payload: SfuGuestJoinRequestPayload): void {
+    for (const cb of this.guestJoinRequestCallbacks) {
+      cb(payload);
     }
   }
 

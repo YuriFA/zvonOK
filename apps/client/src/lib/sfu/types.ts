@@ -29,6 +29,7 @@ export interface SfuJoinPayload {
   userId: string;
   username: string;
   roomOwnerId?: string;
+  roomSlug?: string;
 }
 
 // Joined response from server
@@ -161,6 +162,11 @@ export interface SfuKickedPayload {
 
 export interface SfuRoomEndedPayload {
   roomId: string;
+}
+
+export interface SfuGuestJoinRequestPayload {
+  requestId: string;
+  displayName: string;
 }
 
 // Peer info for tracking remote producers

@@ -12,6 +12,7 @@ import type { SfuPeerInfo, SfuState } from "@/lib/sfu/types";
 export interface UseMediasoupOptions {
   roomId?: string;
   roomOwnerId?: string;
+  roomSlug?: string;
   localVideoStream: MediaStream | null;
   localAudioStream: MediaStream | null;
   enabled?: boolean;
@@ -67,6 +68,7 @@ function updateRemotePeer(
 export function useMediasoup({
   roomId,
   roomOwnerId,
+  roomSlug,
   localVideoStream,
   localAudioStream,
   enabled = true,
@@ -294,6 +296,7 @@ export function useMediasoup({
       userId: identity.userId,
       username: identity.username,
       ...(roomOwnerId ? { roomOwnerId } : {}),
+      ...(roomSlug ? { roomSlug } : {}),
     };
 
     void sfuManager.joinRoom({ ...joinPayload }).catch((error) => {
@@ -306,6 +309,7 @@ export function useMediasoup({
     identity.username,
     roomId,
     roomOwnerId,
+    roomSlug,
     state.connectionState,
     sfuManager,
   ]);

@@ -34,6 +34,7 @@ export interface SfuJoinPayload {
   userId: string;
   username: string;
   roomOwnerId?: string;
+  roomSlug?: string;
 }
 
 export interface SfuJoinedPayload {

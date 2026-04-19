@@ -99,6 +99,7 @@ const mockOnRoomEnded = vi.hoisted(() => vi.fn(() => () => {}));
 vi.mock("@/lib/sfu/manager", () => ({
   sfuManager: {
     onRoomEnded: mockOnRoomEnded,
+    getSocket: () => null,
   },
 }));
 

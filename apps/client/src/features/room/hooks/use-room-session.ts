@@ -50,6 +50,7 @@ export function useRoomSession({
     useRoomSfu({
       roomId: room.id,
       roomOwnerId: room.ownerId,
+      roomSlug: room.slug,
       localVideoStream,
       localAudioStream,
       onKicked: handleKicked,

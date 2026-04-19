@@ -19,6 +19,7 @@ import type {
   SfuScreenShareStartedPayload,
   SfuScreenShareStoppedPayload,
   SfuConsumerClosedPayload,
+  SfuGuestJoinRequestPayload,
 } from "./types";
 import type { SfuExistingPeersPayload } from "./types";
 
@@ -45,6 +46,7 @@ export interface SfuEventHandlers {
   onReconnectFailed(): void;
   onScreenShareStarted(payload: SfuScreenShareStartedPayload): void;
   onScreenShareStopped(payload: SfuScreenShareStoppedPayload): void;
+  onGuestJoinRequest(payload: SfuGuestJoinRequestPayload): void;
 }
 
 /** A registered socket listener that can be selectively removed. */
@@ -124,6 +126,9 @@ export class SfuEventRouter {
     );
     register("sfu:screen-share-stopped", (payload: unknown) =>
       this.handlers.onScreenShareStopped(payload as SfuScreenShareStoppedPayload),
+    );
+    register("sfu:guest-join-request", (payload: unknown) =>
+      this.handlers.onGuestJoinRequest(payload as SfuGuestJoinRequestPayload),
     );
     register("reconnect_failed", () => this.handlers.onReconnectFailed());
   }

@@ -9,7 +9,7 @@ import {
 } from '@nestjs/websockets';
 import { Logger } from '@nestjs/common';
 import { SkipThrottle } from '@nestjs/throttler';
-import { Server, Socket } from 'socket.io';
+import { Server, Socket, Namespace } from 'socket.io';
 import { SfuService } from './sfu.service';
 import type {
   SfuJoinPayload,
@@ -174,5 +174,17 @@ export class SfuGateway
   ): void {
     this.logger.log(`Closing producer ${payload.producerId} for ${client.id}`);
     this.sfuService.closeProducer(client.id, payload.producerId);
+  }
+
+  getOwnerSocketId(roomSlug: string): string | null {
+    return this.sfuService.getOwnerSocketId(roomSlug);
+  }
+
+  emitToSocket(socketId: string, event: string, payload: unknown): void {
+    if (!this.server) return;
+    const socket = (this.server as unknown as Namespace).sockets.get(socketId);
+    if (socket) {
+      socket.emit(event, payload);
+    }
   }
 }
