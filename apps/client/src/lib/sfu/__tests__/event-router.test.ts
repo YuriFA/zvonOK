@@ -31,6 +31,7 @@ describe("SfuEventRouter", () => {
       onReconnectFailed: vi.fn(),
       onScreenShareStarted: vi.fn(),
       onScreenShareStopped: vi.fn(),
+      onGuestJoinRequest: vi.fn(),
     };
 
     socket = {
@@ -73,7 +74,8 @@ describe("SfuEventRouter", () => {
     expect(events).toContain("sfu:produce-error");
     expect(events).toContain("sfu:screen-share-started");
     expect(events).toContain("sfu:screen-share-stopped");
-    expect(events).toHaveLength(19);
+    expect(events).toContain("sfu:guest-join-request");
+    expect(events).toHaveLength(20);
   });
 
   it("routes connect event to onConnected", () => {
