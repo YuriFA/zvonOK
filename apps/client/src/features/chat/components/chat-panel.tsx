@@ -31,9 +31,7 @@ export function ChatPanel({
     <aside
       className={cn(
         "flex flex-col overflow-hidden bg-background transition-all duration-300 ease-in-out",
-        isOpen
-          ? "absolute inset-0 z-50 w-full md:relative md:z-auto md:w-80 md:border-l"
-          : "w-0",
+        isOpen ? "absolute inset-0 z-50 w-full md:relative md:z-auto md:w-80 md:border-l" : "w-0",
       )}
     >
       <div className="flex items-center justify-between border-b px-3 py-2">

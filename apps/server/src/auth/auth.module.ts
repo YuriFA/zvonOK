@@ -12,14 +12,17 @@ import { JwtRefreshTokenStrategy } from './strategies/jwt-refresh-token.strategy
 import { TokenHelper } from './helpers/token.helper';
 
 @Module({
-  imports: [UserModule, JwtModule.registerAsync({
+  imports: [
+    UserModule,
+    JwtModule.registerAsync({
       global: true,
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_ACCESS_SECRET'),
       }),
-    })],
+    }),
+  ],
   controllers: [AuthController],
   providers: [
     AuthService,
