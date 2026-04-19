@@ -49,17 +49,17 @@ import { APP_GUARD } from '@nestjs/core';
       {
         name: 'short',
         ttl: 60000,
-        limit: 10,
+        limit: 100,
       },
       {
         name: 'medium',
         ttl: 300000,
-        limit: 20,
+        limit: 200,
       },
       {
         name: 'long',
         ttl: 3600000,
-        limit: 100,
+        limit: 1000,
       },
     ]),
     PrismaModule,
