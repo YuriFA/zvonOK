@@ -17,8 +17,9 @@ function makeMessage(overrides: Partial<Message> = {}): Message {
 }
 
 describe("ChatPanel", () => {
-  let onClose: ReturnType<typeof vi.fn>;
-  let onSendMessage: ReturnType<typeof vi.fn>;
+  const onClose = vi.fn();
+  const onSendMessage = vi.fn();
+
   let defaultProps: {
     messages: Message[];
     currentUserId: string;
@@ -28,8 +29,7 @@ describe("ChatPanel", () => {
   };
 
   beforeEach(() => {
-    onClose = vi.fn();
-    onSendMessage = vi.fn().mockResolvedValue(undefined);
+    vi.clearAllMocks();
     defaultProps = {
       messages: [],
       currentUserId: "u1",

@@ -1,16 +1,17 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, cleanup, waitFor, act } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { MessageInput } from "../message-input";
 
 describe("MessageInput", () => {
-  let onSend: ReturnType<typeof vi.fn>;
+  const onSend = vi.fn<(content: string) => Promise<void>>();
 
-  beforeEach(() => {
-    onSend = vi.fn().mockResolvedValue(undefined);
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
   });
 
-  function typeInInput(value: string) {
+  async function typeInInput(value: string) {
     fireEvent.change(screen.getByLabelText("Chat message input"), { target: { value } });
   }
 
@@ -129,13 +130,6 @@ describe("MessageInput", () => {
   });
 
   it("does not send while already sending", async () => {
-    let resolveSend: () => void;
-    onSend.mockImplementation(
-      () =>
-        new Promise<void>((resolve) => {
-          resolveSend = resolve;
-        }),
-    );
     render(<MessageInput onSend={onSend} />);
     typeInInput("Hello");
     fireEvent.click(screen.getByLabelText("Send message"));
@@ -143,15 +137,18 @@ describe("MessageInput", () => {
       expect(onSend).toHaveBeenCalledOnce();
     });
     expect(screen.getByLabelText("Send message")).toBeDisabled();
-    resolveSend!();
   });
 
   it("returns focus to textarea after send", async () => {
     render(<MessageInput onSend={onSend} />);
     const textarea = screen.getByLabelText("Chat message input");
     const focusSpy = vi.spyOn(textarea, "focus");
-    typeInInput("Hello");
-    fireEvent.click(screen.getByLabelText("Send message"));
+
+    act(() => {
+      typeInInput("Hello jfkdjfkd");
+      fireEvent.click(screen.getByLabelText("Send message"));
+    });
+
     await waitFor(() => {
       expect(onSend).toHaveBeenCalled();
     });
