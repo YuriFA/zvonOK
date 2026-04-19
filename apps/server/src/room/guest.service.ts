@@ -127,6 +127,26 @@ export class GuestService implements OnModuleDestroy {
     return { status: request.status, token: request.token };
   }
 
+  validateGuestToken(
+    token: string,
+    roomSlug: string,
+  ): { guestId: string; displayName: string } | null {
+    try {
+      const payload = this.jwtService.verify<{
+        guestId: string;
+        displayName: string;
+        roomSlug: string;
+        scope: string;
+      }>(token, {
+        secret: this.config.get<string>('JWT_GUEST_SECRET'),
+      });
+      if (payload.scope !== 'room' || payload.roomSlug !== roomSlug) return null;
+      return { guestId: payload.guestId, displayName: payload.displayName };
+    } catch {
+      return null;
+    }
+  }
+
   private cleanup(): void {
     const now = Date.now();
     for (const [id, request] of this.pending) {

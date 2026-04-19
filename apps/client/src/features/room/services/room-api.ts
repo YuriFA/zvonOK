@@ -8,11 +8,11 @@ export interface GuestRequestResponse {
 
 export interface GuestStatusResponse {
   status: "pending" | "approved" | "denied";
-  token?: string;
 }
 
-export interface GuestApproveResponse {
-  token: string;
+export interface GuestCheckResponse {
+  valid: boolean;
+  displayName?: string;
 }
 
 class RoomApi {
@@ -40,8 +40,8 @@ class RoomApi {
     });
   }
 
-  async guestApprove(slug: string, requestId: string): Promise<GuestApproveResponse> {
-    return this.client.post<GuestApproveResponse>(`/rooms/${slug}/guest-approve`, {
+  async guestApprove(slug: string, requestId: string): Promise<void> {
+    return this.client.post<void>(`/rooms/${slug}/guest-approve`, {
       requestId,
     });
   }
@@ -52,6 +52,10 @@ class RoomApi {
 
   async guestStatus(slug: string, requestId: string): Promise<GuestStatusResponse> {
     return this.client.get<GuestStatusResponse>(`/rooms/${slug}/guest-status/${requestId}`);
+  }
+
+  async guestCheck(slug: string): Promise<GuestCheckResponse> {
+    return this.client.get<GuestCheckResponse>(`/rooms/${slug}/guest-check`);
   }
 }
 

@@ -12,6 +12,9 @@ const mockUseRoomSession = vi.hoisted(() => vi.fn());
 const mockKickPeer = vi.hoisted(() => vi.fn());
 const mockToggleVideo = vi.hoisted(() => vi.fn());
 const mockToggleAudio = vi.hoisted(() => vi.fn());
+const mockGuestCheck = vi.hoisted(() => vi.fn());
+const mockGuestRequest = vi.hoisted(() => vi.fn());
+const mockGuestStatus = vi.hoisted(() => vi.fn());
 
 vi.mock("@/features/room/hooks/use-room", () => ({
   useRoom: mockUseRoom,
@@ -23,6 +26,16 @@ vi.mock("@/features/room/hooks/use-end-room", () => ({
 
 vi.mock("@/features/auth/contexts/auth.context", () => ({
   useAuth: mockUseAuth,
+}));
+
+vi.mock("@/features/room/services/room-api", () => ({
+  roomApi: {
+    guestCheck: mockGuestCheck,
+    guestRequest: mockGuestRequest,
+    guestStatus: mockGuestStatus,
+    guestApprove: vi.fn(),
+    guestDeny: vi.fn(),
+  },
 }));
 
 vi.mock("@/lib/media/manager-factory", () => ({
@@ -99,6 +112,7 @@ const mockOnRoomEnded = vi.hoisted(() => vi.fn(() => () => {}));
 vi.mock("@/lib/sfu/manager", () => ({
   sfuManager: {
     onRoomEnded: mockOnRoomEnded,
+    onGuestJoinRequest: vi.fn(() => () => {}),
     getSocket: () => null,
   },
 }));
@@ -292,7 +306,7 @@ describe("RoomPage", () => {
       </TooltipProvider>,
     );
 
-  it("renders prejoin view and transitions to active room after joining", async () => {
+  it("renders prejoin view and transitions to active room after joining (authenticated)", async () => {
     renderRoomPage();
 
     expect(screen.getByRole("button", { name: "Join Room" })).toBeInTheDocument();
@@ -359,5 +373,134 @@ describe("RoomPage", () => {
     expect(screen.getByRole("link", { name: "Back to Home" })).toHaveAttribute("href", "/");
     expect(screen.queryByText("Join Room")).not.toBeInTheDocument();
     expect(screen.queryByTestId("device-selector")).not.toBeInTheDocument();
+  });
+
+  describe("guest flow", () => {
+    beforeEach(() => {
+      mockUseAuth.mockReturnValue({ user: null, isLoading: false });
+    });
+
+    it("guest with valid cookie joins immediately without requesting approval", async () => {
+      mockGuestCheck.mockResolvedValue({ valid: true, displayName: "Bob" });
+
+      renderRoomPage();
+
+      await waitFor(() => {
+        expect(mockGuestCheck).toHaveBeenCalledWith("alpha");
+      });
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Join Room" }));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: "Turn off camera" })).toBeInTheDocument();
+      });
+
+      expect(mockGuestRequest).not.toHaveBeenCalled();
+    });
+
+    it("guest without cookie sends request and waits for approval", async () => {
+      mockGuestCheck.mockResolvedValue({ valid: false });
+      mockGuestRequest.mockResolvedValue({ requestId: "req-123" });
+      mockGuestStatus.mockResolvedValue({ status: "pending" });
+
+      renderRoomPage();
+
+      await waitFor(() => {
+        expect(mockGuestCheck).toHaveBeenCalledWith("alpha");
+      });
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Join Room" }));
+      });
+
+      await waitFor(() => {
+        expect(mockGuestRequest).toHaveBeenCalledWith("alpha", "Guest");
+        expect(screen.getByText("Waiting for room owner to approve...")).toBeInTheDocument();
+      });
+    });
+
+    it("guest transitions to active room after approval", async () => {
+      mockGuestCheck.mockResolvedValue({ valid: false });
+      mockGuestRequest.mockResolvedValue({ requestId: "req-123" });
+      mockGuestStatus.mockResolvedValue({ status: "approved" });
+
+      vi.spyOn(global, "setInterval").mockImplementation((cb) => {
+        setTimeout(() => (cb as () => void)(), 0);
+        return 1 as unknown as ReturnType<typeof setInterval>;
+      });
+
+      renderRoomPage();
+
+      await waitFor(() => expect(mockGuestCheck).toHaveBeenCalled());
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Join Room" }));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: "Turn off camera" })).toBeInTheDocument();
+      });
+
+      vi.restoreAllMocks();
+    });
+
+    it("guest sees denied state when request is denied", async () => {
+      mockGuestCheck.mockResolvedValue({ valid: false });
+      mockGuestRequest.mockResolvedValue({ requestId: "req-123" });
+      mockGuestStatus.mockResolvedValue({ status: "denied" });
+
+      vi.spyOn(global, "setInterval").mockImplementation((cb) => {
+        setTimeout(() => (cb as () => void)(), 0);
+        return 1 as unknown as ReturnType<typeof setInterval>;
+      });
+
+      renderRoomPage();
+
+      await waitFor(() => expect(mockGuestCheck).toHaveBeenCalled());
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Join Room" }));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText("Your request to join was denied.")).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Try Again" })).toBeInTheDocument();
+      });
+
+      vi.restoreAllMocks();
+    });
+
+    it("guest can retry after denied", async () => {
+      mockGuestCheck.mockResolvedValue({ valid: false });
+      mockGuestRequest.mockResolvedValue({ requestId: "req-123" });
+      mockGuestStatus.mockResolvedValue({ status: "denied" });
+
+      vi.spyOn(global, "setInterval").mockImplementation((cb) => {
+        setTimeout(() => (cb as () => void)(), 0);
+        return 1 as unknown as ReturnType<typeof setInterval>;
+      });
+
+      renderRoomPage();
+
+      await waitFor(() => expect(mockGuestCheck).toHaveBeenCalled());
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Join Room" }));
+      });
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: "Try Again" })).toBeInTheDocument();
+      });
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Try Again" }));
+      });
+
+      expect(screen.getByRole("button", { name: "Join Room" })).toBeInTheDocument();
+
+      vi.restoreAllMocks();
+    });
   });
 });

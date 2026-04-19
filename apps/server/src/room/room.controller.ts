@@ -11,7 +11,10 @@ import {
   ForbiddenException,
   BadRequestException,
   NotFoundException,
+  Req,
+  Res,
 } from '@nestjs/common';
+import type { Request, Response } from 'express';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { SkipAuthGuard } from '../auth/skip-auth.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -129,17 +132,40 @@ export class RoomController {
     }
   }
 
+  @Get(':slug/guest-check')
+  @SkipAuthGuard()
+  @ApiOperation({ summary: 'Check guest HTTP-only cookie validity' })
+  async guestCheck(
+    @Param('slug') slug: string,
+    @Req() req: Request,
+  ): Promise<{ valid: boolean; displayName?: string }> {
+    const token = (req.cookies as Record<string, string>)[`zvonok_guest_${slug}`];
+    if (!token) return { valid: false };
+    const result = this.guestService.validateGuestToken(token, slug);
+    if (!result) return { valid: false };
+    return { valid: true, displayName: result.displayName };
+  }
+
   @Get(':slug/guest-status/:requestId')
   @SkipAuthGuard()
   @ApiOperation({ summary: 'Guest checks join request status' })
   async guestStatus(
-    @Param('slug') _slug: string,
+    @Param('slug') slug: string,
     @Param('requestId') requestId: string,
+    @Res({ passthrough: true }) res: Response,
   ) {
     const result = this.guestService.getRequestStatus(requestId);
     if (!result) {
       throw new NotFoundException('Request not found or expired');
     }
-    return result;
+    if (result.status === 'approved' && result.token) {
+      res.cookie(`zvonok_guest_${slug}`, result.token, {
+        httpOnly: true,
+        sameSite: 'lax',
+        maxAge: 7200 * 1000,
+        path: '/',
+      });
+    }
+    return { status: result.status };
   }
 }

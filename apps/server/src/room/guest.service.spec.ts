@@ -16,7 +16,10 @@ describe('GuestService', () => {
         GuestService,
         {
           provide: JwtService,
-          useValue: { sign: jest.fn().mockReturnValue('guest.jwt.token') },
+          useValue: {
+            sign: jest.fn().mockReturnValue('guest.jwt.token'),
+            verify: jest.fn(),
+          },
         },
         {
           provide: ConfigService,
@@ -121,6 +124,40 @@ describe('GuestService', () => {
       expect(service.getRequestStatus(requestId)).toEqual({
         status: 'pending',
       });
+    });
+  });
+
+  describe('validateGuestToken', () => {
+    const validPayload = {
+      guestId: 'guest-uuid',
+      displayName: 'John',
+      roomSlug: 'abc123',
+      scope: 'room',
+    };
+
+    it('returns guest info for a valid token with matching slug', () => {
+      (jwtService.verify as jest.Mock).mockReturnValue(validPayload);
+      expect(service.validateGuestToken('valid.token', 'abc123')).toEqual({
+        guestId: 'guest-uuid',
+        displayName: 'John',
+      });
+    });
+
+    it('returns null when roomSlug does not match', () => {
+      (jwtService.verify as jest.Mock).mockReturnValue(validPayload);
+      expect(service.validateGuestToken('valid.token', 'other-room')).toBeNull();
+    });
+
+    it('returns null when scope is not "room"', () => {
+      (jwtService.verify as jest.Mock).mockReturnValue({ ...validPayload, scope: 'other' });
+      expect(service.validateGuestToken('valid.token', 'abc123')).toBeNull();
+    });
+
+    it('returns null when token verification throws (expired or invalid)', () => {
+      (jwtService.verify as jest.Mock).mockImplementation(() => {
+        throw new Error('jwt expired');
+      });
+      expect(service.validateGuestToken('expired.token', 'abc123')).toBeNull();
     });
   });
 });

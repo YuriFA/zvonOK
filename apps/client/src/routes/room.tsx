@@ -7,9 +7,10 @@ import { MediaManagerProvider } from "@/features/media/contexts/media-manager.co
 import { MediaStreamProvider } from "@/features/media/contexts/media-stream.context";
 import { CallEndedView } from "@/features/room/components/call-ended-view";
 import { GuestApprovalDialog } from "@/features/room/components/guest-approval-dialog";
-import { GuestJoinForm } from "@/features/room/components/guest-join-form";
 import { PrejoinView } from "@/features/room/components/prejoin-view";
+import type { GuestState } from "@/features/room/components/prejoin-view";
 import { RoomView } from "@/features/room/components/room-view";
+import { roomApi } from "@/features/room/services/room-api";
 import { useRoom } from "@/features/room/hooks/use-room";
 import { SfuManagerProvider } from "@/features/sfu/contexts/sfu-manager.context";
 import { createMediaManager } from "@/lib/media/manager-factory";
@@ -17,6 +18,8 @@ import { sfuManager } from "@/lib/sfu/manager";
 import { loadGuestDisplayName, saveGuestDisplayName } from "@/lib/utils/display-name";
 
 type RoomViewState = "prejoin" | "active" | "ended";
+
+const POLL_INTERVAL_MS = 2000;
 
 export const RoomPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -26,9 +29,28 @@ export const RoomPage = () => {
   const { data: room, isLoading, error } = useRoom(slug || "");
 
   const [displayName, setDisplayName] = useState(() => user?.username ?? loadGuestDisplayName());
-  const guestTokenRef = useRef<string | null>(null);
+  const [guestPreApproved, setGuestPreApproved] = useState(false);
+  const [guestState, setGuestState] = useState<GuestState>("idle");
+  const [errorMessage, setErrorMessage] = useState<string>("");
+  const requestIdRef = useRef<string | null>(null);
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const mediaManager = useMemo(() => createMediaManager(), []);
+
+  // On mount: if guest, check for a valid HTTP-only cookie
+  useEffect(() => {
+    if (user || !slug) return;
+    roomApi.guestCheck(slug).then((result) => {
+      if (result.valid) {
+        setGuestPreApproved(true);
+        if (result.displayName) {
+          setDisplayName(result.displayName);
+        }
+      }
+    }).catch(() => {
+      // silent fail — treat as no pre-approval
+    });
+  }, [user, slug]);
 
   useEffect(() => {
     if (!user) {
@@ -42,6 +64,37 @@ export const RoomPage = () => {
     }
   }, [room?.status]);
 
+  const stopPolling = useCallback(() => {
+    if (pollTimerRef.current !== null) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => stopPolling();
+  }, [stopPolling]);
+
+  const startPolling = useCallback((currentSlug: string, requestId: string) => {
+    stopPolling();
+    pollTimerRef.current = setInterval(async () => {
+      try {
+        const result = await roomApi.guestStatus(currentSlug, requestId);
+        if (result.status === "approved") {
+          stopPolling();
+          setViewState("active");
+        } else if (result.status === "denied") {
+          stopPolling();
+          setGuestState("denied");
+        }
+      } catch {
+        stopPolling();
+        setGuestState("error");
+        setErrorMessage("Your request expired or something went wrong.");
+      }
+    }, POLL_INTERVAL_MS);
+  }, [stopPolling]);
+
   const handleRoomEnded = useCallback(() => {
     setViewState("ended");
   }, []);
@@ -52,22 +105,41 @@ export const RoomPage = () => {
     return unsubscribe;
   }, [viewState, handleRoomEnded]);
 
-  const handleJoin = () => {
-    if (!user) {
-      saveGuestDisplayName(displayName);
+  const handleJoin = useCallback(async () => {
+    if (user || guestPreApproved) {
+      if (!user) {
+        saveGuestDisplayName(displayName);
+      }
+      setViewState("active");
+      return;
     }
 
-    setViewState("active");
-  };
+    if (!slug) return;
 
-  const handleGuestApproved = useCallback((token: string) => {
-    guestTokenRef.current = token;
-    setViewState("active");
-  }, []);
+    saveGuestDisplayName(displayName);
 
-  const handleGuestDenied = useCallback(() => {
-    // stay on form, GuestJoinForm handles its own "denied" state
-  }, []);
+    try {
+      const { requestId } = await roomApi.guestRequest(slug, displayName);
+      if (!requestId) {
+        setGuestState("error");
+        setErrorMessage("Room owner is not online. Please try again later.");
+        return;
+      }
+      requestIdRef.current = requestId;
+      setGuestState("waiting");
+      startPolling(slug, requestId);
+    } catch {
+      setGuestState("error");
+      setErrorMessage("Failed to send join request. Please try again.");
+    }
+  }, [user, guestPreApproved, slug, displayName, startPolling]);
+
+  const handleRetry = useCallback(() => {
+    stopPolling();
+    requestIdRef.current = null;
+    setGuestState("idle");
+    setErrorMessage("");
+  }, [stopPolling]);
 
   if (isLoading || authLoading) {
     return (
@@ -98,23 +170,15 @@ export const RoomPage = () => {
       <SfuManagerProvider manager={sfuManager}>
         <MediaStreamProvider>
           {viewState === "prejoin" ? (
-            user ? (
-              <PrejoinView
-                roomUrl={roomUrl}
-                displayName={displayName}
-                onDisplayNameChange={setDisplayName}
-                onJoin={handleJoin}
-              />
-            ) : (
-              <GuestJoinForm
-                roomUrl={roomUrl}
-                slug={room.slug}
-                displayName={displayName}
-                onDisplayNameChange={setDisplayName}
-                onApproved={handleGuestApproved}
-                onDenied={handleGuestDenied}
-              />
-            )
+            <PrejoinView
+              roomUrl={roomUrl}
+              displayName={displayName}
+              onDisplayNameChange={setDisplayName}
+              onJoin={handleJoin}
+              guestState={user ? undefined : guestState}
+              errorMessage={errorMessage}
+              onRetry={handleRetry}
+            />
           ) : (
             <>
               {isOwner && (
