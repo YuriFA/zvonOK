@@ -139,7 +139,9 @@ export class RoomController {
     @Param('slug') slug: string,
     @Req() req: Request,
   ): Promise<{ valid: boolean; displayName?: string }> {
-    const token = (req.cookies as Record<string, string>)[`zvonok_guest_${slug}`];
+    const token = (req.cookies as Record<string, string>)[
+      `zvonok_guest_${slug}`
+    ];
     if (!token) return { valid: false };
     const result = this.guestService.validateGuestToken(token, slug);
     if (!result) return { valid: false };

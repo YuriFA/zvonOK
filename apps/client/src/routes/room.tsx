@@ -7,12 +7,12 @@ import { MediaManagerProvider } from "@/features/media/contexts/media-manager.co
 import { MediaStreamProvider } from "@/features/media/contexts/media-stream.context";
 import { CallEndedView } from "@/features/room/components/call-ended-view";
 import { GuestApprovalDialog } from "@/features/room/components/guest-approval-dialog";
-import { GuestRequestsProvider } from "@/features/room/contexts/guest-requests.context";
 import { PrejoinView } from "@/features/room/components/prejoin-view";
 import type { GuestState } from "@/features/room/components/prejoin-view";
 import { RoomView } from "@/features/room/components/room-view";
-import { roomApi } from "@/features/room/services/room-api";
+import { GuestRequestsProvider } from "@/features/room/contexts/guest-requests.context";
 import { useRoom } from "@/features/room/hooks/use-room";
+import { roomApi } from "@/features/room/services/room-api";
 import { SfuManagerProvider } from "@/features/sfu/contexts/sfu-manager.context";
 import { createMediaManager } from "@/lib/media/manager-factory";
 import { sfuManager } from "@/lib/sfu/manager";
@@ -41,16 +41,19 @@ export const RoomPage = () => {
   // On mount: if guest, check for a valid HTTP-only cookie
   useEffect(() => {
     if (user || !slug) return;
-    roomApi.guestCheck(slug).then((result) => {
-      if (result.valid) {
-        setGuestPreApproved(true);
-        if (result.displayName) {
-          setDisplayName(result.displayName);
+    roomApi
+      .guestCheck(slug)
+      .then((result) => {
+        if (result.valid) {
+          setGuestPreApproved(true);
+          if (result.displayName) {
+            setDisplayName(result.displayName);
+          }
         }
-      }
-    }).catch(() => {
-      // silent fail — treat as no pre-approval
-    });
+      })
+      .catch(() => {
+        // silent fail — treat as no pre-approval
+      });
   }, [user, slug]);
 
   useEffect(() => {
@@ -76,25 +79,28 @@ export const RoomPage = () => {
     return () => stopPolling();
   }, [stopPolling]);
 
-  const startPolling = useCallback((currentSlug: string, requestId: string) => {
-    stopPolling();
-    pollTimerRef.current = setInterval(async () => {
-      try {
-        const result = await roomApi.guestStatus(currentSlug, requestId);
-        if (result.status === "approved") {
+  const startPolling = useCallback(
+    (currentSlug: string, requestId: string) => {
+      stopPolling();
+      pollTimerRef.current = setInterval(async () => {
+        try {
+          const result = await roomApi.guestStatus(currentSlug, requestId);
+          if (result.status === "approved") {
+            stopPolling();
+            setViewState("active");
+          } else if (result.status === "denied") {
+            stopPolling();
+            setGuestState("denied");
+          }
+        } catch {
           stopPolling();
-          setViewState("active");
-        } else if (result.status === "denied") {
-          stopPolling();
-          setGuestState("denied");
+          setGuestState("error");
+          setErrorMessage("Your request expired or something went wrong.");
         }
-      } catch {
-        stopPolling();
-        setGuestState("error");
-        setErrorMessage("Your request expired or something went wrong.");
-      }
-    }, POLL_INTERVAL_MS);
-  }, [stopPolling]);
+      }, POLL_INTERVAL_MS);
+    },
+    [stopPolling],
+  );
 
   const handleRoomEnded = useCallback(() => {
     setViewState("ended");

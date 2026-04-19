@@ -85,7 +85,7 @@ export function ParticipantsList({
       {hasPendingRequests && (
         <div className="border-t">
           <div className="px-4 py-2">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
               Pending Requests
             </span>
           </div>

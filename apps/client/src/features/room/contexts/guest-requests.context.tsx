@@ -70,6 +70,7 @@ const DEFAULT_VALUE: GuestRequestsContextValue = {
   denyRequest: async () => {},
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useGuestRequests(): GuestRequestsContextValue {
   return useContext(GuestRequestsContext) ?? DEFAULT_VALUE;
 }

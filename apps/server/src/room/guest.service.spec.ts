@@ -145,11 +145,16 @@ describe('GuestService', () => {
 
     it('returns null when roomSlug does not match', () => {
       (jwtService.verify as jest.Mock).mockReturnValue(validPayload);
-      expect(service.validateGuestToken('valid.token', 'other-room')).toBeNull();
+      expect(
+        service.validateGuestToken('valid.token', 'other-room'),
+      ).toBeNull();
     });
 
     it('returns null when scope is not "room"', () => {
-      (jwtService.verify as jest.Mock).mockReturnValue({ ...validPayload, scope: 'other' });
+      (jwtService.verify as jest.Mock).mockReturnValue({
+        ...validPayload,
+        scope: 'other',
+      });
       expect(service.validateGuestToken('valid.token', 'abc123')).toBeNull();
     });
 

@@ -140,7 +140,8 @@ export class GuestService implements OnModuleDestroy {
       }>(token, {
         secret: this.config.get<string>('JWT_GUEST_SECRET'),
       });
-      if (payload.scope !== 'room' || payload.roomSlug !== roomSlug) return null;
+      if (payload.scope !== 'room' || payload.roomSlug !== roomSlug)
+        return null;
       return { guestId: payload.guestId, displayName: payload.displayName };
     } catch {
       return null;

@@ -38,17 +38,13 @@ export function PrejoinView({
           {guestState === "waiting" && (
             <div className="flex flex-col items-center gap-3 rounded-lg border border-border bg-card p-4 text-center">
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-              <p className="text-sm text-muted-foreground">
-                Waiting for room owner to approve...
-              </p>
+              <p className="text-sm text-muted-foreground">Waiting for room owner to approve...</p>
             </div>
           )}
 
           {guestState === "denied" && (
             <div className="flex flex-col items-center gap-3 rounded-lg border border-destructive bg-card p-4 text-center">
-              <p className="text-sm text-destructive">
-                Your request to join was denied.
-              </p>
+              <p className="text-sm text-destructive">Your request to join was denied.</p>
               <Button variant="outline" size="sm" onClick={onRetry}>
                 Try Again
               </Button>
