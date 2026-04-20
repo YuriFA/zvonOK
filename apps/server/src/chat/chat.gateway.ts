@@ -12,8 +12,15 @@ import { Logger } from '@nestjs/common';
 import { SkipThrottle } from '@nestjs/throttler';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
+import { randomUUID } from 'node:crypto';
 import { ChatService } from './chat.service';
 import { SendMessageDto } from './dto/send-message.dto';
+import { GuestService } from '../room/guest.service';
+import { RoomService } from '../room/room.service';
+
+type ClientIdentity =
+  | { type: 'user'; userId: string }
+  | { type: 'guest'; guestId: string; roomSlug: string; displayName: string };
 
 @SkipThrottle()
 @WebSocketGateway({
@@ -34,6 +41,8 @@ export class ChatGateway
   constructor(
     private readonly chatService: ChatService,
     private readonly jwtService: JwtService,
+    private readonly guestService: GuestService,
+    private readonly roomService: RoomService,
   ) {}
 
   afterInit(): void {
@@ -41,14 +50,18 @@ export class ChatGateway
   }
 
   handleConnection(client: Socket): void {
-    const userId = this.authenticate(client);
-    if (!userId) {
+    const identity = this.authenticate(client);
+    if (!identity) {
       this.logger.warn(`Chat client disconnected (auth failed): ${client.id}`);
       client.disconnect(true);
       return;
     }
-    (client.data as Record<string, unknown>).userId = userId;
-    this.logger.log(`Chat client connected: ${client.id} (user: ${userId})`);
+    (client.data as Record<string, unknown>).identity = identity;
+    const label =
+      identity.type === 'user'
+        ? `user:${identity.userId}`
+        : `guest:${identity.guestId} (${identity.displayName})`;
+    this.logger.log(`Chat client connected: ${client.id} (${label})`);
   }
 
   handleDisconnect(client: Socket): void {
@@ -60,9 +73,36 @@ export class ChatGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() payload: SendMessageDto,
   ): Promise<void> {
-    const userId = (client.data as Record<string, unknown>).userId as string;
+    const identity = (client.data as Record<string, unknown>)
+      .identity as ClientIdentity;
+
+    if (identity.type === 'guest') {
+      const room = await this.roomService.findBySlug(identity.roomSlug);
+      if (!room || room.id !== payload.roomId) {
+        client.emit('chat:error', {
+          event: 'chat:send',
+          message: 'Forbidden',
+        });
+        return;
+      }
+      const message = {
+        id: randomUUID(),
+        content: payload.content,
+        roomId: payload.roomId,
+        createdAt: new Date().toISOString(),
+        isGuest: true,
+        user: { id: identity.guestId, username: identity.displayName },
+      };
+      await client.join(payload.roomId);
+      this.server.to(payload.roomId).emit('chat:message', message);
+      return;
+    }
+
     try {
-      const message = await this.chatService.sendMessage(userId, payload);
+      const message = await this.chatService.sendMessage(
+        identity.userId,
+        payload,
+      );
       await client.join(payload.roomId);
       this.server.to(payload.roomId).emit('chat:message', message);
     } catch (err) {
@@ -78,6 +118,20 @@ export class ChatGateway
     @ConnectedSocket() client: Socket,
     @MessageBody() { roomId }: { roomId: string },
   ) {
+    const identity = (client.data as Record<string, unknown>)
+      .identity as ClientIdentity;
+
+    if (identity.type === 'guest') {
+      const room = await this.roomService.findBySlug(identity.roomSlug);
+      if (!room || room.id !== roomId) {
+        client.emit('chat:error', {
+          event: 'chat:history',
+          message: 'Forbidden',
+        });
+        return;
+      }
+    }
+
     try {
       const result = await this.chatService.getMessages(roomId);
       await client.join(roomId);
@@ -98,25 +152,55 @@ export class ChatGateway
     const cookieHeader = client.handshake.headers?.cookie;
     if (!cookieHeader) return null;
 
-    const match = cookieHeader
-      .split('; ')
-      .find((c: string) => c.startsWith('access_token='));
-    return match ? match.split('=').slice(1).join('=') || null : null;
+    const cookies = cookieHeader.split('; ');
+
+    const accessCookie = cookies.find((c: string) =>
+      c.startsWith('access_token='),
+    );
+    if (accessCookie) return accessCookie.split('=').slice(1).join('=') || null;
+
+    const guestCookie = cookies.find((c: string) =>
+      c.startsWith('zvonok_guest_'),
+    );
+    if (guestCookie) return guestCookie.split('=').slice(1).join('=') || null;
+
+    return null;
   }
 
-  private authenticate(client: Socket): string | null {
+  private extractGuestSlugFromCookie(client: Socket): string | null {
+    const cookieHeader = client.handshake.headers?.cookie;
+    if (!cookieHeader) return null;
+    const match = cookieHeader
+      .split('; ')
+      .find((c: string) => c.startsWith('zvonok_guest_'));
+    if (!match) return null;
+    const key = match.split('=')[0];
+    return key.replace('zvonok_guest_', '') || null;
+  }
+
+  private authenticate(client: Socket): ClientIdentity | null {
     const token = this.extractToken(client);
-    console.log(`[DEVLOG] Extracted token for client ${client.id}:`, token);
     if (!token) return null;
 
+    // Try guest token first (uses a separate secret)
+    const roomSlug = this.extractGuestSlugFromCookie(client);
+    if (roomSlug) {
+      const guest = this.guestService.validateGuestToken(token, roomSlug);
+      if (guest) {
+        return {
+          type: 'guest',
+          guestId: guest.guestId,
+          roomSlug,
+          displayName: guest.displayName,
+        };
+      }
+    }
+
+    // Fall back to user token
     try {
       const payload = this.jwtService.verify<{ id: string }>(token);
-      console.log(
-        `[DEVLOG] Authenticated chat client ${client.id} as user ${payload.id}`,
-      );
-      return payload.id;
-    } catch (error) {
-      console.error('[DEVLOG] JWT verification failed:', error);
+      return { type: 'user', userId: payload.id };
+    } catch {
       return null;
     }
   }

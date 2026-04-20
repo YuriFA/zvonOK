@@ -9,6 +9,6 @@ import { SfuModule } from '../sfu/sfu.module';
   imports: [SfuModule],
   controllers: [RoomController],
   providers: [RoomService, RoomCleanupService, GuestService],
-  exports: [RoomService],
+  exports: [RoomService, GuestService],
 })
 export class RoomModule {}

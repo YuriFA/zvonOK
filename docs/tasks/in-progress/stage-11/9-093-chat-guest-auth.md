@@ -1,6 +1,6 @@
 # TASK-093 — Chat Gateway: авторизация гостей по room-токену
 
-> **Status:** planned
+> **Status:** completed
 > **Priority:** high
 > **Created:** 2026-04-17
 
