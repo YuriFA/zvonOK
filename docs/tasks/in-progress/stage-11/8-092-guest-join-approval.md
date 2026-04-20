@@ -1,6 +1,6 @@
 # TASK-092 — Guest Join: подтверждение овнером + временный токен
 
-> **Status:** in-progress
+> **Status:** completed
 > **Priority:** high
 > **Created:** 2026-04-17
 
