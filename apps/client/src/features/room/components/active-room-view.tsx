@@ -137,7 +137,7 @@ export function ActiveRoomView({
     await toggleAudio();
   }, [toggleAudio]);
 
-  const [isParticipantsVisible, setIsParticipantsVisible] = useState(false);
+  const [asideState, setAsideState] = useState<"participants" | "chat" | null>(null);
 
   const isOwner = currentUserId === room.ownerId;
   const { pendingRequests, approveRequest, denyRequest } = useGuestRequests();
@@ -248,31 +248,36 @@ export function ActiveRoomView({
         <aside
           className={cn(
             "flex-1 overflow-hidden transition-all duration-300 ease-in-out",
-            isParticipantsVisible ? "ml-4 max-w-80" : "ml-0 max-w-0",
+            asideState !== null ? "ml-4 max-w-80" : "ml-0 max-w-0",
           )}
         >
-          <ParticipantsList
-            className="size-full"
-            participants={participants}
-            currentUserId={currentUserId}
-            roomOwnerId={room.ownerId}
-            onKickParticipant={kickPeer}
-            pendingRequests={isOwner ? pendingRequests : undefined}
-            onApproveRequest={isOwner ? approveRequest : undefined}
-            onDenyRequest={isOwner ? denyRequest : undefined}
-          />
-        </aside>
+          {asideState === "participants" && (
+            <ParticipantsList
+              className="size-full"
+              participants={participants}
+              currentUserId={currentUserId}
+              roomOwnerId={room.ownerId}
+              onKickParticipant={kickPeer}
+              pendingRequests={isOwner ? pendingRequests : undefined}
+              onApproveRequest={isOwner ? approveRequest : undefined}
+              onDenyRequest={isOwner ? denyRequest : undefined}
+              onClose={() => setAsideState(null)}
+            />
+          )}
 
-        <ChatPanel
-          messages={chat.messages}
-          currentUserId={currentUserId}
-          isOpen={chat.isOpen}
-          isLoading={chat.isLoading}
-          hasMore={chat.hasMore}
-          onSendMessage={chat.sendMessage}
-          onLoadMore={chat.loadHistory}
-          onClose={() => chat.setIsOpen(false)}
-        />
+          {asideState === "chat" && (
+            <ChatPanel
+              className="size-full"
+              currentUserId={currentUserId}
+              messages={chat.messages}
+              isLoading={chat.isLoading}
+              hasMore={chat.hasMore}
+              onSendMessage={chat.sendMessage}
+              onLoadMore={chat.loadHistory}
+              onClose={() => setAsideState(null)}
+            />
+          )}
+        </aside>
       </div>
 
       <div className="flex items-center justify-between border-t p-4">
@@ -293,10 +298,18 @@ export function ActiveRoomView({
 
         <RoomRightControls
           pendingRequestsCount={isOwner ? pendingRequests.length : undefined}
-          isParticipantsVisible={isParticipantsVisible}
-          onToggleParticipants={() => setIsParticipantsVisible((v) => !v)}
-          isChatOpen={chat.isOpen}
-          onToggleChat={() => chat.setIsOpen((v) => !v)}
+          isParticipantsVisible={asideState === "participants"}
+          onToggleParticipants={() =>
+            setAsideState((v) => (v === "participants" ? null : "participants"))
+          }
+          isChatOpen={asideState === "chat"}
+          onToggleChat={() => {
+            setAsideState((v) => {
+              const next = v === "chat" ? null : "chat";
+              if (next === "chat") chat.resetUnreadCount();
+              return next;
+            });
+          }}
           unreadCount={chat.unreadCount}
         />
       </div>

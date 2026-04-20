@@ -16,32 +16,22 @@ interface UseChatOptions {
 
 interface UseChatReturn {
   messages: Message[];
-  isOpen: boolean;
   unreadCount: number;
   isLoading: boolean;
   hasMore: boolean;
-  setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
   sendMessage: (content: string) => Promise<void>;
   loadHistory: () => void;
+  resetUnreadCount: () => void;
 }
 
 export function useChat({ roomId, currentUserId, enabled = true }: UseChatOptions): UseChatReturn {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [isOpen, setIsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [hasMore, setHasMore] = useState(false);
 
   const socketRef = useRef<Socket | null>(null);
-  const isOpenRef = useRef(isOpen);
   const currentPageRef = useRef(1);
-
-  useEffect(() => {
-    isOpenRef.current = isOpen;
-    if (isOpen) {
-      setUnreadCount(0);
-    }
-  }, [isOpen]);
 
   useEffect(() => {
     if (!enabled || !roomId) return;
@@ -76,7 +66,8 @@ export function useChat({ roomId, currentUserId, enabled = true }: UseChatOption
         if (prev.some((m) => m.id === message.id)) return prev;
         return [...prev, message];
       });
-      if (!isOpenRef.current && message.userId !== currentUserId) {
+
+      if (message.userId !== currentUserId) {
         setUnreadCount((c) => c + 1);
       }
     });
@@ -128,14 +119,17 @@ export function useChat({ roomId, currentUserId, enabled = true }: UseChatOption
     );
   }, [roomId]);
 
+  const resetUnreadCount = useCallback(() => {
+    setUnreadCount(0);
+  }, []);
+
   return {
     messages,
-    isOpen,
     unreadCount,
     isLoading,
     hasMore,
-    setIsOpen,
     sendMessage,
     loadHistory,
+    resetUnreadCount,
   };
 }

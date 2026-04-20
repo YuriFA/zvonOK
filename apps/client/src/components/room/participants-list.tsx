@@ -1,4 +1,4 @@
-import { Users } from "lucide-react";
+import { Users, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { SfuGuestJoinRequestPayload } from "@/lib/sfu/types";
@@ -20,6 +20,7 @@ export interface Participant {
 }
 
 export interface ParticipantsListProps {
+  className?: string;
   participants: Participant[];
   currentUserId?: string;
   roomOwnerId?: string;
@@ -27,7 +28,7 @@ export interface ParticipantsListProps {
   pendingRequests?: SfuGuestJoinRequestPayload[];
   onApproveRequest?: (requestId: string) => Promise<void>;
   onDenyRequest?: (requestId: string) => Promise<void>;
-  className?: string;
+  onClose?: () => void;
 }
 
 export function ParticipantsList({
@@ -39,6 +40,7 @@ export function ParticipantsList({
   onApproveRequest,
   onDenyRequest,
   className,
+  onClose,
 }: ParticipantsListProps) {
   const participantCount = participants.length;
   const isOwner = currentUserId === roomOwnerId;
@@ -62,6 +64,17 @@ export function ParticipantsList({
         <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
           {participantCount}
         </span>
+
+        {typeof onClose === "function" && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="ml-auto rounded-sm p-1 text-muted-foreground hover:text-foreground"
+            aria-label="Close participants"
+          >
+            <X className="size-4" />
+          </button>
+        )}
       </div>
 
       <div className="border-t px-2 py-2">

@@ -59,36 +59,29 @@ export function MessageInput({
   );
 
   return (
-    <div className="flex flex-col gap-1 border-t px-3 pt-2 pb-3">
-      <div className="flex items-end gap-2">
-        <textarea
-          ref={textareaRef}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          disabled={disabled || sending}
-          maxLength={maxLength + 100}
-          rows={1}
-          aria-label="Chat message input"
-          className="max-h-24 min-h-[36px] flex-1 resize-none rounded-md border border-input bg-transparent px-2.5 py-1.5 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
-        />
-        <Button
-          type="button"
-          size="icon-sm"
-          variant="ghost"
-          onClick={handleSubmit}
-          disabled={!canSend || isOverLimit}
-          aria-label="Send message"
-        >
-          <SendHorizontal className="size-4" />
-        </Button>
-      </div>
-      <div className="flex justify-end">
-        <span className={`text-xs ${isOverLimit ? "text-destructive" : "text-muted-foreground"}`}>
-          {charCount}/{maxLength}
-        </span>
-      </div>
+    <div className="flex gap-2 border-t px-3 py-2">
+      <textarea
+        ref={textareaRef}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder}
+        disabled={disabled || sending}
+        maxLength={maxLength + 100}
+        rows={1}
+        aria-label="Chat message input"
+        className="max-h-24 min-h-[36px] w-full resize-none rounded-md border border-input bg-transparent px-2.5 py-1.5 text-sm outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+      />
+      <Button
+        type="button"
+        size="icon-sm"
+        variant="ghost"
+        onClick={handleSubmit}
+        disabled={!canSend || isOverLimit}
+        aria-label="Send message"
+      >
+        <SendHorizontal className="size-5" />
+      </Button>
     </div>
   );
 }
