@@ -29,6 +29,8 @@ COPY apps/server ./apps/server
 # Generate Prisma client, build NestJS, then prune devDependencies in place.
 # Pruning here means the production stage can COPY node_modules without
 # reinstalling — keeping compiled native addons (bcrypt, mediasoup) intact.
+ENV CI=true
+
 RUN pnpm -C apps/server exec prisma generate && \
     pnpm -C apps/server build && \
     pnpm prune --prod
