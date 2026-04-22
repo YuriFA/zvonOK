@@ -32,7 +32,7 @@ ENV CI=true
 
 RUN pnpm -C apps/server exec prisma generate && \
     pnpm -C apps/server build && \
-    pnpm deploy --filter=server --prod /app/deploy
+    pnpm deploy --filter=server --prod --legacy /app/deploy
 
 # ── Stage 2: Migrations runner ────────────────────────────────────────────────
 # Has prisma CLI + ts-node for prisma.config.ts; also seeds the DB.
