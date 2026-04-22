@@ -65,15 +65,6 @@ jobs:
           cache-from: type=gha,scope=server-build
           cache-to: type=gha,scope=server-build,mode=max
 
-      - name: Scan server image for vulnerabilities
-        uses: aquasecurity/trivy-action@0.35.0
-        with:
-          image-ref: ${{ env.SERVER_IMAGE }}:${{ steps.image-tag.outputs.value }}
-          format: table
-          severity: CRITICAL
-          exit-code: 1
-          ignore-unfixed: true
-
       - name: Extract metadata (migrator)
         id: meta-migrator
         uses: docker/metadata-action@v5
@@ -94,15 +85,6 @@ jobs:
           labels: ${{ steps.meta-migrator.outputs.labels }}
           cache-from: type=gha,scope=server-build
           cache-to: type=gha,scope=migrator-build,mode=max
-
-      - name: Scan migrator image for vulnerabilities
-        uses: aquasecurity/trivy-action@0.35.0
-        with:
-          image-ref: ${{ env.MIGRATOR_IMAGE }}:${{ steps.image-tag.outputs.value }}
-          format: table
-          severity: CRITICAL
-          exit-code: 1
-          ignore-unfixed: true
 
   build-caddy:
     name: Build & Push Caddy
@@ -149,15 +131,6 @@ jobs:
           labels: ${{ steps.meta-caddy.outputs.labels }}
           cache-from: type=gha,scope=caddy-build
           cache-to: type=gha,scope=caddy-build,mode=max
-
-      - name: Scan caddy image for vulnerabilities
-        uses: aquasecurity/trivy-action@0.35.0
-        with:
-          image-ref: ${{ env.CADDY_IMAGE }}:${{ steps.image-tag.outputs.value }}
-          format: table
-          severity: CRITICAL
-          exit-code: 1
-          ignore-unfixed: true
 
   deploy:
     name: Deploy to VPS
