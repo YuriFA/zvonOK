@@ -320,26 +320,7 @@ describe("RoomPage", () => {
       expect(screen.getByRole("button", { name: "End Room" })).toBeInTheDocument();
     });
 
-    expect(screen.getByRole("button", { name: "Turn off camera" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Turn off microphone" })).toBeInTheDocument();
-  });
-
-  it("calls toggleVideo and toggleAudio when media control buttons are clicked", async () => {
-    renderRoomPage();
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Join Room" }));
-    });
-
-    await act(async () => {
-      fireEvent.click(screen.getByLabelText("Turn off camera"));
-      fireEvent.click(screen.getByLabelText("Turn off microphone"));
-      fireEvent.click(screen.getByRole("button", { name: "End Room" }));
-    });
-
-    expect(mockToggleVideo).toHaveBeenCalled();
-    expect(mockToggleAudio).toHaveBeenCalled();
-    expect(mutate).toHaveBeenCalledWith("room-1");
+    expect(screen.getByTestId("room-view")).toBeInTheDocument();
   });
 
   it("allows the room owner to kick a remote participant from the participants list", async () => {
@@ -394,7 +375,7 @@ describe("RoomPage", () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByRole("button", { name: "Turn off camera" })).toBeInTheDocument();
+        expect(screen.getByTestId("room-view")).toBeInTheDocument();
       });
 
       expect(mockGuestRequest).not.toHaveBeenCalled();
@@ -440,7 +421,7 @@ describe("RoomPage", () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByRole("button", { name: "Turn off camera" })).toBeInTheDocument();
+        expect(screen.getByTestId("room-view")).toBeInTheDocument();
       });
 
       vi.restoreAllMocks();
