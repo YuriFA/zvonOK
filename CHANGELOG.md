@@ -1,5 +1,46 @@
 # Changelog
 
+## [0.4.0](https://github.com/YuriFA/zvonOK/compare/v0.3.0...v0.4.0) (2026-04-22)
+
+### Features
+
+* add guest join and approval flow ([33f52b7](https://github.com/YuriFA/zvonOK/commit/33f52b7847e811802bfef5b3b292d37d05035d5b))
+* **client:** add chat panel with real-time messaging ([4bbe5bf](https://github.com/YuriFA/zvonOK/commit/4bbe5bf74ddfe3b3873467c5f7acab6b2483d122))
+* **client:** add error handling and tests for MessageInput component ([f3efea2](https://github.com/YuriFA/zvonOK/commit/f3efea280da6aa015c87790df911347c7c83d4a3))
+* **client:** add message list skeleton and tests ([a6c1892](https://github.com/YuriFA/zvonOK/commit/a6c18920661c1653f3749ba12f0d4322657173c1))
+* **client:** add pagination tracking and throw on disconnected send ([d7a42c3](https://github.com/YuriFA/zvonOK/commit/d7a42c32107abee1cf8e0de6ea0e3ab812e3f523))
+* **client:** add screen share button to room controls ([2dd394a](https://github.com/YuriFA/zvonOK/commit/2dd394ad7f6dd42b3a0890d414530d226bbd6a6d))
+* **client:** add useScreenShare hook with SFU track replacement ([92afd9e](https://github.com/YuriFA/zvonOK/commit/92afd9e5b3e0412510901ac556b1a649d7708c7c))
+* **client:** make chat panel overlay on mobile ([cee74d0](https://github.com/YuriFA/zvonOK/commit/cee74d0ecc12dd564b1c35ee0f884e704efa0402))
+* **client:** show guest join requests in participants list for owner ([83fd1cf](https://github.com/YuriFA/zvonOK/commit/83fd1cfe77a412490920dee665971192d8653603))
+* persist guest messages and resolve guest identity in chat ([1c07f36](https://github.com/YuriFA/zvonOK/commit/1c07f368f078092c0b36a55dd891bd5e227a0d0d))
+* **server:** add ChatGateway with JWT auth and real-time messaging ([d327173](https://github.com/YuriFA/zvonOK/commit/d327173a15a99a73befc084e6ea59d037ed7b0ec))
+* **server:** add ChatModule with message endpoints and paginated history ([b19f186](https://github.com/YuriFA/zvonOK/commit/b19f18631a9c165ea10c21e80eea881f25c2384d))
+* **server:** add guest authentication to chat gateway ([edb8483](https://github.com/YuriFA/zvonOK/commit/edb84835e3a67bac420d4957eef5527ad43baad8))
+* **server:** add Message model with migration ([29cc9bc](https://github.com/YuriFA/zvonOK/commit/29cc9bc0559e1802a0d9ddb295b31d3bd9b97df7))
+* **sfu:** add adaptive video quality via simulcast layer switching ([3395214](https://github.com/YuriFA/zvonOK/commit/3395214cfb98852b567f44267273d0f5dd1f0f0a))
+* **sfu:** add jitter to network quality metrics ([afca11c](https://github.com/YuriFA/zvonOK/commit/afca11c5d7de39b72e0eb1cc8242014ab4e1fa90))
+* **sfu:** implement automatic reconnection handling ([e77d19c](https://github.com/YuriFA/zvonOK/commit/e77d19c7366c2482432108e28df8c7aecd55fdb1))
+* **sfu:** implement screen share as separate producer with mutual exclusion ([67ebbe5](https://github.com/YuriFA/zvonOK/commit/67ebbe50c057b4b133318eac174ab07c3e703fd7))
+* unify guest and auth prejoin flow with HTTP-only cookie ([2e17b75](https://github.com/YuriFA/zvonOK/commit/2e17b75bfc69355accefee210e7a409733321488))
+* **video-layout:** add spotlight mode for screen share layout ([4ed35d4](https://github.com/YuriFA/zvonOK/commit/4ed35d4163c433a8aebeafd507af1d2f7f7eb7d8))
+
+### Bug Fixes
+
+* chat ui tests ([9b29bef](https://github.com/YuriFA/zvonOK/commit/9b29bef0ec35331db6d10ba0ecce9ceb2e97285c))
+* **client:** enforce char limit before sending message ([7328acc](https://github.com/YuriFA/zvonOK/commit/7328accd23e8bb62e5941ab7c1d934dd4070cf4f))
+* **client:** log error on failed message send ([cc816e0](https://github.com/YuriFA/zvonOK/commit/cc816e0f53c8b5288127e4dec14f42ce5d4ea511))
+* **docker:** add --legacy flag to pnpm deploy for pnpm v10 compatibility ([4c2f3b2](https://github.com/YuriFA/zvonOK/commit/4c2f3b2e32e3c70180f71880d460977f7b20756a))
+* **docker:** copy .npmrc into build stages to enable hoisted node-linker ([8f68e9d](https://github.com/YuriFA/zvonOK/commit/8f68e9def5209852d38927d09d6f49114d948366))
+* **docker:** replace pnpm prune with pnpm deploy for clean production image ([65b9d77](https://github.com/YuriFA/zvonOK/commit/65b9d776abe6d268aed12bc7086b83d6c7113b02))
+* **docker:** set CI=true for non-interactive Prisma generation ([fb41a0d](https://github.com/YuriFA/zvonOK/commit/fb41a0da02b65c28c4827c6502127436cdc49ce0))
+* **docker:** use hoisted node-linker to fix module resolution in production image ([76ff1dc](https://github.com/YuriFA/zvonOK/commit/76ff1dc33efd4e25eb7f8682be30ad51047ba61e))
+* remove unused code ([a46b75f](https://github.com/YuriFA/zvonOK/commit/a46b75f791fc0f49104bcf27d22a3f2c025b0f41))
+* **server:** add error handling to chat gateway authentication ([f256ba2](https://github.com/YuriFA/zvonOK/commit/f256ba27b95db9b7da0335d7c6c22bc1d5542261))
+* **server:** load JWT secret via ConfigService in auth module ([d7752c7](https://github.com/YuriFA/zvonOK/commit/d7752c7c2ebdbdddb953bdc5f64ef9d9c39e6b1c))
+* **server:** resolve version.ts package.json resolution in Docker ([3b67723](https://github.com/YuriFA/zvonOK/commit/3b67723bf62fabd49d24fe3b9862868571c1234b))
+* **sfu:** enable Opus FEC and delay audio consumer resume for jitter buffer ([31c5d50](https://github.com/YuriFA/zvonOK/commit/31c5d5018acf72045cf72cf3fbdecf28a6fee0af))
+
 ## [0.3.0](https://github.com/YuriFA/zvonOK/compare/v0.2.5...v0.3.0) (2026-04-04)
 
 ### Features
