@@ -16,7 +16,7 @@ FROM base AS builder
 WORKDIR /app
 
 # Copy workspace manifests first so pnpm install is cached independently of source changes
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml .npmrc ./
 COPY apps/server/package.json ./apps/server/
 
 # Install all dependencies.
@@ -41,8 +41,7 @@ FROM base AS migrator
 
 WORKDIR /app
 
-# Copy workspace config
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml .npmrc ./
 COPY apps/server/package.json ./apps/server/
 
 # Install all dependencies.
@@ -122,7 +121,7 @@ FROM base AS development
 WORKDIR /app
 
 # Copy workspace config
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml .npmrc ./
 COPY apps/server/package.json ./apps/server/
 
 # Install all dependencies (dev + prod)
