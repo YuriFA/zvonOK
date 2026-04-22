@@ -155,9 +155,7 @@ export class RoomController {
   @SkipAuthGuard()
   @UseGuards(FlexibleRoomAuthGuard)
   @ApiOperation({ summary: 'Get current identity in the context of a room' })
-  getRoomMe(
-    @Req() req: Request,
-  ): { userId: string; isGuest: boolean } {
+  getRoomMe(@Req() req: Request): { userId: string; isGuest: boolean } {
     const identity = (req as Request & { user: RoomIdentity }).user;
     return { userId: identity.id, isGuest: identity.isGuest };
   }
