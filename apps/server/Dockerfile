@@ -9,14 +9,14 @@ RUN corepack enable
 
 # ── Stage 1: Builder ──────────────────────────────────────────────────────────
 # Installs all deps (dev + prod), generates Prisma client, compiles NestJS,
-# then prunes devDependencies so the production stage can copy node_modules
-# directly — preserving compiled native addons (bcrypt, mediasoup worker).
+# then uses pnpm deploy to create a self-contained production node_modules
+# with only prod deps — no symlinks, no .pnpm store, compiled native addons intact.
 FROM base AS builder
 
 WORKDIR /app
 
 # Copy workspace manifests first so pnpm install is cached independently of source changes
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml .npmrc ./
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY apps/server/package.json ./apps/server/
 
 # Install all dependencies.
@@ -26,14 +26,13 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 # Copy server source files
 COPY apps/server ./apps/server
 
-# Generate Prisma client, build NestJS, then prune devDependencies in place.
-# Pruning here means the production stage can COPY node_modules without
-# reinstalling — keeping compiled native addons (bcrypt, mediasoup) intact.
+# Generate Prisma client, build NestJS, then create a self-contained production
+# deployment with pnpm deploy — no symlinks, no .pnpm store, clean node_modules.
 ENV CI=true
 
 RUN pnpm -C apps/server exec prisma generate && \
     pnpm -C apps/server build && \
-    pnpm prune --prod
+    pnpm deploy --filter=server --prod /app/deploy
 
 # ── Stage 2: Migrations runner ────────────────────────────────────────────────
 # Has prisma CLI + ts-node for prisma.config.ts; also seeds the DB.
@@ -41,7 +40,7 @@ FROM base AS migrator
 
 WORKDIR /app
 
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml .npmrc ./
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY apps/server/package.json ./apps/server/
 
 # Install all dependencies.
@@ -72,16 +71,14 @@ RUN apt-get update && \
 
 WORKDIR /app
 
-# Copy production node_modules from builder.
-# devDependencies were pruned by `pnpm prune --prod`; compiled native addons
-# (bcrypt, mediasoup worker) are preserved — no reinstall required.
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/apps/server/node_modules ./apps/server/node_modules
+# Copy self-contained production node_modules from pnpm deploy output.
+# No symlinks, no .pnpm store — safe to COPY directly.
+COPY --from=builder /app/deploy/node_modules ./apps/server/node_modules
 
 # Expose mediasoup worker at a stable, fixed path.
 # Using a symlink avoids duplicating the binary already present in node_modules.
 # The guard (`test -n`) makes the build fail loudly if the binary is not found.
-RUN WORKER=$(find /app/node_modules/.pnpm -name 'mediasoup-worker' \
+RUN WORKER=$(find /app/apps/server/node_modules -name 'mediasoup-worker' \
         -path '*/worker/out/Release/mediasoup-worker' | head -1) && \
     { test -n "$WORKER" || { echo "ERROR: mediasoup-worker binary not found in builder" >&2; exit 1; }; } && \
     ln -s "$WORKER" /app/mediasoup-worker
@@ -121,7 +118,7 @@ FROM base AS development
 WORKDIR /app
 
 # Copy workspace config
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml .npmrc ./
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY apps/server/package.json ./apps/server/
 
 # Install all dependencies (dev + prod)
