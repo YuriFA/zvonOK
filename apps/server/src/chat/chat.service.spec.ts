@@ -36,6 +36,16 @@ describe('ChatService', () => {
     id: 'msg-1',
     content: 'Hello!',
     userId: 'user-1',
+    guestId: null,
+    roomId: 'room-1',
+    createdAt: new Date('2024-01-01T00:00:00.000Z'),
+    user: { id: 'user-1', username: 'john' },
+  };
+
+  const baseMessageNormalized = {
+    id: 'msg-1',
+    content: 'Hello!',
+    userId: 'user-1',
     roomId: 'room-1',
     createdAt: new Date('2024-01-01T00:00:00.000Z'),
     user: { id: 'user-1', username: 'john' },
@@ -138,7 +148,7 @@ describe('ChatService', () => {
       const result = await service.getMessages('room-1', 1, 50);
 
       expect(result).toEqual({
-        data: [baseMessage],
+        data: [baseMessageNormalized],
         meta: {
           page: 1,
           limit: 50,
@@ -196,7 +206,7 @@ describe('ChatService', () => {
       expect(prisma.message.findMany).not.toHaveBeenCalled();
     });
 
-    it('orders messages by createdAt descending', async () => {
+    it('orders messages by createdAt ascending', async () => {
       prisma.room.findUnique.mockResolvedValue(baseRoom);
       prisma.message.findMany.mockResolvedValue([]);
       prisma.message.count.mockResolvedValue(0);
@@ -205,7 +215,7 @@ describe('ChatService', () => {
 
       expect(prisma.message.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: 'asc' },
         }),
       );
     });

@@ -4,6 +4,7 @@ export interface Message {
   userId: string;
   roomId: string;
   createdAt: string;
+  isGuest?: boolean;
   user: {
     id: string;
     username: string;

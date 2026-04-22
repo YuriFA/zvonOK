@@ -15,6 +15,7 @@ const mockToggleAudio = vi.hoisted(() => vi.fn());
 const mockGuestCheck = vi.hoisted(() => vi.fn());
 const mockGuestRequest = vi.hoisted(() => vi.fn());
 const mockGuestStatus = vi.hoisted(() => vi.fn());
+const mockGetRoomMe = vi.hoisted(() => vi.fn());
 
 vi.mock("@/features/room/hooks/use-room", () => ({
   useRoom: mockUseRoom,
@@ -35,6 +36,7 @@ vi.mock("@/features/room/services/room-api", () => ({
     guestStatus: mockGuestStatus,
     guestApprove: vi.fn(),
     guestDeny: vi.fn(),
+    getRoomMe: mockGetRoomMe,
   },
 }));
 
@@ -293,6 +295,7 @@ describe("RoomPage", () => {
     });
     mockToggleVideo.mockResolvedValue(undefined);
     mockToggleAudio.mockResolvedValue(undefined);
+    mockGetRoomMe.mockResolvedValue({ userId: "guest-abc" });
   });
 
   const renderRoomPage = () =>

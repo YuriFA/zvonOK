@@ -115,13 +115,13 @@ describe("MessageList", () => {
 
   it("shows header when time gap exceeds 5 minutes", () => {
     const timeGapMessages: Message[] = [
-      makeMessage({ id: "m1", content: "Later", userId: "u1", createdAt: "2026-01-01T10:40:00Z" }),
       makeMessage({
-        id: "m2",
+        id: "m1",
         content: "Earlier",
         userId: "u1",
         createdAt: "2026-01-01T10:30:00Z",
       }),
+      makeMessage({ id: "m2", content: "Later", userId: "u1", createdAt: "2026-01-01T10:40:00Z" }),
     ];
     render(<MessageList messages={timeGapMessages} currentUserId="u2" />);
 
@@ -130,22 +130,22 @@ describe("MessageList", () => {
   });
 
   it("renders messages oldest first in the DOM", () => {
-    const newestFirst: Message[] = [
-      makeMessage({
-        id: "m3",
-        content: "How are you?",
-        userId: "u1",
-        createdAt: "2026-01-01T10:32:00Z",
-      }),
-      makeMessage({ id: "m2", content: "Hey!", userId: "u2", createdAt: "2026-01-01T10:31:00Z" }),
+    const oldestFirst: Message[] = [
       makeMessage({
         id: "m1",
         content: "Hi there",
         userId: "u1",
         createdAt: "2026-01-01T10:30:00Z",
       }),
+      makeMessage({ id: "m2", content: "Hey!", userId: "u2", createdAt: "2026-01-01T10:31:00Z" }),
+      makeMessage({
+        id: "m3",
+        content: "How are you?",
+        userId: "u1",
+        createdAt: "2026-01-01T10:32:00Z",
+      }),
     ];
-    const { container } = render(<MessageList messages={newestFirst} currentUserId="u1" />);
+    const { container } = render(<MessageList messages={oldestFirst} currentUserId="u1" />);
     const messageEls = container.querySelectorAll("[class*='break-words']");
     expect(messageEls[0]).toHaveTextContent("Hi there");
     expect(messageEls[1]).toHaveTextContent("Hey!");

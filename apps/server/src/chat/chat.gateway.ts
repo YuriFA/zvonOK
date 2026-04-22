@@ -12,7 +12,6 @@ import { Logger } from '@nestjs/common';
 import { SkipThrottle } from '@nestjs/throttler';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
-import { randomUUID } from 'node:crypto';
 import { ChatService } from './chat.service';
 import { SendMessageDto } from './dto/send-message.dto';
 import { GuestService } from '../room/guest.service';
@@ -85,16 +84,31 @@ export class ChatGateway
         });
         return;
       }
-      const message = {
-        id: randomUUID(),
-        content: payload.content,
-        roomId: payload.roomId,
-        createdAt: new Date().toISOString(),
-        isGuest: true,
-        user: { id: identity.guestId, username: identity.displayName },
-      };
-      await client.join(payload.roomId);
-      this.server.to(payload.roomId).emit('chat:message', message);
+      try {
+        const saved = await this.chatService.saveGuestMessage(
+          identity.guestId,
+          identity.displayName,
+          payload.content,
+          payload.roomId,
+        );
+        const message = {
+          id: saved.id,
+          content: saved.content,
+          userId: identity.guestId,
+          roomId: saved.roomId,
+          createdAt: saved.createdAt.toISOString(),
+          isGuest: true,
+          user: { id: identity.guestId, username: identity.displayName },
+        };
+        await client.join(payload.roomId);
+        this.server.to(payload.roomId).emit('chat:message', message);
+      } catch (err) {
+        client.emit('chat:error', {
+          event: 'chat:send',
+          message:
+            err instanceof Error ? err.message : 'Failed to send message',
+        });
+      }
       return;
     }
 

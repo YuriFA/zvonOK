@@ -71,7 +71,6 @@ export function MessageList({
     if (!el) return;
     el.scrollTop = el.scrollHeight;
     isNearBottomRef.current = true;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -84,9 +83,7 @@ export function MessageList({
     }
   }, [messages.length]);
 
-  const sortedMessages = [...messages].reverse();
-
-  if (isLoading && sortedMessages.length === 0) {
+  if (isLoading && messages.length === 0) {
     return (
       <div className="flex-1 overflow-y-auto">
         <MessageSkeleton />
@@ -109,15 +106,15 @@ export function MessageList({
           Load earlier messages
         </button>
       )}
-      {!isLoading && sortedMessages.length === 0 && (
+      {!isLoading && messages.length === 0 && (
         <p className="text-center text-xs text-muted-foreground">No messages yet</p>
       )}
-      {sortedMessages.map((message, index) => (
+      {messages.map((message, index) => (
         <MessageBubble
           key={message.id}
           message={message}
           isOwn={message.userId === currentUserId}
-          showHeader={shouldShowHeader(sortedMessages, index)}
+          showHeader={shouldShowHeader(messages, index)}
         />
       ))}
     </div>

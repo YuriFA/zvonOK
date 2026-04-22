@@ -13,6 +13,7 @@ import {
   NotFoundException,
   Req,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
@@ -27,6 +28,8 @@ import { CreateRoomDto } from './dto/create-room.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { GuestRequestDto, GuestActionDto } from './dto/guest.dto';
 import { Role } from '../generated/prisma/enums';
+import { FlexibleRoomAuthGuard } from './guards/flexible-room-auth.guard';
+import type { RoomIdentity } from './guards/flexible-room-auth.guard';
 
 @ApiTags('rooms')
 @Controller('rooms')
@@ -146,6 +149,17 @@ export class RoomController {
     const result = this.guestService.validateGuestToken(token, slug);
     if (!result) return { valid: false };
     return { valid: true, displayName: result.displayName };
+  }
+
+  @Get(':slug/me')
+  @SkipAuthGuard()
+  @UseGuards(FlexibleRoomAuthGuard)
+  @ApiOperation({ summary: 'Get current identity in the context of a room' })
+  getRoomMe(
+    @Req() req: Request,
+  ): { userId: string; isGuest: boolean } {
+    const identity = (req as Request & { user: RoomIdentity }).user;
+    return { userId: identity.id, isGuest: identity.isGuest };
   }
 
   @Get(':slug/guest-status/:requestId')

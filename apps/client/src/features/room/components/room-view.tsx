@@ -14,9 +14,10 @@ import { RoomAlerts } from "./room-alerts";
 interface Props {
   room: Room;
   displayName: string;
+  currentUserId: string | undefined;
 }
 
-export const RoomView = ({ room, displayName }: Props) => {
+export const RoomView = ({ room, displayName, currentUserId }: Props) => {
   const navigate = useNavigate();
   const endRoom = useEndRoom({
     onSuccess: () => navigate("/"),
@@ -42,7 +43,7 @@ export const RoomView = ({ room, displayName }: Props) => {
           <ActiveRoomView
             session={session}
             room={room}
-            currentUserId={user?.id}
+            currentUserId={currentUserId}
             currentUsername={displayName}
           />
         </div>

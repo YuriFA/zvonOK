@@ -15,6 +15,11 @@ export interface GuestCheckResponse {
   displayName?: string;
 }
 
+export interface RoomMeResponse {
+  userId: string;
+  isGuest: boolean;
+}
+
 class RoomApi {
   private readonly client = apiClient;
 
@@ -56,6 +61,10 @@ class RoomApi {
 
   async guestCheck(slug: string): Promise<GuestCheckResponse> {
     return this.client.get<GuestCheckResponse>(`/rooms/${slug}/guest-check`);
+  }
+
+  async getRoomMe(slug: string): Promise<RoomMeResponse> {
+    return this.client.get<RoomMeResponse>(`/rooms/${slug}/me`);
   }
 }
 

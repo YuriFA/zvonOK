@@ -38,6 +38,36 @@ export class ChatService {
     });
   }
 
+  async saveGuestMessage(
+    guestId: string,
+    displayName: string,
+    content: string,
+    roomId: string,
+  ) {
+    const room = await this.prisma.room.findUnique({ where: { id: roomId } });
+    if (!room) {
+      throw new NotFoundException('Room not found');
+    }
+    if (room.status === 'ended') {
+      throw new BadRequestException('Room has ended');
+    }
+
+    return this.prisma.message.create({
+      data: {
+        content,
+        guestId,
+        roomId,
+      },
+      select: {
+        id: true,
+        content: true,
+        guestId: true,
+        roomId: true,
+        createdAt: true,
+      },
+    });
+  }
+
   async getMessages(roomId: string, page: number = 1, limit: number = 50) {
     const room = await this.prisma.room.findUnique({
       where: { id: roomId },
@@ -48,10 +78,16 @@ export class ChatService {
 
     const skip = (page - 1) * limit;
 
-    const [messages, total] = await Promise.all([
+    const [rawMessages, total] = await Promise.all([
       this.prisma.message.findMany({
         where: { roomId },
-        include: {
+        select: {
+          id: true,
+          content: true,
+          userId: true,
+          guestId: true,
+          roomId: true,
+          createdAt: true,
           user: {
             select: {
               id: true,
@@ -59,12 +95,35 @@ export class ChatService {
             },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: 'asc' },
         skip,
         take: limit,
       }),
       this.prisma.message.count({ where: { roomId } }),
     ]);
+
+    // Normalise guest messages: expose guestId as userId and provide a user shape
+    const messages = rawMessages.map((m) => {
+      if (m.guestId != null) {
+        return {
+          id: m.id,
+          content: m.content,
+          userId: m.guestId,
+          roomId: m.roomId,
+          createdAt: m.createdAt,
+          isGuest: true as const,
+          user: { id: m.guestId, username: 'Guest' },
+        };
+      }
+      return {
+        id: m.id,
+        content: m.content,
+        userId: m.userId,
+        roomId: m.roomId,
+        createdAt: m.createdAt,
+        user: m.user,
+      };
+    });
 
     return {
       data: messages,

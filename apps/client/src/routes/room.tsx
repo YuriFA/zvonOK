@@ -38,6 +38,10 @@ export const RoomPage = () => {
 
   const mediaManager = useMemo(() => createMediaManager(), []);
 
+  const [guestUserId, setGuestUserId] = useState<string | undefined>(undefined);
+
+  const currentUserId = user?.id ?? guestUserId;
+
   // On mount: if guest, check for a valid HTTP-only cookie
   useEffect(() => {
     if (user || !slug) return;
@@ -55,6 +59,17 @@ export const RoomPage = () => {
         // silent fail — treat as no pre-approval
       });
   }, [user, slug]);
+
+  // Resolve guest identity from the server once the guest enters the room
+  useEffect(() => {
+    if (user || !slug || viewState !== "active") return;
+    roomApi
+      .getRoomMe(slug)
+      .then((result) => setGuestUserId(result.userId))
+      .catch(() => {
+        // silent fail — identity will be undefined
+      });
+  }, [user, slug, viewState]);
 
   useEffect(() => {
     if (!user) {
@@ -113,10 +128,11 @@ export const RoomPage = () => {
   }, [viewState, handleRoomEnded]);
 
   const handleJoin = useCallback(async () => {
+    if (!user) {
+      saveGuestDisplayName(displayName);
+    }
+
     if (user || guestPreApproved) {
-      if (!user) {
-        saveGuestDisplayName(displayName);
-      }
       setViewState("active");
       return;
     }
@@ -191,10 +207,10 @@ export const RoomPage = () => {
               {isOwner ? (
                 <GuestRequestsProvider roomSlug={room.slug}>
                   <GuestApprovalDialog />
-                  <RoomView room={room} displayName={displayName} />
+                  <RoomView room={room} displayName={displayName} currentUserId={currentUserId} />
                 </GuestRequestsProvider>
               ) : (
-                <RoomView room={room} displayName={displayName} />
+                <RoomView room={room} displayName={displayName} currentUserId={currentUserId} />
               )}
             </>
           )}

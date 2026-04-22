@@ -53,14 +53,16 @@ model Room {
 model Message {
   id        String   @id @default(cuid())
   content   String
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guestId   String?
   roomId    String
   room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
   @@index([roomId])
   @@index([userId])
+  @@index([guestId])
 }
 
 enum Role {

@@ -32,6 +32,13 @@ export function useChat({ roomId, currentUserId, enabled = true }: UseChatOption
 
   const socketRef = useRef<Socket | null>(null);
   const currentPageRef = useRef(1);
+  // Ref keeps the latest value available inside socket event handlers without
+  // triggering a reconnect when identity resolves after the socket connects.
+  const currentUserIdRef = useRef<string | undefined>(currentUserId);
+
+  useEffect(() => {
+    currentUserIdRef.current = currentUserId;
+  }, [currentUserId]);
 
   useEffect(() => {
     if (!enabled || !roomId) return;
@@ -67,7 +74,7 @@ export function useChat({ roomId, currentUserId, enabled = true }: UseChatOption
         return [...prev, message];
       });
 
-      if (message.userId !== currentUserId) {
+      if (message.userId !== currentUserIdRef.current) {
         setUnreadCount((c) => c + 1);
       }
     });
@@ -80,7 +87,7 @@ export function useChat({ roomId, currentUserId, enabled = true }: UseChatOption
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [enabled, roomId, currentUserId]);
+  }, [enabled, roomId]);
 
   const sendMessage = useCallback(
     async (content: string) => {
@@ -110,7 +117,7 @@ export function useChat({ roomId, currentUserId, enabled = true }: UseChatOption
           setMessages((prev) => {
             const existingIds = new Set(prev.map((m) => m.id));
             const newMessages = response.data.filter((m) => !existingIds.has(m.id));
-            return [...newMessages, ...prev];
+            return [...prev, ...newMessages];
           });
           setHasMore(response.meta.page < response.meta.totalPages);
         }
