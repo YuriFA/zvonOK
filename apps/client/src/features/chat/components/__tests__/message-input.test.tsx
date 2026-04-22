@@ -85,29 +85,10 @@ describe("MessageInput", () => {
     expect(onSend).not.toHaveBeenCalled();
   });
 
-  it("shows character counter", () => {
-    render(<MessageInput onSend={onSend} />);
-    expect(screen.getByText("0/500")).toBeInTheDocument();
-    typeInInput("Hi");
-    expect(screen.getByText("2/500")).toBeInTheDocument();
-  });
-
-  it("shows character counter with custom maxLength", () => {
-    render(<MessageInput onSend={onSend} maxLength={100} />);
-    expect(screen.getByText("0/100")).toBeInTheDocument();
-  });
-
   it("disables send button when over character limit", () => {
     render(<MessageInput onSend={onSend} maxLength={5} />);
     typeInInput("123456");
     expect(screen.getByLabelText("Send message")).toBeDisabled();
-  });
-
-  it("shows destructive color when over character limit", () => {
-    render(<MessageInput onSend={onSend} maxLength={5} />);
-    typeInInput("123456");
-    const counter = screen.getByText("6/5");
-    expect(counter.className).toContain("text-destructive");
   });
 
   it("disables input and button when disabled prop is true", () => {

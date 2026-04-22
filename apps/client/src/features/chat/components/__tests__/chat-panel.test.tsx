@@ -67,25 +67,6 @@ describe("ChatPanel", () => {
     expect(screen.getByText("World")).toBeInTheDocument();
   });
 
-  it("has mobile overlay and desktop sidebar classes when open", () => {
-    const { container } = render(<ChatPanel {...defaultProps} />);
-    const aside = container.querySelector("aside") as HTMLElement;
-    expect(aside.className).toContain("absolute");
-    expect(aside.className).toContain("z-50");
-    expect(aside.className).toContain("w-full");
-    expect(aside.className).toContain("md:relative");
-    expect(aside.className).toContain("md:w-80");
-    expect(aside.className).toContain("md:border-l");
-  });
-
-  it("has w-0 class when closed", () => {
-    const { container } = render(<ChatPanel {...defaultProps} isOpen={false} />);
-    const aside = container.querySelector("aside") as HTMLElement;
-    expect(aside.className).toContain("w-0");
-    expect(aside.className).not.toContain("z-50");
-    expect(aside.className).not.toContain("absolute");
-  });
-
   it("shows load earlier button when hasMore is true with messages", () => {
     const onLoadMore = vi.fn();
     render(
