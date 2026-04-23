@@ -1,4 +1,5 @@
 import { computeLayout } from "@zvonok/video-layout";
+import { MessageSquare, Users } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -13,9 +14,10 @@ import type { UseRoomSessionResult } from "@/features/room/hooks/use-room-sessio
 import type { Room } from "@/features/room/types/room.types";
 import type { ScreenShareError } from "@/hooks/use-screen-share";
 import { useScreenShare } from "@/hooks/use-screen-share";
-import { cn } from "@/lib/utils";
 
 import { useGuestRequests } from "../contexts/guest-requests.context";
+import { AsidePanel, AsidePanelContainer, AsidePanelHeader } from "./aside-panel";
+import { RoomLeftControls } from "./room-left-controls";
 import { RoomRightControls } from "./room-right-controls";
 
 interface ActiveScreenShare {
@@ -245,50 +247,59 @@ export function ActiveRoomView({
           )}
         </VideoGrid>
 
-        <aside
-          className={cn(
-            "flex-1 overflow-hidden transition-all duration-300 ease-in-out",
-            asideState !== null ? "ml-4 max-w-80" : "ml-0 max-w-0",
-          )}
-        >
+        <AsidePanelContainer data-state={asideState ? "open" : "closed"}>
           {asideState === "participants" && (
-            <ParticipantsList
-              className="size-full"
-              participants={participants}
-              currentUserId={currentUserId}
-              roomOwnerId={room.ownerId}
-              onKickParticipant={kickPeer}
-              pendingRequests={isOwner ? pendingRequests : undefined}
-              onApproveRequest={isOwner ? approveRequest : undefined}
-              onDenyRequest={isOwner ? denyRequest : undefined}
-              onClose={() => setAsideState(null)}
-            />
+            <AsidePanel>
+              <AsidePanelHeader onClose={() => setAsideState(null)}>
+                <Users className="size-4" />
+                <span>Participants</span>
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                  {participants.length}
+                </span>
+              </AsidePanelHeader>
+              <ParticipantsList
+                participants={participants}
+                currentUserId={currentUserId}
+                roomOwnerId={room.ownerId}
+                onKickParticipant={kickPeer}
+                pendingRequests={isOwner ? pendingRequests : undefined}
+                onApproveRequest={isOwner ? approveRequest : undefined}
+                onDenyRequest={isOwner ? denyRequest : undefined}
+              />
+            </AsidePanel>
           )}
 
           {asideState === "chat" && (
-            <ChatPanel
-              className="size-full"
-              currentUserId={currentUserId}
-              messages={chat.messages}
-              isLoading={chat.isLoading}
-              hasMore={chat.hasMore}
-              onSendMessage={chat.sendMessage}
-              onLoadMore={chat.loadHistory}
-              onClose={() => setAsideState(null)}
-            />
+            <AsidePanel>
+              <AsidePanelHeader onClose={() => setAsideState(null)}>
+                <MessageSquare className="size-4" />
+                Chat
+              </AsidePanelHeader>
+              <ChatPanel
+                currentUserId={currentUserId}
+                messages={chat.messages}
+                isLoading={chat.isLoading}
+                hasMore={chat.hasMore}
+                onSendMessage={chat.sendMessage}
+                onLoadMore={chat.loadHistory}
+              />
+            </AsidePanel>
           )}
-        </aside>
+        </AsidePanelContainer>
       </div>
 
       <div className="flex items-center justify-between border-t p-4">
-        <RoomCenterControls
-          className="mx-auto"
+        <RoomLeftControls
           isVideoEnabled={mediaControls.isVideoEnabled}
           isAudioEnabled={mediaControls.isAudioEnabled}
           videoCaptureState={mediaControls.videoCaptureState}
           audioCaptureState={mediaControls.audioCaptureState}
           onToggleVideo={handleToggleVideo}
           onToggleAudio={handleToggleAudio}
+        />
+
+        <RoomCenterControls
+          className="mx-auto"
           isScreenSharing={isSharing}
           isScreenShareSupported={isScreenShareSupported}
           isScreenShareBlocked={isScreenShareBlocked}
