@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams } from "react-router";
 
 import { LinkButton } from "@/components/ui/link-button";
@@ -8,9 +8,9 @@ import { MediaStreamProvider } from "@/features/media/contexts/media-stream.cont
 import { CallEndedView } from "@/features/room/components/call-ended-view";
 import { GuestApprovalDialog } from "@/features/room/components/guest-approval-dialog";
 import { PrejoinView } from "@/features/room/components/prejoin-view";
-import type { GuestState } from "@/features/room/components/prejoin-view";
 import { RoomView } from "@/features/room/components/room-view";
 import { GuestRequestsProvider } from "@/features/room/contexts/guest-requests.context";
+import { useGuestJoinRoom } from "@/features/room/hooks/use-guest-join-room";
 import { useRoom } from "@/features/room/hooks/use-room";
 import { roomApi } from "@/features/room/services/room-api";
 import { SfuManagerProvider } from "@/features/sfu/contexts/sfu-manager.context";
@@ -19,8 +19,6 @@ import { sfuManager } from "@/lib/sfu/manager";
 import { loadGuestDisplayName, saveGuestDisplayName } from "@/lib/utils/display-name";
 
 type RoomViewState = "prejoin" | "active" | "ended";
-
-const POLL_INTERVAL_MS = 2000;
 
 export const RoomPage = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -31,16 +29,22 @@ export const RoomPage = () => {
 
   const [displayName, setDisplayName] = useState(() => user?.username ?? loadGuestDisplayName());
   const [guestPreApproved, setGuestPreApproved] = useState(false);
-  const [guestState, setGuestState] = useState<GuestState>("idle");
-  const [errorMessage, setErrorMessage] = useState<string>("");
-  const requestIdRef = useRef<string | null>(null);
-  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const mediaManager = useMemo(() => createMediaManager(), []);
 
   const [guestUserId, setGuestUserId] = useState<string | undefined>(undefined);
 
   const currentUserId = user?.id ?? guestUserId;
+
+  const handleJoined = useCallback(() => {
+    setViewState("active");
+  }, []);
+  const {
+    join,
+    retry,
+    guestState,
+    error: joinError,
+  } = useGuestJoinRoom({ onJoinApproved: handleJoined });
 
   // On mount: if guest, check for a valid HTTP-only cookie
   useEffect(() => {
@@ -72,50 +76,10 @@ export const RoomPage = () => {
   }, [user, slug, viewState]);
 
   useEffect(() => {
-    if (!user) {
-      setDisplayName(loadGuestDisplayName());
-    }
-  }, [user]);
-
-  useEffect(() => {
     if (room?.status === "ended") {
       setViewState("ended");
     }
   }, [room?.status]);
-
-  const stopPolling = useCallback(() => {
-    if (pollTimerRef.current !== null) {
-      clearInterval(pollTimerRef.current);
-      pollTimerRef.current = null;
-    }
-  }, []);
-
-  useEffect(() => {
-    return () => stopPolling();
-  }, [stopPolling]);
-
-  const startPolling = useCallback(
-    (currentSlug: string, requestId: string) => {
-      stopPolling();
-      pollTimerRef.current = setInterval(async () => {
-        try {
-          const result = await roomApi.guestStatus(currentSlug, requestId);
-          if (result.status === "approved") {
-            stopPolling();
-            setViewState("active");
-          } else if (result.status === "denied") {
-            stopPolling();
-            setGuestState("denied");
-          }
-        } catch {
-          stopPolling();
-          setGuestState("error");
-          setErrorMessage("Your request expired or something went wrong.");
-        }
-      }, POLL_INTERVAL_MS);
-    },
-    [stopPolling],
-  );
 
   const handleRoomEnded = useCallback(() => {
     setViewState("ended");
@@ -128,41 +92,17 @@ export const RoomPage = () => {
   }, [viewState, handleRoomEnded]);
 
   const handleJoin = useCallback(async () => {
-    if (!user) {
-      saveGuestDisplayName(displayName);
-    }
+    if (!slug) return;
 
     if (user || guestPreApproved) {
       setViewState("active");
       return;
     }
 
-    if (!slug) return;
-
     saveGuestDisplayName(displayName);
 
-    try {
-      const { requestId } = await roomApi.guestRequest(slug, displayName);
-      if (!requestId) {
-        setGuestState("error");
-        setErrorMessage("Room owner is not online. Please try again later.");
-        return;
-      }
-      requestIdRef.current = requestId;
-      setGuestState("waiting");
-      startPolling(slug, requestId);
-    } catch {
-      setGuestState("error");
-      setErrorMessage("Failed to send join request. Please try again.");
-    }
-  }, [user, guestPreApproved, slug, displayName, startPolling]);
-
-  const handleRetry = useCallback(() => {
-    stopPolling();
-    requestIdRef.current = null;
-    setGuestState("idle");
-    setErrorMessage("");
-  }, [stopPolling]);
+    await join({ slug, displayName });
+  }, [user, guestPreApproved, slug, displayName, join]);
 
   if (isLoading || authLoading) {
     return (
@@ -199,8 +139,8 @@ export const RoomPage = () => {
               onDisplayNameChange={setDisplayName}
               onJoin={handleJoin}
               guestState={user ? undefined : guestState}
-              errorMessage={errorMessage}
-              onRetry={handleRetry}
+              errorMessage={joinError}
+              onRetry={retry}
             />
           ) : (
             <>
