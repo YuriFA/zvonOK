@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.5.0](https://github.com/YuriFA/zvonOK/compare/v0.4.0...v0.5.0) (2026-05-27)
+
+### Features
+
+* **client:** optimize SFU and media for mobile devices ([05ba894](https://github.com/YuriFA/zvonOK/commit/05ba89474cf018ac4d65724b58ec5301b0b51d23))
+
+### Performance Improvements
+
+* **client:** add audio level hysteresis and silence threshold ([aee9bf5](https://github.com/YuriFA/zvonOK/commit/aee9bf583bcc6b23c5e4a3c5be3678039cddbfd9))
+* **client:** reduce UI reflows and audio processing overhead ([72c6ca1](https://github.com/YuriFA/zvonOK/commit/72c6ca192963b9d9fc3b1b6df79c30ca63cfa5fa))
+
 ## [0.4.0](https://github.com/YuriFA/zvonOK/compare/v0.3.0...v0.4.0) (2026-04-22)
 
 ### Features
