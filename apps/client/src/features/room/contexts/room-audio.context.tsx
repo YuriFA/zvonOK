@@ -79,7 +79,7 @@ export function RoomAudioContextProvider({ children, session }: Props) {
         const speakerId = detectorRef.current.detect(levels);
         storeRef.current.setActiveSpeakerId(speakerId);
       }
-    }, 100);
+    }, 250);
 
     return () => {
       clearInterval(interval);

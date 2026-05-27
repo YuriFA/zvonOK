@@ -45,7 +45,7 @@ export function AudioLevelRings({ level, color, maxRings = 4, className }: Audio
         return (
           <div
             key={i}
-            className="absolute rounded-full transition-all duration-150 will-change-[transform,opacity]"
+            className="absolute rounded-full transition-[opacity] duration-150 will-change-[opacity]"
             style={{
               width: ring.size,
               height: ring.size,

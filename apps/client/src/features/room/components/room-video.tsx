@@ -44,7 +44,7 @@ export function RoomVideo({
   return (
     <VideoTile isActiveSpeaker={activeSpeakerId === userId} style={style}>
       <div className="relative size-full overflow-hidden rounded-lg bg-muted">
-        <video ref={videoRef} autoPlay playsInline muted className="h-full w-full object-cover" />
+        <video ref={videoRef} autoPlay playsInline muted className="mirror h-full w-full object-cover" />
 
         {!isVideoEnabled && (
           <div className="absolute inset-0 flex items-center justify-center bg-muted select-none">
