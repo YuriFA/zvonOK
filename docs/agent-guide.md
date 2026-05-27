@@ -148,7 +148,7 @@ if (error.response?.status === 401) {
 ### Common Commands
 ```bash
 # Server
-cd apps/server && pnpm start:dev    # Development with watch
+cd apps/server && pnpm dev           # Development with watch
 cd apps/server && pnpm migrate:dev   # Apply Prisma migrations
 
 # Client
@@ -156,7 +156,7 @@ cd apps/client && pnpm dev           # Vite dev server
 cd apps/client && pnpm build         # Production build
 
 # Database
-pnpm -C apps/server bd:dev          # Start PostgreSQL via Docker
+pnpm -C apps/server bd:dev           # Start PostgreSQL via Docker
 ```
 
 ### Environment Variables

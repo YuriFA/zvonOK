@@ -18,7 +18,7 @@ pnpm bd:dev
 pnpm migrate:dev
 
 # Run dev server
-pnpm start:dev
+pnpm dev
 ```
 
 Server: http://localhost:3000
@@ -28,9 +28,9 @@ Swagger: http://localhost:3000/swagger
 
 | Category | Command | Description |
 |----------|---------|-------------|
-| **Dev** | `pnpm start:dev` | Watch mode (primary) |
-| | `pnpm start` | Production run |
-| | `pnpm start:debug` | Debug mode |
+| **Dev** | `pnpm dev` | Watch mode (primary) |
+| | `pnpm prod` | Production run |
+| | `pnpm debug` | Debug mode |
 | **Build** | `pnpm build` | Compile to dist/ |
 | | `pnpm lint` | ESLint check |
 | | `pnpm format` | Prettier format |
