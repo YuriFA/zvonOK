@@ -2,6 +2,15 @@ import { useSyncExternalStore } from "react";
 
 type Listener = () => void;
 
+const LEVEL_HYSTERESIS = 0.05;
+
+function isLevelChangeSignificant(prev: number | undefined, next: number): boolean {
+  if (prev === undefined) return true;
+  if (prev === next) return false;
+  if ((prev === 0) !== (next === 0)) return true;
+  return Math.abs(prev - next) >= LEVEL_HYSTERESIS;
+}
+
 export class RoomAudioStore {
   private audioLevels = new Map<string, number>();
   private activeSpeakerId: string | null = null;
@@ -13,7 +22,7 @@ export class RoomAudioStore {
     const changedIds: string[] = [];
 
     for (const [id, level] of levels) {
-      if (this.audioLevels.get(id) !== level) {
+      if (isLevelChangeSignificant(this.audioLevels.get(id), level)) {
         changedIds.push(id);
       }
     }

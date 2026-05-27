@@ -1,5 +1,7 @@
 import { calculateRmsLevel } from "./audio-utils";
 
+const SILENCE_THRESHOLD = 0.01;
+
 interface OwnedEntry {
   type: "owned";
   context: AudioContext;
@@ -88,8 +90,9 @@ export class AudioLevelSampler {
       const raw = calculateRmsLevel(entry.analyser);
       const prev = this.smoothed.get(id) ?? 0;
       const smoothed = prev + this.smoothFactor * (raw - prev);
+      const rounded = Math.round(smoothed * 100) / 100;
       this.smoothed.set(id, smoothed);
-      levels.set(id, smoothed);
+      levels.set(id, rounded < SILENCE_THRESHOLD ? 0 : rounded);
     }
 
     return levels;
