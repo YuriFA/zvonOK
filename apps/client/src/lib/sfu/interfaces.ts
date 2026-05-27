@@ -62,7 +62,7 @@ interface ISfuRoomMembership {
  */
 interface ISfuProducerManager {
   /** Produce a local track */
-  produce(track: MediaStreamTrack): Promise<Producer | null>;
+  produce(track: MediaStreamTrack, params?: { isMobile?: boolean }): Promise<Producer | null>;
   /** Produce a screen share track */
   produceScreen(track: MediaStreamTrack): Promise<Producer | null>;
   /** Close the screen share producer */

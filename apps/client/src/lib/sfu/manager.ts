@@ -210,8 +210,13 @@ export class SfuManager implements ISfuManager {
   }
 
   // ISfuProducerManager
-  async produce(track: MediaStreamTrack): Promise<Producer | null> {
-    return this.produceWithSource(track, track.kind === "video" ? "camera" : undefined);
+  async produce(
+    track: MediaStreamTrack,
+    { isMobile }: { isMobile?: boolean } = {},
+  ): Promise<Producer | null> {
+    return this.produceWithSource(track, track.kind === "video" ? "camera" : undefined, {
+      isMobile,
+    });
   }
 
   async produceScreen(track: MediaStreamTrack): Promise<Producer | null> {
@@ -221,6 +226,7 @@ export class SfuManager implements ISfuManager {
   private async produceWithSource(
     track: MediaStreamTrack,
     source?: SfuMediaSource,
+    { isMobile }: { isMobile?: boolean } = {},
   ): Promise<Producer | null> {
     if (!this.sendTransport) {
       console.error("[SFU] Send transport not ready");
@@ -250,7 +256,7 @@ export class SfuManager implements ISfuManager {
       return pending;
     }
 
-    const producePromise = this.doProduceTrack(track, source);
+    const producePromise = this.doProduceTrack(track, source, { isMobile });
     this.producingInProgress.set(dedupeKey, producePromise);
 
     try {
@@ -263,6 +269,7 @@ export class SfuManager implements ISfuManager {
   private async doProduceTrack(
     track: MediaStreamTrack,
     source?: SfuMediaSource,
+    { isMobile }: { isMobile?: boolean } = {},
   ): Promise<Producer | null> {
     if (!this.sendTransport) return null;
 
@@ -274,7 +281,17 @@ export class SfuManager implements ISfuManager {
         encodings: isVideo && !isScreen ? SIMULCAST_ENCODINGS : undefined,
         codecOptions: isVideo
           ? { videoGoogleStartBitrate: 1000 }
-          : { opusStereo: true, opusFec: true },
+          : {
+              opusStereo: true,
+              opusFec: true,
+
+              ...(isMobile && {
+                // Optional mobile-friendly bitrate settings:
+                opusDtx: true, // Stops sending packets during silence
+                opusStereoDtx: true,
+                opusBitrate: 32000, // 32 kbps is a great sweet spot for mobile
+              }),
+            },
         appData: { source: source ?? (isVideo ? "camera" : undefined) },
       });
 

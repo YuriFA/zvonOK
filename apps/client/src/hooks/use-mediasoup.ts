@@ -9,6 +9,8 @@ import { useAuth } from "@/features/auth/contexts/auth.context";
 import { useSfuManager } from "@/features/sfu/contexts/sfu-manager.context";
 import type { SfuPeerInfo, SfuState } from "@/lib/sfu/types";
 
+import { useIsMobile } from "./use-is-mobile";
+
 export interface UseMediasoupOptions {
   roomId?: string;
   roomOwnerId?: string;
@@ -75,6 +77,7 @@ export function useMediasoup({
   displayName,
 }: UseMediasoupOptions): UseMediasoupResult {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const sfuManager = useSfuManager();
   const [state, setState] = useState<SfuState>(() => sfuManager.getState());
   const [remotePeers, setRemotePeers] = useState<RemotePeerMap>(new Map());
@@ -331,7 +334,7 @@ export function useMediasoup({
         ) {
           producedKindsRef.current.add(track.kind);
           sfuManager
-            .produce(track)
+            .produce(track, { isMobile })
             .then((producer) => {
               if (!producer) {
                 producedKindsRef.current.delete(track.kind as "audio" | "video");
@@ -344,7 +347,7 @@ export function useMediasoup({
         }
       });
     }
-  }, [localVideoStream, localAudioStream, state.isSendTransportCreated, sfuManager]);
+  }, [localVideoStream, localAudioStream, state.isSendTransportCreated, sfuManager, isMobile]);
 
   const kickPeer = useCallback(
     (userId: string) => {
@@ -357,13 +360,13 @@ export function useMediasoup({
     async (track: MediaStreamTrack): Promise<boolean> => {
       const kind = track.kind as "audio" | "video";
       producedKindsRef.current.add(kind);
-      const producer = await sfuManager.produce(track);
+      const producer = await sfuManager.produce(track, { isMobile });
       if (!producer) {
         producedKindsRef.current.delete(kind);
       }
       return producer !== null;
     },
-    [sfuManager],
+    [sfuManager, isMobile],
   );
 
   const pauseProducer = useCallback(

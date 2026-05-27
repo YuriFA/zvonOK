@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, type ReactNode } from "react";
 
 import { useSfuManager } from "@/features/sfu/contexts/sfu-manager.context";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import { qualityToSpatialLayer } from "@/lib/sfu/quality-score";
 import type { SimulcastSpatialLayer } from "@/lib/sfu/types";
 
@@ -23,6 +24,7 @@ interface Props {
 export function PeerQualityProvider({ enabled = true, children }: Props) {
   const storeRef = useRef<PeerQualityStore>(new PeerQualityStore());
   const sfuManager = useSfuManager();
+  const isMobile = useIsMobile();
 
   /**
    * Per-peer debounce timers and last-emitted layer for simulcast adaptation.
@@ -108,7 +110,7 @@ export function PeerQualityProvider({ enabled = true, children }: Props) {
       clearUserLayerState(userId);
     });
 
-    sfuManager.startStatsCollection(2000);
+    sfuManager.startStatsCollection(isMobile ? 5000 : 2000);
 
     return () => {
       unsubscribe();
@@ -123,7 +125,7 @@ export function PeerQualityProvider({ enabled = true, children }: Props) {
       layerTimersCurrent.clear();
       lastEmittedLayerCurrent.clear();
     };
-  }, [enabled, sfuManager]);
+  }, [enabled, sfuManager, isMobile]);
 
   return (
     <PeerQualityContext.Provider value={{ store: storeRef.current }}>
