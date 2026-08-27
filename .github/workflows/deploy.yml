@@ -151,7 +151,7 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          source: "docker-compose.prod.yml,Caddyfile,turnserver.conf"
+          source: "docker-compose.prod.yml,Caddyfile.traefik,Caddyfile.routes,turnserver.conf"
           target: ~/zvonOK
 
       - name: Deploy via SSH
@@ -172,6 +172,9 @@ jobs:
             export GHCR_REPO="$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')"
 
             cd ~/zvonOK
+
+            # Shared docker network with the Traefik gateway (idempotent)
+            docker network create web 2>/dev/null || true
 
             echo "${GHCR_TOKEN}" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
 

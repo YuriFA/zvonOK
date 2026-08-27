@@ -693,25 +693,29 @@ pnpm -C apps/client dev       # Vite dev server on port 5173
 
 ### 9.2 Production Deployment
 
-**Stack:** Docker Compose with Caddy + NestJS + PostgreSQL
+**Stack:** Docker Compose with Traefik gateway + Caddy + NestJS + PostgreSQL
 
-**Architecture:**
+**Architecture (VPS, multi-site):**
 ```
-┌──────────┐      ┌────────────────┐      ┌──────────┐
-│ Browser  │─────▶│  Caddy (:443)  │─────▶│  NestJS  │
-│          │ HTTPS│  - static SPA  │ HTTP │  (:3000)  │
-│          │◀─────│  - reverse     │◀─────│  API+WS   │
-└──────────┘      │    proxy       │      └──────────┘
-     │            └────────────────┘           │
-     │                                         ▼
-     │     ┌──────────┐                 ┌──────────┐
-     └────▶│  coturn   │                │PostgreSQL│
-      TURN │(:3478/5349)                │  (:5432) │
-           └──────────┘                 └──────────┘
+┌──────────┐      ┌───────────────┐      ┌────────────────┐      ┌──────────┐
+│ Browser  │─────▶│ Traefik :443  │─────▶│  Caddy (:80)   │─────▶│  NestJS  │
+│          │ HTTPS│ (gateway, LE  │ HTTP │  - static SPA  │ HTTP │  (:3000)  │
+│          │◀─────│  certs, all   │◀─────│  - reverse     │◀─────│  API+WS   │
+└──────────┘      │  subdomains)  │      │    proxy       │      └──────────┘
+     │            └───────┬───────┘      └────────────────┘           │
+     │                    │ routes other Hosts                          ▼
+     │                    │ to sibling sites                       ┌──────────┐
+     │     ┌──────────┐   │ (shared `web` docker network)         │PostgreSQL│
+     └────▶│  coturn   │◀──┘                                       │  (:5432) │
+      TURN │(:3478/5349)                                           └──────────┘
+           └──────────┘
 ```
+
+Traefik (`~/gateway`, separate from this repo) is the only service binding host ports 80/443; other repositories deploy independently on their own subdomains behind the same gateway. Standalone/local runs skip Traefik — Caddy then manages TLS itself (`Caddyfile`); production uses the HTTP-only `Caddyfile.traefik` (see [traefik-migration-plan.md](./traefik-migration-plan.md)).
 
 **Components:**
-- **Reverse Proxy:** Caddy (automatic HTTPS via Let's Encrypt, or self-signed for localhost)
+- **Edge:** Traefik gateway (prod only) — TLS termination, Let's Encrypt for every subdomain, Host-based routing via Docker labels
+- **Reverse Proxy:** Caddy (dev/standalone: automatic HTTPS via Let's Encrypt, or self-signed for localhost)
 - **Client:** Vite static build served by Caddy (`/srv/client`)
 - **Server:** NestJS production image with pre-built mediasoup worker
 - **Database:** PostgreSQL 16
@@ -747,8 +751,11 @@ Run `make help` for the full list.
 
 **Key Files:**
 - `Makefile` — Production Docker orchestration
-- `docker-compose.yml` — Full stack service definitions
-- `Caddyfile` — Reverse proxy configuration
+- `docker-compose.yml` — Full stack service definitions (standalone/dev)
+- `docker-compose.prod.yml` — VPS deployment from GHCR images (behind Traefik)
+- `Caddyfile.routes` — Shared routing rules (API proxies, SPA, headers)
+- `Caddyfile` — Standalone/dev wrapper (TLS + redirects)
+- `Caddyfile.traefik` — Production wrapper (plain HTTP behind Traefik)
 - `apps/server/Dockerfile` — Server multi-stage build (mediasoup worker + NestJS)
 - `apps/client/Dockerfile` — Caddy with baked-in client static assets (node + Vite → Caddy image)
 - `.env.production.example` — Environment variable template

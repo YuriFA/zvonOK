@@ -92,6 +92,8 @@ services:
       - "5432"
 
   # --- Caddy reverse proxy (with baked-in client assets) ---
+  # Behind the shared Traefik gateway (~/gateway on the VPS): Traefik owns
+  # host ports 80/443 and terminates TLS; Caddy serves plain HTTP internally.
   caddy:
     image: ghcr.io/${GHCR_REPO}/caddy:${IMAGE_TAG:-latest}
     container_name: zvonok-caddy
@@ -100,19 +102,27 @@ services:
       options:
         max-size: "30m"
         max-file: "3"
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"  # HTTP/3
+    expose:
+      - "80"
     environment:
       SITE_ADDRESS: ${SITE_ADDRESS:-localhost}
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./Caddyfile.traefik:/etc/caddy/Caddyfile:ro
+      - ./Caddyfile.routes:/etc/caddy/Caddyfile.routes:ro
       - caddy_data:/data
       - caddy_config:/config
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.zvonok.rule=Host(`${SITE_ADDRESS}`)"
+      - "traefik.http.routers.zvonok.entrypoints=websecure"
+      - "traefik.http.routers.zvonok.tls.certresolver=le"
+      - "traefik.http.services.zvonok.loadbalancer.server.port=80"
     depends_on:
       server:
         condition: service_started
+    networks:
+      - default
+      - web
     restart: unless-stopped
 
   # --- coturn TURN/STUN server ---
@@ -134,6 +144,12 @@ services:
       - --realm=${SITE_ADDRESS:-localhost}
       - --user=${TURN_USER}:${TURN_PASSWORD}
     restart: unless-stopped
+
+networks:
+  default:
+  # Shared with the Traefik gateway and other sites on the same VPS
+  web:
+    external: true
 
 volumes:
   postgres_data:

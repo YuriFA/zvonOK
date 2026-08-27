@@ -40,8 +40,9 @@ Client → Traefik (ports 80/443, TLS) → other-site-app (internal :8080)
 
 ~/zvonOK/               # this repo — minimal changes
 ├── docker-compose.prod.yml  # modified
-├── Caddyfile               # unchanged
-├── turnserver.conf         # unchanged
+├── Caddyfile.traefik        # NEW — prod config behind Traefik (plain HTTP)
+├── Caddyfile.routes         # NEW — shared routing snippet
+├── turnserver.conf          # unchanged
 └── ...
 
 ~/other-site/           # separate repo — fully independent
@@ -113,7 +114,17 @@ touch acme.json && chmod 600 acme.json
 docker compose up -d
 ```
 
-### Step 3: Modify Zvonok `docker-compose.prod.yml`
+### Step 3: Split the Caddy config
+
+The original plan assumed `Caddyfile` stays unchanged — that is wrong. With `SITE_ADDRESS` set to a real domain, Caddy enables automatic HTTPS: the `http://{$SITE_ADDRESS}` block answers every plain-HTTP request with a permanent redirect to HTTPS. Behind Traefik this creates an infinite redirect loop (Traefik terminates TLS and forwards plain HTTP → Caddy redirects to HTTPS → Traefik → …).
+
+Fix — routing rules move to a shared snippet, each mode gets its own wrapper:
+
+- `Caddyfile.routes` — routing only: API routes (`/auth/*`, `/users/*`, `/rooms*`, `/version`, `/socket.io/*`), static SPA + fallback, security headers, logging. No TLS, no redirects.
+- `Caddyfile` (dev/standalone) — unchanged behavior: global options, `http://` → HTTPS redirect block, HTTPS site block. Imports `Caddyfile.routes`. Used by `docker-compose.yml`.
+- `Caddyfile.traefik` (prod) — a single `:80 { import Caddyfile.routes }` block. No TLS, no redirects. Mounted by `docker-compose.prod.yml` as `/etc/caddy/Caddyfile`.
+
+### Step 4: Modify Zvonok `docker-compose.prod.yml`
 
 Changes:
 1. Remove `ports` (80/443) from `caddy` service
@@ -121,6 +132,7 @@ Changes:
 3. Add Traefik labels to `caddy`
 4. Add `web` external network
 5. Connect `caddy` to both `default` and `web` networks
+6. Mount `Caddyfile.traefik` as `/etc/caddy/Caddyfile` (+ `Caddyfile.routes`)
 
 ```yaml
 services:
@@ -140,7 +152,8 @@ services:
     environment:
       SITE_ADDRESS: ${SITE_ADDRESS:-localhost}
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./Caddyfile.traefik:/etc/caddy/Caddyfile:ro
+      - ./Caddyfile.routes:/etc/caddy/Caddyfile.routes:ro
       - caddy_data:/data
       - caddy_config:/config
     labels:
@@ -170,7 +183,7 @@ volumes:
   caddy_config:
 ```
 
-### Step 4: Modify `deploy.yml`
+### Step 5: Modify `deploy.yml`
 
 One change in the SSH deploy script — ensure the `web` network exists before `up`:
 
@@ -196,7 +209,7 @@ script: |
     | xargs -r docker rmi || true
 ```
 
-### Step 5: Add a New Site (Example)
+### Step 6: Add a New Site (Example)
 
 `~/other-site/docker-compose.yml`:
 
@@ -264,11 +277,11 @@ jobs:
 
 | File / Component | Status |
 |-----------------|--------|
-| `Caddyfile` | Unchanged (internal routing) |
+| `Caddyfile` (dev) | Behavior unchanged (routing extracted to `Caddyfile.routes`) |
 | `apps/client/Dockerfile` | Unchanged (Caddy + baked-in SPA) |
 | `apps/server/Dockerfile` | Unchanged |
 | `turnserver.conf` | Unchanged |
-| `docker-compose.yml` (dev) | Unchanged |
+| `docker-compose.yml` (dev) | One line added: mounts `Caddyfile.routes` |
 | Build jobs in `deploy.yml` | Unchanged |
 | Server code | Unchanged |
 | Client code | Unchanged |
@@ -277,8 +290,11 @@ jobs:
 
 | File / Component | Change |
 |-----------------|--------|
-| `docker-compose.prod.yml` | Remove caddy ports 80/443, add expose/labels/networks |
-| `.github/workflows/deploy.yml` | Add `docker network create web` in deploy script |
+| `Caddyfile.routes` | New — shared routing snippet (single source of truth) |
+| `Caddyfile.traefik` | New — prod config: `:80` only, no TLS, no redirects |
+| `docker-compose.prod.yml` | Remove caddy ports 80/443, add expose/labels/networks, mount `Caddyfile.traefik` |
+| `docker-compose.yml` (dev) | Mount `Caddyfile.routes` (imported by `Caddyfile`) |
+| `.github/workflows/deploy.yml` | Copy `Caddyfile.traefik` + `Caddyfile.routes`; add `docker network create web` in deploy script |
 | VPS: `~/gateway/` | New directory with Traefik compose |
 
 ## DNS
@@ -292,30 +308,36 @@ Traefik auto-provisions Let's Encrypt certs for each domain on first request.
 
 ## Execution Order on VPS
 
+Order matters: Docker refuses to start Traefik while the running zvonok-caddy still holds ports 80/443 ("port is already allocated").
+
 ```bash
 # 1. Create shared network
 docker network create web
 
-# 2. Start Traefik gateway
+# 2. Prepare the gateway directory (compose + .env + acme.json) — do NOT
+#    start it yet, ports 80/443 are still owned by the old caddy
+cd ~/gateway && ls   # docker-compose.yml, .env, acme.json in place
+
+# 3. Redeploy zvonok (via GitHub Actions) — the new caddy releases 80/443
+#    and joins the web network. Brief downtime until step 4.
+
+# 4. Start the gateway — binds 80/443, discovers zvonok labels, routes traffic
 cd ~/gateway && docker compose up -d
 
-# 3. Redeploy zvonok (via GitHub Actions or manually)
-cd ~/zvonOK
-docker compose -f docker-compose.prod.yml pull
-docker compose -f docker-compose.prod.yml up -d --remove-orphans
-
-# 4. Deploy other sites independently
+# 5. Deploy other sites independently
 cd ~/other-site && docker compose up -d
 ```
+
+`scripts/setup-traefik-gateway.sh` walks through steps 1–4 interactively (DNS check included).
 
 ## Rollback
 
 If Traefik causes issues:
 
 1. Stop Traefik: `cd ~/gateway && docker compose down`
-2. Revert `docker-compose.prod.yml` to restore caddy ports 80/443
+2. Revert `docker-compose.prod.yml` to restore caddy ports 80/443 and mount `./Caddyfile` (dev config) instead of `Caddyfile.traefik`
 3. `docker compose -f docker-compose.prod.yml up -d`
-4. Zvonok works standalone again (self-signed TLS or `tls internal`)
+4. Zvonok works standalone again (Caddy manages its own Let's Encrypt / `tls internal`)
 
 ## Trade-offs
 

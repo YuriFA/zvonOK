@@ -7,16 +7,18 @@ This guide covers deploying ZvonOK with Docker Compose on a Linux server (or loc
 ```
 Internet
    │
-   ├─ HTTPS (443) ──────────▶ Caddy ──┬── Static files (React SPA from /srv/client)
-   │                                   ├── /auth/*, /users/*, /rooms/* ──▶ NestJS :3000
-   │                                   ├── /socket.io/* ──▶ NestJS :3000 (WebSocket)
-   │                                   └── /* (fallback) ──▶ index.html (SPA routing)
+   ├─ HTTPS (443) ──▶ Traefik ──▶ Caddy ──┬── Static files (React SPA from /srv/client)
+   │                  (gateway)           ├── /auth/*, /users/*, /rooms/* ──▶ NestJS :3000
+   │                  TLS + LE            ├── /socket.io/* ──▶ NestJS :3000 (WebSocket)
+   │                  (prod only)         └── /* (fallback) ──▶ index.html (SPA routing)
    │
    ├─ UDP/TCP (40000-40099) ──▶ NestJS (mediasoup RTC media) ──▶ directly exposed
    │
    └─ UDP/TCP (3478, 5349) ──▶ coturn (STUN/TURN relay)
      └─ UDP (49152-49252)     relay port range (host network mode)
 ```
+
+In production, a shared **Traefik** gateway (`~/gateway` on the VPS) owns ports 80/443, terminates TLS (Let's Encrypt), and routes by hostname to this stack's Caddy over the shared `web` Docker network. For local/standalone runs Traefik is absent and Caddy manages TLS itself.
 
 **Five services** run via `docker-compose.yml`:
 
@@ -25,7 +27,7 @@ Internet
 | `postgres` | `postgres:16-alpine`       | Database |
 | `migrate`  | `apps/server/Dockerfile` (target: `migrator`) | Runs `prisma migrate deploy`, then exits |
 | `server`   | `apps/server/Dockerfile` (target: `production`) | NestJS API + mediasoup SFU |
-| `caddy`    | `apps/client/Dockerfile`   | Caddy reverse proxy with baked-in client static assets + automatic HTTPS |
+| `caddy`    | `apps/client/Dockerfile`   | Caddy reverse proxy with baked-in client static assets; TLS at the edge (Traefik in prod, Caddy itself in dev) |
 | `coturn`   | `coturn/coturn:alpine`     | STUN/TURN server for NAT traversal (host network mode) |
 
 ### `docker-compose.yml` vs `docker-compose.prod.yml`
@@ -36,7 +38,46 @@ Both files define the same five services but differ intentionally:
 |------------|---------------------|---------------------------|--------|
 | Images | Builds from local Dockerfiles | Pulls pre-built images from GHCR | Prod uses CI-built images; dev builds locally |
 | Server `TURN_*` env vars | Not set | `TURN_URL`, `TURNS_URL`, `TURN_USER`, `TURN_PASSWORD` | In local dev coturn runs without auth; prod passes TURN credentials to clients via `sfu:transport-created` |
-| Caddy `certs` volume | `./certs:/srv/certs:ro` | Not mounted | Dev uses self-signed certs from `./certs`; prod uses Caddy's automatic Let's Encrypt |
+| Caddy `certs` volume | `./certs:/srv/certs:ro` | Not mounted | Dev uses self-signed certs from `./certs`; prod terminates TLS at Traefik |
+| Caddy entrypoint | Host ports 80/443, `Caddyfile` | `expose: 80` behind Traefik, `Caddyfile.traefik` | Prod shares ports 80/443 with other sites via the gateway |
+
+## Traefik Gateway (Multi-Site Production)
+
+The VPS hosts several independent sites, each in its own repository, each on its own subdomain. A single Traefik container (`~/gateway`) owns host ports 80/443, obtains Let's Encrypt certificates for every domain, and routes by `Host` header to containers on the shared external Docker network `web`. Full details: [traefik-migration-plan.md](./traefik-migration-plan.md). The first-time gateway setup is walked through by `scripts/setup-traefik-gateway.sh`.
+
+Why prod uses `Caddyfile.traefik` instead of the dev `Caddyfile`: with a real domain, the dev config enables automatic HTTPS and redirects every plain-HTTP request to HTTPS. Traefik forwards plain HTTP, so that redirect would loop forever. `Caddyfile.traefik` serves plain HTTP only — no TLS, no redirects; routing rules are shared via `Caddyfile.routes`.
+
+### Adding a New Site to the VPS
+
+Each new repository deploys independently — no changes to the gateway or to zvonok:
+
+1. **Dockerfile** — any stack; the app listens on an internal port (e.g., `3001`).
+2. **`docker-compose.yml`** in the site's repo — no host `ports`, only `expose`, plus Traefik labels and both networks:
+
+   ```yaml
+   services:
+     app:
+       image: ghcr.io/USER/REPO/app:latest
+       expose: ["3001"]
+       labels:
+         - "traefik.enable=true"
+         - "traefik.http.routers.shop.rule=Host(`shop.example.com`)"
+         - "traefik.http.routers.shop.entrypoints=websecure"
+         - "traefik.http.routers.shop.tls.certresolver=le"
+         - "traefik.http.services.shop.loadbalancer.server.port=3001"
+       networks: [default, web]
+       restart: unless-stopped
+
+   networks:
+     web:
+       external: true
+   ```
+
+3. **Deploy workflow** — same pattern as zvonok: scp compose to `~/shop` on the VPS, then `docker network create web 2>/dev/null || true && docker compose pull && docker compose up -d`.
+4. **Repo secrets** — `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY` (+ `GHCR_TOKEN` if images live in GHCR).
+5. **DNS** — A record `shop.example.com → VPS IP`.
+
+The certificate is issued automatically by Traefik on the first request. Router names (`shop`) must be unique across all containers on the gateway.
 
 ## Prerequisites
 
@@ -60,8 +101,8 @@ The following ports must be open on the server firewall:
 
 | Port(s) | Protocol | Service | Purpose |
 |---------|----------|---------|---------|
-| 80 | TCP | Caddy | HTTP redirect + ACME challenge |
-| 443 | TCP + UDP | Caddy | HTTPS + HTTP/3 |
+| 80 | TCP | Traefik (prod) / Caddy (dev) | HTTP redirect + ACME challenge |
+| 443 | TCP + UDP | Traefik (prod) / Caddy (dev) | HTTPS + HTTP/3 |
 | 3478 | UDP + TCP | coturn | STUN/TURN |
 | 5349 | UDP + TCP | coturn | TURNS (TLS) |
 | 40000–40099 | UDP + TCP | mediasoup | WebRTC media transport |
@@ -266,10 +307,18 @@ TURNS_URL=turns:203.0.113.42:5349
 
 ## Caddy Routing
 
-The `Caddyfile` in the repo root defines the routing:
+Routing is defined in three files in the repo root:
 
-- `/auth/*`, `/users/*`, `/rooms`, `/rooms/*` → reverse proxy to `server:3000`
-- `/swagger*` → reverse proxy to `server:3000` (API docs)
+| File | Used by | Purpose |
+|------|---------|---------|
+| `Caddyfile.routes` | both | The actual routing: API proxies, static SPA fallback, security headers, logging |
+| `Caddyfile` | `docker-compose.yml` (dev/standalone) | Adds TLS and HTTP→HTTPS redirect around the routes |
+| `Caddyfile.traefik` | `docker-compose.prod.yml` (prod) | Serves the routes on plain `:80` behind the Traefik gateway |
+
+The routes:
+
+- `/auth/*`, `/users/*`, `/rooms`, `/rooms/*`, `/version` → reverse proxy to `server:3000`
+- `/swagger*` → not proxied in production (dev only, via SSH port-forward)
 - `/socket.io/*` → reverse proxy to `server:3000` (WebSocket + polling)
 - Everything else → `try_files` for static SPA with `index.html` fallback
 
@@ -277,7 +326,9 @@ The `Caddyfile` in the repo root defines the routing:
 
 ### Custom Domain with Automatic HTTPS
 
-Set `SITE_ADDRESS=your-domain.com` in `.env`. Caddy will automatically obtain a Let's Encrypt certificate. Make sure:
+**Production:** TLS is handled by the Traefik gateway — make sure the DNS A record points to the server and ports 80/443 are open; the certificate is issued automatically (TLS-ALPN challenge).
+
+**Standalone/dev:** set `SITE_ADDRESS=your-domain.com` in `.env`. Caddy will automatically obtain a Let's Encrypt certificate itself. Make sure:
 
 1. DNS A record points to your server's IP
 2. Ports 80 and 443 are open (Caddy needs port 80 for the ACME HTTP challenge)
@@ -394,8 +445,8 @@ Summary of required open ports:
 
 | Port(s) | Protocol | Service | Purpose |
 |---------|----------|---------|---------|
-| 80 | TCP | Caddy | HTTP redirect + ACME challenge |
-| 443 | TCP + UDP | Caddy | HTTPS + HTTP/3 |
+| 80 | TCP | Traefik (prod) / Caddy (dev) | HTTP redirect + ACME challenge |
+| 443 | TCP + UDP | Traefik (prod) / Caddy (dev) | HTTPS + HTTP/3 |
 | 3478 | UDP + TCP | coturn | STUN/TURN |
 | 5349 | UDP + TCP | coturn | TURNS (TLS) |
 | 40000–40099 | UDP + TCP | mediasoup | WebRTC media transport |
@@ -442,10 +493,16 @@ Summary of required open ports:
 
 ### Caddy not getting Let's Encrypt certificate
 
+- **Production:** TLS certificates are managed by the Traefik gateway (`docker logs traefik`), not Caddy — check the gateway first
 - Ensure DNS A record exists and propagated: `dig +short your-domain.com`
-- Port 80 **must** be open for the ACME HTTP-01 challenge
+- Port 80 **must** be open for the ACME HTTP-01 challenge (dev/standalone mode)
 - Check Caddy logs: `docker compose logs caddy`
 - If behind a load balancer, ensure the LB forwards port 80 to the server
+
+### Redirect loop (too many redirects) behind Traefik
+
+- The prod stack must use `Caddyfile.traefik` (plain HTTP, no redirects) — check the `caddy` service volumes in `docker-compose.prod.yml`
+- The dev `Caddyfile` redirects HTTP→HTTPS, which loops forever behind a TLS-terminating proxy
 
 ### Services keep restarting
 

@@ -1,4 +1,4 @@
-# Caddyfile — Caddy reverse proxy for WebRTC Chat
+# Caddyfile — Caddy reverse proxy for WebRTC Chat (standalone / development)
 #
 # Usage:
 #   Development (localhost with self-signed TLS):
@@ -10,14 +10,9 @@
 # The {$SITE_ADDRESS:localhost} syntax means:
 #   use env var SITE_ADDRESS, default to "localhost" if unset.
 #
-# Routing strategy:
-#   NestJS has no /api prefix. Backend routes (/auth, /users, /rooms, etc.)
-#   are proxied explicitly. Everything else is served as static files
-#   with SPA fallback to index.html.
-#
-# Swagger UI (/swagger*) is intentionally not proxied.
-#   Access it in development via SSH port-forward:
-#     ssh -L 3000:localhost:3000 user@host
+# Routing rules live in Caddyfile.routes (imported below).
+# For production behind the shared Traefik gateway, docker-compose.prod.yml
+# mounts Caddyfile.traefik instead of this file.
 
 # When SITE_ADDRESS is an IP, some TLS clients (macOS LibreSSL, older
 # curl, etc.) don't send SNI. The default_sni ensures Caddy still
@@ -39,74 +34,5 @@ http://{$SITE_ADDRESS:localhost} {
 	# For localhost/IP: uncomment the next line for self-signed TLS.
 	# tls internal
 
-	# Compress all responses (API + static) with zstd (preferred) and gzip fallback
-	encode zstd gzip
-
-	# Serve client static files (built by Vite)
-	root * /srv/client
-
-	# --- Backend API routes -> NestJS ---
-	handle /auth/* {
-		reverse_proxy server:3000
-	}
-
-	handle /version {
-		reverse_proxy server:3000
-	}
-
-	handle /users/* {
-		reverse_proxy server:3000
-	}
-
-	handle /rooms {
-		reverse_proxy server:3000
-	}
-
-	handle /rooms/* {
-		reverse_proxy server:3000
-	}
-
-	# Socket.io transport (SFU WebSocket + polling fallback)
-	handle /socket.io/* {
-		reverse_proxy server:3000
-	}
-
-	# --- Static files + SPA fallback ---
-	handle {
-		# Immutable cache for Vite hashed assets (JS, CSS)
-		@hashed path /assets/*
-		header @hashed Cache-Control "public, max-age=31536000, immutable"
-
-		try_files {path} /index.html
-		file_server
-	}
-
-	# Security headers
-	header {
-		# Prevent MIME-type sniffing
-		X-Content-Type-Options nosniff
-		# Disallow embedding in iframes
-		X-Frame-Options DENY
-		# Limit referrer information on cross-origin requests
-		Referrer-Policy strict-origin-when-cross-origin
-		# Enforce HTTPS for 2 years; include subdomains; eligible for preload list
-		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
-		# Content Security Policy for WebRTC + Socket.io SPA.
-		# wss: is required for Socket.io WebSocket transport.
-		# blob: is required for WebRTC media stream object URLs.
-		# 'unsafe-inline' in style-src is required for Vite CSS-in-JS at runtime.
-		# Tighten connect-src once TURN/STUN hostnames are known.
-		Content-Security-Policy "default-src 'self'; connect-src 'self' wss: https:; media-src 'self' blob:; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; worker-src 'self' blob:;"
-		# Declare which browser features this origin may use.
-		# camera/microphone/display-capture are needed for WebRTC calls.
-		Permissions-Policy "camera=(self), microphone=(self), display-capture=(self)"
-		# Remove the Server header to avoid leaking Caddy version
-		-Server
-	}
-
-	# Logging — JSON format for structured log aggregation (Loki, Datadog, etc.)
-	log {
-		output stdout
-		format json
-	}
+	import Caddyfile.routes
 }

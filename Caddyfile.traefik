@@ -1,0 +1,13 @@
+# Caddyfile.traefik — Caddy config for production behind the shared Traefik gateway
+#
+# Mounted as /etc/caddy/Caddyfile by docker-compose.prod.yml.
+# Traefik owns ports 80/443, terminates TLS (Let's Encrypt), and forwards
+# plain HTTP to this Caddy over the shared `web` docker network.
+#
+# No TLS and no HTTP→HTTPS redirects here: a redirect would loop forever
+# (Traefik → caddy:80 → "go to https" → Traefik → …). Traefik performs
+# the edge redirect itself. Routing rules live in Caddyfile.routes.
+
+:80 {
+	import Caddyfile.routes
+}

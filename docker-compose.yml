@@ -119,6 +119,7 @@ services:
       SITE_ADDRESS: ${SITE_ADDRESS:-localhost}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./Caddyfile.routes:/etc/caddy/Caddyfile.routes:ro
       - caddy_data:/data
       - caddy_config:/config
       - ./certs:/srv/certs:ro

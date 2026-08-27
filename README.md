@@ -8,7 +8,7 @@ A modern WebRTC video chat application built as a pnpm monorepo with NestJS back
 - **Secure Authentication** — JWT with refresh token rotation and reuse detection
 - **Modern Stack** — React 19, NestJS, TypeScript, Tailwind CSS
 - **Database** — PostgreSQL with Prisma ORM
-- **Production-Ready** — Docker Compose + Caddy (automatic HTTPS)
+- **Production-Ready** — Docker Compose + Caddy, shared Traefik gateway on the VPS (multi-site, automatic HTTPS)
 
 ## Tech Stack
 
@@ -17,7 +17,7 @@ A modern WebRTC video chat application built as a pnpm monorepo with NestJS back
 | Backend | NestJS v11, PostgreSQL 16, Prisma ORM, Passport.js (JWT), mediasoup |
 | Frontend | React 19, Vite 7, Tailwind CSS v4, React Router v7, Radix UI, mediasoup-client |
 | Signalling | Socket.io |
-| Deployment | Docker Compose, Caddy (reverse proxy + HTTPS) |
+| Deployment | Docker Compose, Caddy + shared Traefik gateway in production (multi-site VPS) |
 
 ## Prerequisites
 
@@ -117,7 +117,8 @@ webrtc-chat/
 ├── docs/                   # Documentation (SDD, deployment, tasks)
 ├── docker-compose.yml      # Production full-stack deployment
 ├── Makefile                # Production Docker orchestration (make help)
-├── Caddyfile               # Caddy reverse proxy config
+├── Caddyfile               # Caddy config (dev/standalone; imports Caddyfile.routes)
+├── Caddyfile.traefik       # Caddy config for prod behind the Traefik gateway
 └── .env.production.example # Production env template
 ```
 
