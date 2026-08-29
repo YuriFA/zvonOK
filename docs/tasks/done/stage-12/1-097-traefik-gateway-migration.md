@@ -1,8 +1,9 @@
 # TASK-097 — Traefik gateway migration (multi-site VPS)
 
-> **Status:** in-progress
+> **Status:** completed
 > **Priority:** high
 > **Created:** 2026-08-27
+> **Completed:** 2026-08-29
 
 ---
 
@@ -47,12 +48,16 @@ Both import `Caddyfile.routes` for API routes, static SPA fallback, security hea
 
 ## Acceptance Criteria
 
-- [ ] `docker compose -f docker-compose.prod.yml config` validates
-- [ ] Dev stack (`docker-compose.yml`) behavior unchanged (still self-managed TLS)
-- [ ] `Caddyfile.traefik` serves all routes over plain HTTP with no redirect
-- [ ] `deploy.yml` copies `Caddyfile.traefik` + `Caddyfile.routes` and creates the `web` network idempotently
-- [ ] `docs/deployment.md` has a new-site onboarding checklist
-- [ ] VPS wizard script generated
+- [x] `docker compose -f docker-compose.prod.yml config` validates
+- [x] Dev stack (`docker-compose.yml`) behavior unchanged (still self-managed TLS)
+- [x] `Caddyfile.traefik` serves all routes over plain HTTP with no redirect
+- [x] `deploy.yml` copies `Caddyfile.traefik` + `Caddyfile.routes` and creates the `web` network idempotently
+- [x] `docs/deployment.md` has a new-site onboarding checklist
+- [x] VPS wizard script generated
+
+## Result
+
+Executed 2026-08-29 via `scripts/setup-traefik-gateway.sh`. Zvonok now serves on `zvonok.<domain>` behind the shared Traefik gateway (`~/gateway`, Let's Encrypt via TLS-ALPN). The apex domain is no longer routed (404 at the edge) — an apex→subdomain redirect router can be added to the gateway later if needed. Note: during execution the `GHCR_TOKEN` secret had expired and was rotated (symptom: `docker login ghcr.io` → `denied: denied` on the VPS).
 
 ## Related Files
 
