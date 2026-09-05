@@ -61,3 +61,15 @@ Group video calls with authentication and room management.
 - **WebRTC:** mediasoup SFU
 - **Signalling:** Socket.io
 - **CI/CD:** GitHub Actions + GHCR + Docker Compose
+
+## Post-MVP Stages (9-12)
+
+| Stage | Description |
+|-------|-------------|
+| 9 | Network quality, reconnection, audio fixes |
+| 10 | Screen share (producer, layout, stop fix) |
+| 11 | Real-time chat + guest join flow (approval, guest auth, identity persistence) |
+| 12 | Traefik gateway migration |
+
+Stages 9-12 followed the MVP without a dedicated release note. This directory
+is frozen history: the docs system migrated to OpenSpec (see `docs/adr/0001`).

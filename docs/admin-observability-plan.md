@@ -3,7 +3,7 @@
 > **Status:** Draft / Pending approval
 > **Created:** 2026-05-29
 > **Owner:** —
-> **Related:** [SDD](./SDD.md), [deployment.md](./deployment.md), [roadmap.md](./roadmap.md)
+> **Related:** [deployment.md](./deployment.md), [ADR-0001 OpenSpec migration](./adr/0001-migrate-sdd-to-openspec.md), [frozen pre-OpenSpec docs](./archive/)
 
 ---
 
@@ -394,7 +394,7 @@ Each phase is a task folder under `docs/tasks/` (semantic name in `backlog/`, re
 - Grafana auth + read-only Postgres role.
 - Alert rules + notification channel.
 - VPS sizing guidance & docs.
-- Update `SDD.md`, `deployment.md`, `roadmap.md`.
+- Update `deployment.md`; record spec deltas via OpenSpec (`/opsx-propose` -> `/opsx-archive`).
 - **Done =** production-ready, documented.
 
 ---
@@ -410,11 +410,9 @@ Each phase is a task folder under `docs/tasks/` (semantic name in `backlog/`, re
 
 ---
 
-## 13. SDD Update Checklist (after approval)
+## 13. OpenSpec Update Checklist (after approval)
 
-- [ ] Add "Admin & Observability" section to `SDD.md` (components, data models, API).
-- [ ] New `docs/modules/admin.md` + `docs/modules/observability.md`.
+- [ ] `/opsx-propose` the admin & observability capability (delta specs for new admin domain + observability touchpoints).
 - [ ] Add `docker-compose.monitoring.yml` reference to `deployment.md`.
 - [ ] Add new env vars (e.g. `GRAFANA_*`, `PROMETHEUS_RETENTION`) to env tables.
-- [ ] Create task files under `docs/tasks/backlog/admin-observability/` per phase.
-- [ ] Update `roadmap.md` with the new stage.
+- [ ] Drive each phase as one OpenSpec change; archive merges the deltas into specs.

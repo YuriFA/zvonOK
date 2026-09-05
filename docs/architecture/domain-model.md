@@ -1,10 +1,12 @@
 # Domain Model — Entity Relationship
 
-> Сущности базы данных и их связи.
+> Сущности базы данных и их связи. Источник истины: `apps/server/prisma/schema.prisma`.
 
 ```mermaid
 erDiagram
     User ||--o{ Room : owns
+    User ||--o{ Message : writes
+    Room ||--o{ Message : contains
 
     User {
         string id PK
@@ -34,14 +36,15 @@ erDiagram
         datetime lastActivityAt
     }
 
-    %% Message model to be added in Stage 9 (Chat)
-    %% Message {
-    %%     string id PK
-    %%     string content
-    %%     string userId FK
-    %%     string roomId FK
-    %%     datetime createdAt
-    %% }
+    Message {
+        string id PK
+        string content
+        string userId FK
+        string guestId
+        string roomId FK
+        datetime createdAt
+    }
+}
 ```
 
 ## Text Diagram
@@ -56,50 +59,46 @@ erDiagram
 │ passwordHash                         │
 │ role                USER|HOST|ADMIN  │
 │ refreshTokenHash    (nullable)       │
-│ failedLoginAttempts (default 0)      │
 │ lockedUntil         (nullable)       │
 │ tokenVersion        (default 0)      │
 │ createdAt                            │
 │ updatedAt                            │
-└──────────────────────┬───────────────┘
-                       │ 1
-                       │ owns
-                       │ 0..*
-┌──────────────────────▼───────────────┐
-│                Room                  │
-├──────────────────────────────────────┤
-│ id              PK  (cuid)           │
-│ slug            UK  (6-char alphanum)│
-│ name            (nullable)           │
-│ ownerId         FK → User.id         │
-│ isPublic        (default true)       │
-│ maxParticipants (default 10)         │
-│ status          active | ended       │
-│ createdAt                            │
-│ updatedAt                            │
-│ endedAt         (nullable)           │
-│ lastActivityAt  (nullable)           │
-└──────────────────────────────────────┘
-
-  %% Message (Stage 9 — planned)
-  ┌───────────────────────┐
-  │       Message         │
-  ├───────────────────────┤
-  │ id        PK          │
-  │ content               │
-  │ userId    FK → User   │
-  │ roomId    FK → Room   │
-  │ createdAt             │
-  └───────────────────────┘
+└──────────────┬───────────┬───────────┘
+               │ 1         │ 1
+               │ owns      │ writes
+               │ 0..*      │ 0..*
+┌──────────────▼──────┐ ┌──▼─────────────────────┐
+│        Room         │ │        Message         │
+├─────────────────────┤ ├────────────────────────┤
+│ id        PK (cuid) │ │ id        PK (cuid)    │
+│ slug      UK (6ch)  │ │ content               │
+│ name      (nullable)│ │ userId    FK → User?   │
+│ ownerId   FK → User │ │ guestId   (nullable)  │
+│ isPublic  (true)    │ │ roomId    FK → Room   │
+│ maxPart.  (10)      │ │ createdAt             │
+│ status  active|ended│ └───────────┬────────────┘
+│ createdAt           │             │ N..1
+│ updatedAt           │◄────────────┘ contains
+│ endedAt  (nullable) │
+│ lastActivity (null) │
+└─────────────────────┘
 ```
 
 ## Entities
 
 | Entity | Table | Description |
 |--------|-------|-------------|
-| **User** | `User` | Registered account. Stores hashed password and hashed refresh token. Role: USER / HOST / ADMIN. Owns rooms. |
+| **User** | `User` | Registered account. Stores hashed password and hashed refresh token. Role: USER / HOST / ADMIN. Owns rooms, writes messages. |
 | **Room** | `Room` | Video call room identified by a unique slug. Owned by one User. Status: `active` or `ended`. |
-| **Message** | `Message` | *(Planned — Stage 9)* Chat messages per room. |
+| **Message** | `Message` | Chat message in a room. Author is either a registered user (`userId`, nullable) or a guest (`guestId`, nullable). Cascading delete with Room and User. |
+
+## Relations
+
+| Relation | Cardinality | On delete |
+|----------|-------------|-----------|
+| User → Room (`RoomHost`) | 1 : 0..* | - |
+| User → Message | 1 : 0..* | Cascade |
+| Room → Message | 1 : 0..* | Cascade |
 
 ## Indexes
 
@@ -111,3 +110,6 @@ erDiagram
 | `Room` | `ownerId` | B-tree (FK) |
 | `Room` | `status` | B-tree |
 | `Room` | `isPublic` | B-tree |
+| `Message` | `roomId` | B-tree (FK) |
+| `Message` | `userId` | B-tree (FK) |
+| `Message` | `guestId` | B-tree |

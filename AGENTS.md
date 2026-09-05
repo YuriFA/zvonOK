@@ -7,14 +7,14 @@ pnpm monorepo for WebRTC video chat (P2P 1-on-1, mediasoup SFU for groups).
 | Layer | Technology |
 |-------|------------|
 | Backend | NestJS v11 + PostgreSQL 16 + Prisma + Passport.js (JWT) |
-| Frontend | React 19 + Vite 7 + Tailwind CSS v4 + React Router v7 + Radix UI |
+| Frontend | React 19 + Vite 7 + Tailwind CSS v4 + React Router v7 + Base UI |
 | WebRTC | Socket.io signalling + native WebRTC API + mediasoup SFU |
 
 ## Non-Negotiables
 
 - **Package manager:** `pnpm` only — no npm/yarn
-- **Docs-first:** update `docs/SDD.md` before any feature/architecture change
-- **Task-based:** no implementation without a task file organized per `docs/tasks/README.md`
+- **Spec-driven:** `openspec/specs/` is the source of truth; behavior changes go through OpenSpec change proposals (see Spec-Driven Workflow)
+- **No undocumented work:** architectural/breaking changes require an approved change in `openspec/changes/` before implementation
 - **Surgical edits:** touch only what you must; no unrelated refactors
 - **No barrel files:** no `index.ts` re-export barrels; import from source
 - **No server management:** don't start/stop dev servers or DB; ask user if needed
@@ -137,7 +137,7 @@ pnpm -C apps/client test:run -- -t "handles 401"
 
 ## Architecture
 
-**Source of truth:** `docs/SDD.md` — read before changes.
+**Source of truth:** `openspec/specs/` - current behavior per domain. See Spec-Driven Workflow below.
 
 ```
 apps/
@@ -145,6 +145,8 @@ apps/
 │   ├── prisma/schema.prisma      # DB schema
 │   ├── src/
 │   │   ├── auth/                 # AuthModule (helpers, strategies)
+│   │   ├── room/                 # RoomModule (cleanup, guests)
+│   │   ├── chat/                 # ChatModule (messages, guest auth)
 │   │   ├── user/                 # UserModule
 │   │   ├── sfu/                  # mediasoup SFU
 │   │   └── main.ts
@@ -174,19 +176,44 @@ apps/
 **Client** (`.env.local`):
 - `VITE_SOCKET_URL`, `VITE_API_BASE_URL`
 
+**Source of truth:** `openspec/specs/` describes current implemented behavior per domain (auth, user, room, chat, sfu, client). `openspec/changes/` holds in-flight deltas.
+
+
+Commands (also available as `.omp/skills/openspec-*` skills):
+
+- `/opsx-explore` - map an unfamiliar area before proposing
+- `/opsx-propose` - create a change: proposal.md + delta specs + tasks
+- `/opsx-apply` - implement the change tasks
+- `/opsx-archive` - merge the delta into specs, move to `openspec/changes/archive/`
+- `pnpm openspec:validate` - validate all specs and changes (lefthook runs this on pre-commit when `openspec/**` is staged)
+
+**Change proposal is mandatory for:**
+
+- New capability, module, or page
+- Breaking/architectural change: Prisma schema migration, REST/WebSocket contract change, event rename, auth flow change
+- Cross-module behavior change
+
+**Direct implementation (no proposal) is fine for:**
+
+- Bug fixes that restore already-specified behavior
+- Internal refactors with no contract change, style fixes, dependency bumps
+
+Hard-to-reverse process/architecture decisions get an ADR in `docs/adr/`.
+
 ## Documentation
 
 | File | Purpose |
 |------|---------|
-| `docs/SDD.md` | System architecture, data models, API spec (source of truth) |
-| `docs/modules/` | API contracts per module |
-| `docs/roadmap.md` | Development phases and status |
-| `docs/tasks/` | Task workflow, structure, and naming rules |
+| `openspec/specs/` | Source of truth: current behavior per domain |
+| `openspec/changes/` | In-flight and archived change proposals |
+| `docs/architecture/` | C4 diagrams, sequence diagrams, domain model (living) |
+| `docs/adr/` | Architecture decision records |
+| `docs/archive/` | Frozen pre-OpenSpec history (SDD, tasks, roadmap, module docs) |
 
 ## Before Implementation
 
-1. Check `docs/SDD.md` for architecture
-2. Create/update the task file using `docs/tasks/README.md` rules
+1. Read the relevant domain spec in `openspec/specs/<domain>/`
+2. If the change is proposal-mandatory (see workflow above), run `/opsx-propose` and get the proposal approved before touching code
 3. State assumptions; if uncertain, ask
 4. If simpler approach exists, say so
 
@@ -197,12 +224,11 @@ apps/
 - No "flexibility" not requested
 - Follow SOLID principles
 - Follow existing patterns
-- If architecture changes → update SDD first
+- If architecture changes -> proposal first, code second
 
 ## After Implementation
 
-- Update SDD if architecture/API changed
-- Update task status according to `docs/tasks/README.md`
+- Archive the change (`/opsx-archive`) so specs absorb the delta; specs must never lag behind code
 - Use Conventional Commits for commit messages (for example: `feat: add room creation validation`)
 
 ## Security
@@ -229,4 +255,4 @@ apps/
 
 - Commits: Conventional Commits (`feat: ...`, `fix: ...`, `docs: ...`, `refactor: ...`, `test: ...`, `chore: ...`)
 - Atomic commits
-- Update `docs/SDD.md` and `docs/modules/` on architecture changes
+- Spec updates land via `/opsx-archive` together with the change they belong to
