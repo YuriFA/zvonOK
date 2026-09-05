@@ -12,6 +12,7 @@ import type {
   SfuExistingPeerPayload,
   SfuMediaSource,
   SfuJoinErrorCode,
+  SfuHostErrorPayload,
 } from './interfaces/sfu.interface';
 import type { Consumer, Producer, WebRtcTransport } from 'mediasoup/types';
 import { config, getIceServers } from './config/mediasoup.config';
@@ -25,6 +26,7 @@ export class SfuService implements OnModuleDestroy {
   private rooms: Map<string, Set<string>> = new Map();
   private roomOwners: Map<string, string> = new Map();
   private roomScreenShare: Map<string, string> = new Map();
+  private roomLocks: Map<string, boolean> = new Map();
   private slugToRoomId: Map<string, string> = new Map();
 
   registerSlug(slug: string, roomId: string): void {
@@ -61,6 +63,7 @@ export class SfuService implements OnModuleDestroy {
     this.peers.clear();
     this.rooms.clear();
     this.roomOwners.clear();
+    this.roomLocks.clear();
     this.slugToRoomId.clear();
     this.logger.log('SFU Service closed');
   }
@@ -233,6 +236,7 @@ export class SfuService implements OnModuleDestroy {
       await this.workerManager.closeRouter(roomId);
       this.rooms.delete(roomId);
       this.roomOwners.delete(roomId);
+      this.roomLocks.delete(roomId);
       for (const [slug, rid] of this.slugToRoomId) {
         if (rid === roomId) this.slugToRoomId.delete(slug);
       }
@@ -245,6 +249,11 @@ export class SfuService implements OnModuleDestroy {
   }
 
   async joinRoom(socket: Socket, payload: SfuJoinPayload): Promise<void> {
+    // A locked room refuses every new join before any peer state is created.
+    if (this.roomLocks.get(payload.roomId)) {
+      this.emitJoinError(socket, 'ROOM_LOCKED', 'Room is locked by the host');
+      return;
+    }
     const { roomId, userId, username, roomOwnerId, roomSlug } = payload;
     const peerId = socket.id;
 
@@ -651,10 +660,7 @@ export class SfuService implements OnModuleDestroy {
       return;
     }
 
-    const roomOwnerId = this.roomOwners.get(roomId);
-    const isRoomOwner = !!roomOwnerId && roomOwnerId === requester.userId;
-    const isTokenAdmin = requester.permissions?.admin === true;
-    if (!isRoomOwner && !isTokenAdmin) {
+    if (!this.isRoomHost(requester, roomId)) {
       this.logger.warn(
         `Unauthorized kick request from ${requester.userId} in room ${roomId}`,
       );
@@ -671,6 +677,125 @@ export class SfuService implements OnModuleDestroy {
     targetPeer.socket.emit('sfu:kicked', { roomId });
     await this.removePeer(targetPeer.id);
     targetPeer.socket.disconnect();
+  }
+
+  /**
+   * A peer is a room host when it owns a user room (its userId matches the
+   * room owner) or holds the admin claim of a project-room token.
+   */
+  private isRoomHost(peer: Peer, roomId: string): boolean {
+    const roomOwnerId = this.roomOwners.get(roomId);
+    const isRoomOwner = !!roomOwnerId && roomOwnerId === peer.userId;
+    const isTokenAdmin = peer.permissions?.admin === true;
+    return isRoomOwner || isTokenAdmin;
+  }
+
+  private emitHostError(socket: Socket, message: string): void {
+    const payload: SfuHostErrorPayload = {
+      code: 'NOT_ROOM_HOST',
+      message,
+    };
+    socket.emit('sfu:host-error', payload);
+  }
+
+  async mutePeer(socket: Socket, targetUserId: string): Promise<void> {
+    const requester = this.getPeer(socket.id);
+    const roomId = this.getRoomId(socket);
+
+    if (!requester || !roomId) {
+      this.logger.warn(`Mute request from unknown peer ${socket.id}`);
+      return;
+    }
+
+    if (!this.isRoomHost(requester, roomId)) {
+      this.logger.warn(
+        `Unauthorized mute request from ${requester.userId} in room ${roomId}`,
+      );
+      this.emitHostError(socket, 'Only the room host can mute participants');
+      return;
+    }
+
+    const targetPeer = this.getRoomPeers(roomId).find(
+      (peer) => peer.userId === targetUserId,
+    );
+    if (!targetPeer || targetPeer.id === socket.id) {
+      this.logger.warn(
+        `Mute target ${targetUserId} not found in room ${roomId}`,
+      );
+      return;
+    }
+
+    await this.muteRoomPeer(roomId, targetPeer);
+  }
+
+  async muteAll(socket: Socket): Promise<void> {
+    const requester = this.getPeer(socket.id);
+    const roomId = this.getRoomId(socket);
+
+    if (!requester || !roomId) {
+      this.logger.warn(`Mute-all request from unknown peer ${socket.id}`);
+      return;
+    }
+
+    if (!this.isRoomHost(requester, roomId)) {
+      this.logger.warn(
+        `Unauthorized mute-all request from ${requester.userId} in room ${roomId}`,
+      );
+      this.emitHostError(socket, 'Only the room host can mute participants');
+      return;
+    }
+
+    // Snapshot of the current publishers: peers that start publishing after
+    // mute-all stay unmuted, and the requesting host is never muted.
+    for (const peer of this.getRoomPeers(roomId)) {
+      if (peer.id === socket.id || peer.producers.size === 0) {
+        continue;
+      }
+      await this.muteRoomPeer(roomId, peer);
+    }
+  }
+
+  async lockRoom(socket: Socket, locked: boolean): Promise<void> {
+    const requester = this.getPeer(socket.id);
+    const roomId = this.getRoomId(socket);
+
+    if (!requester || !roomId) {
+      this.logger.warn(`Lock request from unknown peer ${socket.id}`);
+      return;
+    }
+
+    if (!this.isRoomHost(requester, roomId)) {
+      this.logger.warn(
+        `Unauthorized lock request from ${requester.userId} in room ${roomId}`,
+      );
+      this.emitHostError(socket, 'Only the room host can lock the room');
+      return;
+    }
+
+    const nextLocked = Boolean(locked);
+    if ((this.roomLocks.get(roomId) ?? false) === nextLocked) {
+      return;
+    }
+    this.roomLocks.set(roomId, nextLocked);
+    for (const roomPeer of this.getRoomPeers(roomId)) {
+      roomPeer.socket.emit('sfu:room-locked', { locked: nextLocked });
+    }
+  }
+
+  /**
+   * Pause every producer owned by the target peer server-side and announce
+   * the mute to the whole room, including the target, so it can surface its
+   * muted-by-host state.
+   */
+  private async muteRoomPeer(roomId: string, target: Peer): Promise<void> {
+    for (const producer of Array.from(target.producers.values())) {
+      if (!producer.paused) {
+        await producer.pause();
+      }
+    }
+    for (const roomPeer of this.getRoomPeers(roomId)) {
+      roomPeer.socket.emit('sfu:peer-muted', { userId: target.userId });
+    }
   }
 
   async closePeer(socket: Socket): Promise<void> {
@@ -709,6 +834,9 @@ export class SfuService implements OnModuleDestroy {
    * transports, and tear down the mediasoup Router.
    */
   async endRoom(roomId: string): Promise<void> {
+    // A /v1 DELETE teardown must clear a lock even when the room has no SFU
+    // peers left, so a recreated room can be joined again.
+    this.roomLocks.delete(roomId);
     const roomPeerIds = this.rooms.get(roomId);
     if (!roomPeerIds || roomPeerIds.size === 0) {
       this.logger.log(`No SFU peers in room ${roomId}, nothing to clean up`);

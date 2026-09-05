@@ -15,7 +15,7 @@ import { Test } from '@nestjs/testing';
 import type { TestingModule } from '@nestjs/testing';
 import { SfuService } from './sfu.service';
 import { WorkerManager } from './worker-manager';
-import { Peer } from './interfaces/sfu.interface';
+import type { Peer, PeerPermissions } from './interfaces/sfu.interface';
 import { RoomTokenHelper } from '../platform/room-token.helper';
 import { PrismaService } from 'src/prisma/prisma.service';
 import type { RoomTokenVerifyResult } from '../platform/room-token.helper';
@@ -846,5 +846,318 @@ describe('room-token join', () => {
     expect(targetSocket.emit).toHaveBeenCalledWith('sfu:kicked', {
       roomId: 'room-1',
     });
+  });
+});
+
+describe('host controls', () => {
+  const controlClaims = {
+    roomId: 'room-1',
+    projectId: 'project-1',
+    keyId: 'key-1',
+    participantId: 'participant-1',
+    name: 'Alice',
+    publish: true,
+    admin: false,
+  };
+
+  type ControlState = {
+    peers: Map<string, Peer>;
+    rooms: Map<string, Set<string>>;
+    roomOwners: Map<string, string>;
+    roomLocks: Map<string, boolean>;
+  };
+
+  const state = () => service as unknown as ControlState;
+
+  const makeProducer = (id: string, kind: 'audio' | 'video') =>
+    ({
+      id,
+      kind,
+      paused: false,
+      pause: jest.fn(),
+      appData: { source: 'camera' },
+    }) as unknown as Producer;
+
+  function seedPeer(
+    socket: Socket,
+    userId: string,
+    roomId: string,
+    options: { ownerId?: string; permissions?: PeerPermissions } = {},
+  ): Peer {
+    const peer: Peer = {
+      id: socket.id,
+      userId,
+      username: userId,
+      socket,
+      producers: new Map(),
+      consumers: new Map(),
+      permissions: options.permissions,
+    };
+    state().peers.set(peer.id, peer);
+    const roomPeers = state().rooms.get(roomId) ?? new Set<string>();
+    roomPeers.add(peer.id);
+    state().rooms.set(roomId, roomPeers);
+    if (options.ownerId) {
+      state().roomOwners.set(roomId, options.ownerId);
+    }
+    return peer;
+  }
+
+  function joinTokenPeer(
+    socket: Socket,
+    claims: Partial<typeof controlClaims> = {},
+  ): Promise<void> {
+    (roomTokenHelper.verify as jest.Mock).mockReturnValue({
+      ok: true,
+      claims: { ...controlClaims, ...claims },
+    });
+    prisma.apiKey.findUnique.mockResolvedValue({ revokedAt: null });
+    return service.joinRoom(socket, {
+      roomId: 'room-1',
+      userId: 'ignored',
+      username: 'Ignored',
+      token: 'signed-token',
+    });
+  }
+
+  it('lets the room owner mute a peer and announces it to the room', async () => {
+    const ownerSocket = createSocket('socket-owner');
+    seedPeer(ownerSocket, 'user-1', 'room-1', { ownerId: 'user-1' });
+    const target = seedPeer(createSocket('socket-target'), 'user-2', 'room-1');
+    const audio = makeProducer('prod-a', 'audio');
+    const video = makeProducer('prod-v', 'video');
+    target.producers.set(audio.id, audio);
+    target.producers.set(video.id, video);
+
+    await service.mutePeer(ownerSocket, 'user-2');
+
+    expect(audio.pause).toHaveBeenCalled();
+    expect(video.pause).toHaveBeenCalled();
+    expect(ownerSocket.emit).toHaveBeenCalledWith('sfu:peer-muted', {
+      userId: 'user-2',
+    });
+    expect(target.socket.emit).toHaveBeenCalledWith('sfu:peer-muted', {
+      userId: 'user-2',
+    });
+  });
+
+  it('denies a plain user mute with a coded host error', async () => {
+    const ownerSocket = createSocket('socket-owner');
+    const owner = seedPeer(ownerSocket, 'user-1', 'room-1', {
+      ownerId: 'user-1',
+    });
+    const audio = makeProducer('prod-a', 'audio');
+    owner.producers.set(audio.id, audio);
+    const plainSocket = createSocket('socket-plain');
+    seedPeer(plainSocket, 'user-2', 'room-1');
+
+    await service.mutePeer(plainSocket, 'user-1');
+
+    expect(plainSocket.emit).toHaveBeenCalledWith('sfu:host-error', {
+      code: 'NOT_ROOM_HOST',
+      message: expect.any(String),
+    });
+    expect(audio.pause).not.toHaveBeenCalled();
+    expect(ownerSocket.emit).not.toHaveBeenCalledWith(
+      'sfu:peer-muted',
+      expect.anything(),
+    );
+  });
+
+  it('denies a plain token participant lock in a project room', async () => {
+    const ownerSocket = createSocket('socket-owner');
+    seedPeer(ownerSocket, 'user-1', 'room-1', { ownerId: 'user-1' });
+    const plainToken = createSocket('socket-token');
+    await joinTokenPeer(plainToken, { admin: false });
+
+    await service.lockRoom(plainToken, true);
+
+    expect(plainToken.emit).toHaveBeenCalledWith('sfu:host-error', {
+      code: 'NOT_ROOM_HOST',
+      message: expect.any(String),
+    });
+    expect(state().roomLocks.has('room-1')).toBe(false);
+    expect(ownerSocket.emit).not.toHaveBeenCalledWith(
+      'sfu:room-locked',
+      expect.anything(),
+    );
+  });
+
+  it('lets an admin-token participant mute and lock in a project room', async () => {
+    const adminSocket = createSocket('socket-admin');
+    await joinTokenPeer(adminSocket, {
+      participantId: 'admin-1',
+      admin: true,
+    });
+    const target = seedPeer(createSocket('socket-target'), 'user-2', 'room-1');
+    const audio = makeProducer('prod-a', 'audio');
+    target.producers.set(audio.id, audio);
+
+    await service.mutePeer(adminSocket, 'user-2');
+
+    expect(audio.pause).toHaveBeenCalled();
+    expect(target.socket.emit).toHaveBeenCalledWith('sfu:peer-muted', {
+      userId: 'user-2',
+    });
+
+    await service.lockRoom(adminSocket, true);
+
+    expect(adminSocket.emit).toHaveBeenCalledWith('sfu:room-locked', {
+      locked: true,
+    });
+    expect(target.socket.emit).toHaveBeenCalledWith('sfu:room-locked', {
+      locked: true,
+    });
+  });
+
+  it('mutes every publisher except the host on mute-all', async () => {
+    const host = seedPeer(createSocket('socket-host'), 'user-1', 'room-1', {
+      ownerId: 'user-1',
+    });
+    const hostProducer = makeProducer('prod-host', 'audio');
+    host.producers.set(hostProducer.id, hostProducer);
+
+    const publisher = seedPeer(
+      createSocket('socket-publisher'),
+      'user-2',
+      'room-1',
+    );
+    const pubAudio = makeProducer('prod-a2', 'audio');
+    const pubVideo = makeProducer('prod-v2', 'video');
+    publisher.producers.set(pubAudio.id, pubAudio);
+    publisher.producers.set(pubVideo.id, pubVideo);
+
+    const listener = seedPeer(
+      createSocket('socket-listener'),
+      'user-3',
+      'room-1',
+    );
+
+    await service.muteAll(host.socket);
+
+    expect(hostProducer.pause).not.toHaveBeenCalled();
+    expect(pubAudio.pause).toHaveBeenCalled();
+    expect(pubVideo.pause).toHaveBeenCalled();
+    expect(listener.socket.emit).toHaveBeenCalledWith('sfu:peer-muted', {
+      userId: 'user-2',
+    });
+    expect(listener.socket.emit).not.toHaveBeenCalledWith('sfu:peer-muted', {
+      userId: 'user-1',
+    });
+    expect(listener.socket.emit).not.toHaveBeenCalledWith('sfu:peer-muted', {
+      userId: 'user-3',
+    });
+  });
+
+  it('locks the room and refuses every new join with ROOM_LOCKED', async () => {
+    const ownerSocket = createSocket('socket-owner');
+    seedPeer(ownerSocket, 'user-1', 'room-1', { ownerId: 'user-1' });
+
+    await service.lockRoom(ownerSocket, true);
+
+    expect(ownerSocket.emit).toHaveBeenCalledWith('sfu:room-locked', {
+      locked: true,
+    });
+
+    const joiner = createSocket('socket-joiner');
+    await service.joinRoom(joiner, {
+      roomId: 'room-1',
+      userId: 'user-9',
+      username: 'late',
+    });
+    expect(joiner.emit).toHaveBeenCalledWith('sfu:join-error', {
+      code: 'ROOM_LOCKED',
+      message: expect.any(String),
+    });
+    expect(state().peers.has('socket-joiner')).toBe(false);
+
+    // The gate sits before token verification, so the token path is refused
+    // without even looking at the token.
+    const tokenJoiner = createSocket('socket-token-joiner');
+    await service.joinRoom(tokenJoiner, {
+      roomId: 'room-1',
+      userId: 'x',
+      username: 'x',
+      token: 'signed-token',
+    });
+    expect(tokenJoiner.emit).toHaveBeenCalledWith('sfu:join-error', {
+      code: 'ROOM_LOCKED',
+      message: expect.any(String),
+    });
+    expect(roomTokenHelper.verify).not.toHaveBeenCalled();
+  });
+
+  it('treats lock state idempotently and broadcasts only on change', async () => {
+    const ownerSocket = createSocket('socket-owner');
+    const otherSocket = createSocket('socket-other');
+    seedPeer(ownerSocket, 'user-1', 'room-1', { ownerId: 'user-1' });
+    seedPeer(otherSocket, 'user-2', 'room-1');
+
+    await service.lockRoom(ownerSocket, true);
+    expect(otherSocket.emit).toHaveBeenCalledWith('sfu:room-locked', {
+      locked: true,
+    });
+
+    (ownerSocket.emit as jest.Mock).mockClear();
+    (otherSocket.emit as jest.Mock).mockClear();
+
+    await service.lockRoom(ownerSocket, true);
+    expect(ownerSocket.emit).not.toHaveBeenCalled();
+    expect(otherSocket.emit).not.toHaveBeenCalled();
+
+    await service.lockRoom(ownerSocket, false);
+    expect(otherSocket.emit).toHaveBeenCalledWith('sfu:room-locked', {
+      locked: false,
+    });
+
+    (otherSocket.emit as jest.Mock).mockClear();
+    await service.lockRoom(ownerSocket, false);
+    expect(otherSocket.emit).not.toHaveBeenCalled();
+    expect(state().roomLocks.get('room-1')).toBe(false);
+  });
+
+  it('clears the lock when the room ends so it can be joined again', async () => {
+    const ownerSocket = createSocket('socket-owner');
+    seedPeer(ownerSocket, 'user-1', 'room-1', { ownerId: 'user-1' });
+    await service.lockRoom(ownerSocket, true);
+
+    await service.endRoom('room-1');
+
+    expect(state().roomLocks.has('room-1')).toBe(false);
+    workerManager.createRouter.mockResolvedValue({} as Router<AppData>);
+    workerManager.getRtpCapabilities.mockReturnValue(
+      {} as unknown as RtpCapabilities,
+    );
+    const joiner = createSocket('socket-joiner');
+    await service.joinRoom(joiner, {
+      roomId: 'room-1',
+      userId: 'u',
+      username: 'u',
+    });
+    expect(joiner.emit).toHaveBeenCalledWith('sfu:joined', expect.anything());
+    expect(joiner.emit).not.toHaveBeenCalledWith(
+      'sfu:join-error',
+      expect.anything(),
+    );
+  });
+
+  it('clears the lock when the last peer leaves the room', async () => {
+    const ownerSocket = createSocket('socket-owner');
+    seedPeer(ownerSocket, 'user-1', 'room-1', { ownerId: 'user-1' });
+    await service.lockRoom(ownerSocket, true);
+    expect(state().roomLocks.get('room-1')).toBe(true);
+
+    await service.leaveRoom(ownerSocket);
+
+    expect(state().roomLocks.has('room-1')).toBe(false);
+  });
+
+  it('clears a lingering lock when a room with no peers is ended', async () => {
+    state().roomLocks.set('room-empty', true);
+
+    await service.endRoom('room-empty');
+
+    expect(state().roomLocks.has('room-empty')).toBe(false);
+    expect(workerManager.closeRouter).not.toHaveBeenCalled();
   });
 });
