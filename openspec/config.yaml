@@ -1,0 +1,22 @@
+schema: spec-driven
+
+context: |
+  WebRTC video chat (Google Meet-like): P2P 1-on-1 calls, mediasoup SFU for groups.
+  pnpm monorepo: apps/server (NestJS v11, Prisma, PostgreSQL 16, Passport JWT in
+  HTTP-only cookies, Socket.io) and apps/client (React 19, Vite 7, Tailwind v4,
+  Base UI, framework-agnostic lib/ layer).
+  Domains in openspec/specs/: auth, user, room, chat, sfu, client
+  (no separate gateway module exists; SFU is the signalling gateway).
+  Conventions: TypeScript everywhere, no barrel files (import from source),
+  server Prettier single quotes, conventional commits, NestJS exceptions (never
+  `throw new Error`), client typed errors from lib/api/api.errors.ts.
+  Architecture diagrams (C4, sequences, domain model) live in docs/architecture/
+  as plain docs - do not duplicate them in specs; specs capture behavior.
+  ADRs for hard-to-reverse decisions live in docs/adr/.
+
+rules:
+  proposal:
+    - Specs describe current behavior only; planned work becomes a change, never a spec
+    - Deltas must be scoped to the change; never rewrite a whole spec in a delta
+  tasks:
+    - Each task must be independently verifiable

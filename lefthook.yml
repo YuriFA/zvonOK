@@ -1,0 +1,5 @@
+pre-commit:
+  commands:
+    openspec-validate:
+      glob: "openspec/**"
+      run: pnpm openspec:validate

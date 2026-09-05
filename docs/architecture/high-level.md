@@ -62,7 +62,7 @@ flowchart TB
 │         PostgreSQL + Prisma              │
 │                                          │
 │              [(Database)]               │
-│         users · rooms                    │
+│       users · rooms · messages          │
 └──────────────────────────────────────────┘
 
 Media flow (RTP/SRTP — bypasses REST/WS path):
@@ -74,11 +74,12 @@ Media flow (RTP/SRTP — bypasses REST/WS path):
 
 | Component | Description | Location |
 |-----------|-------------|----------|
-| **REST API** | Auth, user, and room management endpoints | `apps/server/src/auth/`, `user/`, `room/` |
-| **WebSocket Gateway** | SFU signalling via Socket.io `/sfu` namespace | `apps/server/src/sfu/` |
+| **REST API** | Auth, user, room management, and chat message endpoints | `apps/server/src/auth/`, `user/`, `room/`, `chat/` |
+| **WebSocket Gateway** | SFU signalling and chat events via Socket.io | `apps/server/src/sfu/`, `chat/` |
 | **mediasoup SFU** | Single Worker routing media for group calls | `apps/server/src/sfu/` |
-| **PostgreSQL** | Persistent storage for users and rooms | Docker service, accessed via Prisma |
-| **Browser Clients** | React SPA — auth, room UI, SFU client | `apps/client/src/` |
+| **Rate Limiting** | Global ThrottlerModule tiers: 100/60s, 200/5min, 1000/1hr | `apps/server/src/app.module.ts` |
+| **PostgreSQL** | Persistent storage for users, rooms, and messages | Docker service, accessed via Prisma |
+| **Browser Clients** | React SPA — auth, room UI, chat, SFU client | `apps/client/src/` |
 
 ## Communication Protocols
 

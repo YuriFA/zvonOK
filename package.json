@@ -12,7 +12,9 @@
     "test:client": "pnpm -C apps/client test:run",
     "test:server": "pnpm -C apps/server test",
     "release": "release-it",
-    "release:ci": "release-it --ci"
+    "release:ci": "release-it --ci",
+    "prepare": "lefthook install",
+    "openspec:validate": "openspec validate --all"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
@@ -23,13 +25,16 @@
       "@nestjs/core",
       "esbuild",
       "@tailwindcss/oxide",
+      "lefthook",
       "unrs-resolver",
       "@scarf/scarf"
     ]
   },
   "packageManager": "pnpm@10.28.1",
   "devDependencies": {
+    "@fission-ai/openspec": "^1.12.0",
     "@release-it/conventional-changelog": "^10.0.6",
+    "lefthook": "^2.1.12",
     "release-it": "^19.2.4"
   }
 }
