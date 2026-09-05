@@ -1,0 +1,60 @@
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
+import { RoomService } from 'src/room/room.service';
+import { SfuService } from 'src/sfu/sfu.service';
+import { RoomTokenHelper } from './room-token.helper';
+import type { RoomTokenClaims } from './room-token.helper';
+import type {
+  CreatePlatformRoomDto,
+  MintRoomTokenDto,
+} from './dto/platform.dto';
+
+@Injectable()
+export class PlatformService {
+  constructor(
+    private readonly roomService: RoomService,
+    private readonly sfuService: SfuService,
+    private readonly roomTokenHelper: RoomTokenHelper,
+  ) {}
+
+  createRoom(projectId: string, dto: CreatePlatformRoomDto) {
+    return this.roomService.createProjectRoom(projectId, dto);
+  }
+
+  listRooms(projectId: string) {
+    return this.roomService.listProjectRooms(projectId);
+  }
+
+  async endRoom(projectId: string, roomId: string) {
+    const room = await this.roomService.findProjectRoom(roomId, projectId);
+    await this.roomService.softDeleteRoom(room.id);
+    await this.sfuService.endRoom(room.id);
+  }
+
+  async mintRoomToken(
+    projectId: string,
+    keyId: string,
+    roomId: string,
+    dto: MintRoomTokenDto,
+  ) {
+    const room = await this.roomService.findProjectRoom(roomId, projectId);
+    if (room.status !== 'active') {
+      throw new BadRequestException('Room is not active');
+    }
+
+    const claims: RoomTokenClaims = {
+      roomId: room.id,
+      projectId,
+      keyId,
+      participantId: randomUUID(),
+      name: dto.name ?? 'Participant',
+      publish: dto.publish ?? true,
+      admin: dto.admin ?? false,
+    };
+
+    return {
+      token: this.roomTokenHelper.mint(claims),
+      expiresAt: this.roomTokenHelper.expiresAt(),
+    };
+  }
+}
