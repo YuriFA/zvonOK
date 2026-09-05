@@ -1,51 +1,69 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+
 import { describe, expect, it, vi } from "vitest";
 
 import { ParticipantsList } from "../participants-list";
+import type { Participant } from "../participants-list";
 
-describe("ParticipantsList", () => {
-  it("renders participants, count badge, and owner kick controls", () => {
-    const onKickParticipant = vi.fn();
+const participants: Participant[] = [
+  {
+    id: "u1",
+    userId: "u1",
+    username: "alice",
+    isMuted: false,
+    isVideoOff: false,
+    isConnected: true,
+  },
+  {
+    id: "u2",
+    userId: "u2",
+    username: "bob",
+    isMuted: false,
+    isVideoOff: false,
+    isConnected: true,
+  },
+];
 
+describe("ParticipantsList host mute control", () => {
+  it("shows the mute control to the owner for remote participants only", () => {
     render(
       <ParticipantsList
-        participants={[
-          {
-            id: "user-1",
-            userId: "user-1",
-            username: "alice",
-            isMuted: false,
-            isVideoOff: false,
-            isConnected: true,
-          },
-          {
-            id: "user-2",
-            userId: "user-2",
-            username: "bob",
-            isMuted: true,
-            isVideoOff: true,
-            isConnected: false,
-          },
-        ]}
-        currentUserId="user-1"
-        roomOwnerId="user-1"
-        onKickParticipant={onKickParticipant}
+        participants={participants}
+        currentUserId="u1"
+        roomOwnerId="u1"
+        onMuteParticipant={vi.fn()}
       />,
     );
 
-    expect(screen.getByLabelText("Participants list")).toBeInTheDocument();
-    expect(screen.getByText("alice")).toBeInTheDocument();
-    expect(screen.getByText("bob")).toBeInTheDocument();
-    expect(screen.getByText("Disconnected")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Kick bob" }));
-
-    expect(onKickParticipant).toHaveBeenCalledWith("user-2");
+    expect(screen.getByLabelText("Mute bob")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Mute alice")).not.toBeInTheDocument();
   });
 
-  it("shows empty message when no participants", () => {
-    render(<ParticipantsList participants={[]} currentUserId="user-1" roomOwnerId="user-2" />);
+  it("hides the mute control from non-owners", () => {
+    render(
+      <ParticipantsList
+        participants={participants}
+        currentUserId="u2"
+        roomOwnerId="u1"
+        onMuteParticipant={vi.fn()}
+      />,
+    );
 
-    expect(screen.getByText("No participants")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Mute bob")).not.toBeInTheDocument();
+  });
+
+  it("calls onMuteParticipant with the participant id", async () => {
+    const onMuteParticipant = vi.fn();
+    render(
+      <ParticipantsList
+        participants={participants}
+        currentUserId="u1"
+        roomOwnerId="u1"
+        onMuteParticipant={onMuteParticipant}
+      />,
+    );
+
+    fireEvent.click(screen.getByLabelText("Mute bob"));
+    expect(onMuteParticipant).toHaveBeenCalledWith("u2");
   });
 });
