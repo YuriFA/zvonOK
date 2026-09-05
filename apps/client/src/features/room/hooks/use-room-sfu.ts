@@ -1,5 +1,7 @@
+import type { HostControls } from "@zvonok/react";
 import type { SfuState } from "@zvonok/client/sfu/types";
-import { useCallback, useEffect } from "react";
+import { toast } from "sonner";
+import { useCallback, useEffect, useRef } from "react";
 
 import {
   useVideoCaptureControl,
@@ -31,6 +33,9 @@ export interface UseRoomSfuResult {
   mediaControls: UseMediaControlsReturn;
   toggleVideo: () => Promise<void>;
   toggleAudio: () => Promise<void>;
+  isRoomLocked: boolean;
+  mutedByHost: boolean;
+  hostControls: HostControls;
 }
 
 export function useRoomSfu({
@@ -59,6 +64,9 @@ export function useRoomSfu({
     pauseProducer,
     resumeProducer,
     hasProducer,
+    isRoomLocked,
+    mutedByHost,
+    hostControls,
   } = useMediasoup({
     roomId,
     roomOwnerId,
@@ -73,6 +81,22 @@ export function useRoomSfu({
       onKicked();
     }
   }, [wasKicked, onKicked]);
+
+  // A server-enforced host mute pauses our producer; reflect it in the mic
+  // control and tell the user once per occurrence.
+  const announcedHostMuteRef = useRef(false);
+  useEffect(() => {
+    if (!mutedByHost) {
+      announcedHostMuteRef.current = false;
+      return;
+    }
+    if (announcedHostMuteRef.current) {
+      return;
+    }
+    announcedHostMuteRef.current = true;
+    mediaControls.setAudioEnabled(false);
+    toast.info("Muted by the room host");
+  }, [mutedByHost, mediaControls]);
 
   const toggleVideo = useCallback(async () => {
     const nextEnabled = !mediaControls.isVideoEnabled;
@@ -172,5 +196,8 @@ export function useRoomSfu({
     mediaControls,
     toggleVideo,
     toggleAudio,
+    isRoomLocked,
+    mutedByHost,
+    hostControls,
   };
 }

@@ -1,8 +1,9 @@
 import { computeLayout } from "@zvonok/video-layout";
-import { MessageSquare, Users } from "lucide-react";
+import { Lock, LockOpen, MessageSquare, MicOff, Users } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { Button } from "@/components/ui/button";
 import { ParticipantsList } from "@/components/room/participants-list";
 import { VideoGrid } from "@/components/video-grid";
 import { ChatPanel } from "@/features/chat/components/chat-panel";
@@ -50,6 +51,8 @@ export function ActiveRoomView({
     localUserId,
     participants,
     kickPeer,
+    isRoomLocked,
+    hostControls,
   } = session;
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -143,6 +146,33 @@ export function ActiveRoomView({
   const [asideState, setAsideState] = useState<"participants" | "chat" | null>(null);
 
   const isOwner = currentUserId === room.ownerId;
+
+  const handleMuteAll = useCallback(async () => {
+    try {
+      await hostControls.muteAll();
+    } catch {
+      toast.error("Could not mute everyone");
+    }
+  }, [hostControls]);
+
+  const handleToggleLock = useCallback(async () => {
+    try {
+      await hostControls.lockRoom(!isRoomLocked);
+    } catch {
+      toast.error("Could not change the room lock");
+    }
+  }, [hostControls, isRoomLocked]);
+
+  const handleMuteParticipant = useCallback(
+    async (userId: string) => {
+      try {
+        await hostControls.mutePeer(userId);
+      } catch {
+        toast.error("Could not mute the participant");
+      }
+    },
+    [hostControls],
+  );
   const { pendingRequests, approveRequest, denyRequest } = useGuestRequests();
 
   const chat = useChat({
@@ -192,6 +222,15 @@ export function ActiveRoomView({
 
   return (
     <main className="flex flex-1 flex-col overflow-hidden">
+      {isRoomLocked && (
+        <div
+          className="flex items-center justify-center gap-2 bg-amber-500/15 py-1.5 text-xs font-medium text-amber-600"
+          role="status"
+        >
+          <Lock className="size-3.5" />
+          Room is locked - new participants cannot join
+        </div>
+      )}
       <div className="relative flex min-h-0 flex-1 p-4">
         <VideoGrid ref={containerRef}>
           {hasValidDimensions && (
@@ -263,12 +302,34 @@ export function ActiveRoomView({
                   {participants.length}
                 </span>
               </AsidePanelHeader>
+              {isOwner && (
+                <div className="flex items-center gap-2 border-b px-3 py-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 gap-1.5 text-xs"
+                    onClick={handleMuteAll}
+                  >
+                    <MicOff className="size-3.5" />
+                    Mute all
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 gap-1.5 text-xs"
+                    onClick={handleToggleLock}
+                  >
+                    {isRoomLocked ? <LockOpen className="size-3.5" /> : <Lock className="size-3.5" />}
+                    {isRoomLocked ? "Unlock room" : "Lock room"}
+                  </Button>
+                </div>
+              )}
               <ParticipantsList
                 participants={participants}
                 currentUserId={currentUserId}
                 roomOwnerId={room.ownerId}
                 onKickParticipant={kickPeer}
-                pendingRequests={isOwner ? pendingRequests : undefined}
+                onMuteParticipant={isOwner ? handleMuteParticipant : undefined}
                 onApproveRequest={isOwner ? approveRequest : undefined}
                 onDenyRequest={isOwner ? denyRequest : undefined}
               />
