@@ -11,6 +11,12 @@ export {
 } from "./use-zvonok-connection.js";
 export { useParticipants, type UseParticipantsResult } from "./use-participants.js";
 export { useHostControls, type UseHostControlsResult } from "./use-host-controls.js";
+export { createHostControls, type HostControls } from "./host-controls.js";
+export {
+  EMPTY_ROOM_STATE,
+  RoomTracker,
+  type RoomTrackerState,
+} from "./room-tracker.js";
 export { useDeviceControls, type UseDeviceControlsResult } from "./use-device-controls.js";
 export {
   ZvonokError,
