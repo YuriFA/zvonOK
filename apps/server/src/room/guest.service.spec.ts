@@ -1,3 +1,6 @@
+jest.mock('src/prisma/prisma.service', () => ({
+  PrismaService: jest.fn(),
+}));
 import { Test } from '@nestjs/testing';
 import type { TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';

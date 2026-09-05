@@ -11,9 +11,12 @@ import type {
   SfuConsumePayload,
   SfuExistingPeerPayload,
   SfuMediaSource,
+  SfuJoinErrorCode,
 } from './interfaces/sfu.interface';
 import type { Consumer, Producer, WebRtcTransport } from 'mediasoup/types';
 import { config, getIceServers } from './config/mediasoup.config';
+import { RoomTokenHelper } from '../platform/room-token.helper';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class SfuService implements OnModuleDestroy {
@@ -39,9 +42,11 @@ export class SfuService implements OnModuleDestroy {
     return null;
   }
 
-  constructor(private readonly workerManager: WorkerManager) {
-    void WorkerManager;
-  }
+  constructor(
+    private readonly workerManager: WorkerManager,
+    private readonly roomTokenHelper: RoomTokenHelper,
+    private readonly prisma: PrismaService,
+  ) {}
 
   async onModuleDestroy(): Promise<void> {
     this.logger.log('Closing SFU Service...');
@@ -243,14 +248,24 @@ export class SfuService implements OnModuleDestroy {
     const { roomId, userId, username, roomOwnerId, roomSlug } = payload;
     const peerId = socket.id;
 
-    const peer: Peer = {
-      id: peerId,
-      userId,
-      username,
-      socket,
-      producers: new Map(),
-      consumers: new Map(),
-    };
+    let peer: Peer;
+
+    if (payload.token) {
+      const tokenPeer = await this.resolveTokenPeer(socket, payload);
+      if (!tokenPeer) {
+        return;
+      }
+      peer = tokenPeer;
+    } else {
+      peer = {
+        id: peerId,
+        userId,
+        username,
+        socket,
+        producers: new Map(),
+        consumers: new Map(),
+      };
+    }
     this.peers.set(peerId, peer);
 
     if (!this.rooms.has(roomId)) {
@@ -263,7 +278,7 @@ export class SfuService implements OnModuleDestroy {
     }
 
     roomPeers.add(peerId);
-    if (roomOwnerId) {
+    if (roomOwnerId && !payload.token) {
       this.roomOwners.set(roomId, roomOwnerId);
     }
     if (roomSlug) {
@@ -301,6 +316,66 @@ export class SfuService implements OnModuleDestroy {
     if (removedPeer) {
       this.logger.log(`Peer ${socket.id} left SFU room ${removedPeer.roomId}`);
     }
+  }
+
+  /**
+   * Resolves a join that presents a room token: verifies signature, expiry,
+   * room match and minting-key state, then builds the peer solely from the
+   * verified claims. Returns null (after emitting a coded join error) on any
+   * failure.
+   */
+  private async resolveTokenPeer(
+    socket: Socket,
+    payload: SfuJoinPayload,
+  ): Promise<Peer | null> {
+    const result = this.roomTokenHelper.verify(payload.token as string);
+
+    if (!result.ok) {
+      this.emitJoinError(socket, result.code, 'Room token is not valid');
+      return null;
+    }
+
+    const claims = result.claims;
+    if (claims.roomId !== payload.roomId) {
+      this.emitJoinError(
+        socket,
+        'ROOM_TOKEN_ROOM_MISMATCH',
+        'Room token was minted for a different room',
+      );
+      return null;
+    }
+
+    const key = await this.prisma.apiKey.findUnique({
+      where: { id: claims.keyId },
+      select: { revokedAt: true },
+    });
+    if (!key || key.revokedAt) {
+      this.emitJoinError(socket, 'ROOM_TOKEN_INVALID', 'API key is not active');
+      return null;
+    }
+
+    this.logger.log(
+      `Token peer ${claims.participantId} joining room ${claims.roomId}`,
+    );
+
+    return {
+      id: socket.id,
+      userId: claims.participantId,
+      username: claims.name,
+      socket,
+      producers: new Map(),
+      consumers: new Map(),
+      permissions: { publish: claims.publish, admin: claims.admin },
+    };
+  }
+
+  private emitJoinError(
+    socket: Socket,
+    code: SfuJoinErrorCode,
+    message: string,
+  ): void {
+    this.logger.warn(`SFU join rejected (${code}): ${message}`);
+    socket.emit('sfu:join-error', { code, message });
   }
 
   async createSendTransport(socket: Socket): Promise<void> {
@@ -391,6 +466,14 @@ export class SfuService implements OnModuleDestroy {
   ): Promise<void> {
     const peer = this.getPeer(socket.id);
     const roomId = this.getRoomId(socket);
+    if (peer?.permissions && !peer.permissions.publish) {
+      socket.emit('sfu:produce-error', {
+        requestId: payload.requestId,
+        code: 'PUBLISH_NOT_ALLOWED',
+        message: 'Participant is not allowed to publish',
+      });
+      return;
+    }
     if (!peer?.sendTransport || !roomId) {
       socket.emit('sfu:produce-error', {
         requestId: payload.requestId,
@@ -569,7 +652,9 @@ export class SfuService implements OnModuleDestroy {
     }
 
     const roomOwnerId = this.roomOwners.get(roomId);
-    if (!roomOwnerId || roomOwnerId !== requester.userId) {
+    const isRoomOwner = !!roomOwnerId && roomOwnerId === requester.userId;
+    const isTokenAdmin = requester.permissions?.admin === true;
+    if (!isRoomOwner && !isTokenAdmin) {
       this.logger.warn(
         `Unauthorized kick request from ${requester.userId} in room ${roomId}`,
       );
