@@ -15,8 +15,8 @@ every step.
 
 | # | Change | Scope | Status |
 |---|--------|-------|--------|
-| 1 | `add-developer-platform` | Extract `@zvonok/client` into `packages/`; tenancy (`DeveloperAccount`/`Project`/`ApiKey`, nullable room ownership); public `/v1` API (rooms, end, token minting) with per-key rate limits; room-token identity path in `/sfu` | Proposed - `openspec/changes/add-developer-platform/` |
-| 2 | (next, after #1 archives) | `@zvonok/react` thin layer; host-controls through the SDK (mute-remote, mute-all, lock); npm publish `@zvonok/client` + `@zvonok/react`; quickstart doc | Not proposed |
+| 1 | `add-developer-platform` | Extract `@zvonok/client` into `packages/`; tenancy (`DeveloperAccount`/`Project`/`ApiKey`, nullable room ownership); public `/v1` API (rooms, end, token minting) with per-key rate limits; room-token identity path in `/sfu` | Archived 2026-09-05 |
+| 2 | `add-react-sdk-host-controls` | `@zvonok/react` thin layer; host-controls through the SDK (mute-remote, mute-all, lock); npm publish `@zvonok/client` + `@zvonok/react`; quickstart doc | Implemented - publish pending |
 
 **Stage 1 success bar:** from a clean project outside the monorepo, following
 only the quickstart - `npm i @zvonok/client`, mint a room token via curl with
