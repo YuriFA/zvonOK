@@ -47,7 +47,8 @@ export interface SfuJoinPayload {
 export type SfuJoinErrorCode =
   | 'ROOM_TOKEN_INVALID'
   | 'ROOM_TOKEN_EXPIRED'
-  | 'ROOM_TOKEN_ROOM_MISMATCH';
+  | 'ROOM_TOKEN_ROOM_MISMATCH'
+  | 'ROOM_LOCKED';
 
 export interface SfuJoinErrorPayload {
   code: SfuJoinErrorCode;
@@ -151,6 +152,31 @@ export interface SfuResumeProducerPayload {
 
 export interface SfuKickPeerPayload {
   userId: string;
+}
+
+export interface SfuMutePeerPayload {
+  userId: string;
+}
+
+export interface SfuLockRoomPayload {
+  locked: boolean;
+}
+
+export interface SfuPeerMutedPayload {
+  userId: string;
+}
+
+export interface SfuRoomLockedPayload {
+  locked: boolean;
+}
+
+// Coded denial for host-control actions (sfu:mute-peer, sfu:mute-all,
+// sfu:lock-room), emitted on the requesting socket only.
+export type SfuHostErrorCode = 'NOT_ROOM_HOST';
+
+export interface SfuHostErrorPayload {
+  code: SfuHostErrorCode;
+  message: string;
 }
 
 // Peer joined payload - sent when a peer joins the room (independent of media)

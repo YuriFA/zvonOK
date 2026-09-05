@@ -18,6 +18,8 @@ import type {
   SfuConsumePayload,
   SfuResumeConsumerPayload,
   SfuKickPeerPayload,
+  SfuMutePeerPayload,
+  SfuLockRoomPayload,
   SfuSetPreferredLayersPayload,
   SfuCloseProducerPayload,
 } from './interfaces/sfu.interface';
@@ -155,6 +157,30 @@ export class SfuGateway
   ): Promise<void> {
     this.logger.log(`Kick peer ${payload.userId} requested by ${client.id}`);
     await this.sfuService.kickPeer(client, payload.userId);
+  }
+
+  @SubscribeMessage('sfu:mute-peer')
+  async handleMutePeer(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: SfuMutePeerPayload,
+  ): Promise<void> {
+    this.logger.log(`Mute peer ${payload.userId} requested by ${client.id}`);
+    await this.sfuService.mutePeer(client, payload.userId);
+  }
+
+  @SubscribeMessage('sfu:mute-all')
+  async handleMuteAll(@ConnectedSocket() client: Socket): Promise<void> {
+    this.logger.log(`Mute all requested by ${client.id}`);
+    await this.sfuService.muteAll(client);
+  }
+
+  @SubscribeMessage('sfu:lock-room')
+  async handleLockRoom(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: SfuLockRoomPayload,
+  ): Promise<void> {
+    this.logger.log(`Lock room ${payload.locked} requested by ${client.id}`);
+    await this.sfuService.lockRoom(client, payload.locked);
   }
 
   @SubscribeMessage('sfu:set-preferred-layers')
