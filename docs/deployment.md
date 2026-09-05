@@ -235,7 +235,9 @@ All variables are set in the root `.env` file. Copy from `.env.production.exampl
 | `JWT_ACCESS_SECRET` | Yes | — | Secret for signing access tokens. Generate with: `openssl rand -hex 64` |
 | `JWT_REFRESH_SECRET` | Yes | — | Secret for signing refresh tokens. Generate with: `openssl rand -hex 64` |
 | `JWT_ACCESS_EXPIRES_IN_MINUTES` | No | `15` | Access token lifetime in minutes |
-| `JWT_REFRESH_EXPIRES_IN_DAYS` | No | `7` | Refresh token lifetime in days |
+| `JWT_DEV_SECRET` | Yes | — | Secret for developer-account session tokens (Swagger/CLI management). Generate like the other JWT secrets. |
+| `JWT_ROOM_SECRET` | Yes | — | Secret signing ephemeral room tokens for `/v1` API participants. Must differ from all other secrets. |
+| `ROOM_TOKEN_TTL_MINUTES` | No | `60` | Lifetime of minted room tokens. |
 
 ### Client
 
@@ -319,10 +321,24 @@ The routes:
 
 - `/auth/*`, `/users/*`, `/rooms`, `/rooms/*`, `/version` → reverse proxy to `server:3000`
 - `/swagger*` → not proxied in production (dev only, via SSH port-forward)
+- `/v1/*`, `/developers/*` → reverse proxy to `server:3000` (public platform API; `/developers/*` is safe to expose - dev-JWT authenticated, `/v1` is API-key authenticated)
 - `/socket.io/*` → reverse proxy to `server:3000` (WebSocket + polling)
 - Everything else → `try_files` for static SPA with `index.html` fallback
 
 **Note**: Caddy's `handle /rooms/*` does NOT match the bare `/rooms` path. That's why there are separate `handle /rooms` and `handle /rooms/*` blocks.
+
+## Developer Platform API
+
+The server exposes a versioned public API for third-party consumers, authenticated with API keys (`Authorization: Bearer zk_live_...`):
+
+| Endpoint | Description |
+|----------|-------------|
+| `POST /v1/rooms` | Create a room owned by the key's project |
+| `GET /v1/rooms` | List the project's rooms |
+| `DELETE /v1/rooms/:id` | End a project room (disconnects participants) |
+| `POST /v1/rooms/:id/tokens` | Mint a short-lived room token (participant identity + publish/admin permissions) |
+
+Room tokens are consumed by the `/sfu` Socket.IO namespace (`sfu:join` with a `token` field); identity and permissions come from the verified token, not the client payload. Developer accounts, projects, and keys are managed via the `/developers/*` endpoints (see `/swagger`) or seeded with `DEV_SEED_USERNAME` / `DEV_SEED_PASSWORD` / `DEV_SEED_PROJECT` env vars through the seed script. The Caddy routes proxy `/v1/*` and `/developers/*` alongside the existing API paths.
 
 ### Custom Domain with Automatic HTTPS
 
