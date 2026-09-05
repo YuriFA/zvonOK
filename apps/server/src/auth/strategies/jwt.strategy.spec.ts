@@ -3,9 +3,11 @@ jest.mock('src/prisma/prisma.service', () => ({
   PrismaService: jest.fn(),
 }));
 
+import { UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
 import { Test, TestingModule } from '@nestjs/testing';
+import type { User } from 'src/generated/prisma/client';
 import { UserService } from 'src/user/user.service';
 import { JwtStrategy } from './jwt.strategy';
 
@@ -13,6 +15,20 @@ describe('JwtStrategy', () => {
   let strategy: JwtStrategy;
   let configService: ConfigService;
   let userService: jest.Mocked<UserService>;
+
+  const baseUser = {
+    id: 'user-1',
+    email: 'user@example.com',
+    username: 'user-1',
+    passwordHash: 'password-hash',
+    createdAt: new Date(0),
+    updatedAt: new Date(0),
+    refreshTokenHash: 'stored-hash',
+    failedLoginAttempts: 0,
+    lockedUntil: null,
+    tokenVersion: 0,
+    role: 'USER',
+  } as unknown as User;
 
   beforeEach(async () => {
     // Clear all mocks before each test
@@ -56,7 +72,9 @@ describe('JwtStrategy', () => {
   });
 
   describe('validate', () => {
-    it('extracts user from valid JWT payload', async () => {
+    it('extracts user from valid JWT payload with matching tokenVersion', async () => {
+      userService.user.mockResolvedValue(baseUser);
+
       const payload = {
         id: 'user-1',
         email: 'user@example.com',
@@ -73,7 +91,22 @@ describe('JwtStrategy', () => {
       });
     });
 
-    it('does NOT query database for tokenVersion (performance optimization)', async () => {
+    it('fetches the user from the database to verify tokenVersion', async () => {
+      userService.user.mockResolvedValue(baseUser);
+
+      await strategy.validate({
+        id: 'user-1',
+        email: 'user@example.com',
+        role: 'USER' as const,
+        tokenVersion: 0,
+      });
+
+      expect(userService.user).toHaveBeenCalledWith({ id: 'user-1' });
+    });
+
+    it('throws UnauthorizedException when tokenVersion mismatches', async () => {
+      userService.user.mockResolvedValue(baseUser);
+
       const payload = {
         id: 'user-1',
         email: 'user@example.com',
@@ -81,32 +114,32 @@ describe('JwtStrategy', () => {
         tokenVersion: 5,
       };
 
-      await strategy.validate(payload);
-
-      // UserService should NOT be called
-      expect(userService.user).not.toHaveBeenCalled();
+      await expect(strategy.validate(payload)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      await expect(strategy.validate(payload)).rejects.toThrow(
+        'Token version mismatch',
+      );
     });
 
-    it('returns user without tokenVersion check', async () => {
+    it('throws UnauthorizedException when user not found', async () => {
+      userService.user.mockResolvedValue(null);
+
       const payload = {
-        id: 'user-1',
+        id: 'deleted-user',
         email: 'user@example.com',
         role: 'USER' as const,
         tokenVersion: 0,
       };
 
-      const result = await strategy.validate(payload);
-
-      // Result should not include tokenVersion
-      expect(result).not.toHaveProperty('tokenVersion');
-      expect(result).toEqual({
-        id: 'user-1',
-        email: 'user@example.com',
-        role: 'USER',
-      });
+      await expect(strategy.validate(payload)).rejects.toThrow(
+        UnauthorizedException,
+      );
     });
 
-    it('handles payload without tokenVersion', async () => {
+    it('handles payload without tokenVersion (transitional grace)', async () => {
+      userService.user.mockResolvedValue({ ...baseUser, tokenVersion: 5 });
+
       const payload = {
         id: 'user-1',
         email: 'user@example.com',
@@ -120,10 +153,11 @@ describe('JwtStrategy', () => {
         email: 'user@example.com',
         role: 'USER',
       });
-      expect(userService.user).not.toHaveBeenCalled();
     });
 
     it('works with minimal valid payload', async () => {
+      userService.user.mockResolvedValue(baseUser);
+
       const payload = {
         id: 'user-1',
         email: 'user@example.com',
@@ -160,6 +194,8 @@ describe('JwtStrategy', () => {
       ];
 
       for (const payload of payloads) {
+        userService.user.mockResolvedValue({ ...baseUser, id: payload.id });
+
         const result = await strategy.validate(payload);
         expect(result).toEqual({
           id: payload.id,
@@ -187,6 +223,12 @@ describe('JwtStrategy', () => {
       ];
 
       for (const payload of validPayloads) {
+        userService.user.mockResolvedValue({
+          ...baseUser,
+          id: payload.id,
+          tokenVersion: payload.tokenVersion ?? baseUser.tokenVersion,
+        });
+
         await expect(strategy.validate(payload)).resolves.toBeDefined();
       }
     });
