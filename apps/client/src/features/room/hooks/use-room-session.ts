@@ -1,3 +1,4 @@
+import type { HostControls } from "@zvonok/react";
 import type { SfuState } from "@zvonok/client/sfu/types";
 import { useCallback } from "react";
 
@@ -27,6 +28,9 @@ export interface UseRoomSessionResult {
   kickPeer: (userId: string) => void;
   participants: Participant[];
   localUserId: string;
+  isRoomLocked: boolean;
+  mutedByHost: boolean;
+  hostControls: HostControls;
 }
 
 export function useRoomSession({
@@ -46,16 +50,26 @@ export function useRoomSession({
     stopMedia();
   }, [stopMedia]);
 
-  const { sfuState, remotePeers, wasKicked, kickPeer, mediaControls, toggleVideo, toggleAudio } =
-    useRoomSfu({
-      roomId: room.id,
-      roomOwnerId: room.ownerId,
-      roomSlug: room.slug,
-      localVideoStream,
-      localAudioStream,
-      onKicked: handleKicked,
-      displayName,
-    });
+  const {
+    sfuState,
+    remotePeers,
+    wasKicked,
+    kickPeer,
+    mediaControls,
+    toggleVideo,
+    toggleAudio,
+    isRoomLocked,
+    mutedByHost,
+    hostControls,
+  } = useRoomSfu({
+    roomId: room.id,
+    roomOwnerId: room.ownerId,
+    roomSlug: room.slug,
+    localVideoStream,
+    localAudioStream,
+    onKicked: handleKicked,
+    displayName,
+  });
 
   const { participants } = useRoomParticipants({
     userId,
@@ -78,5 +92,8 @@ export function useRoomSession({
     kickPeer,
     participants,
     localUserId,
+    isRoomLocked,
+    mutedByHost,
+    hostControls,
   };
 }

@@ -1,10 +1,13 @@
 /**
  * Mediasoup hook for SFU integration.
- * Uses dependency injection via SfuManagerContext.
+ * Uses dependency injection via SfuManagerContext; remote peer media state
+ * and room lock state come from the @zvonok/react RoomTracker, and host
+ * actions from the SDK host controls factory.
  */
 
-import type { SfuPeerInfo, SfuState } from "@zvonok/client/sfu/types";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createHostControls, EMPTY_ROOM_STATE, RoomTracker, type HostControls, type ZvonokParticipant } from "@zvonok/react";
+import type { SfuState } from "@zvonok/client/sfu/types";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import { useAuth } from "@/features/auth/contexts/auth.context";
 import { useSfuManager } from "@/features/sfu/contexts/sfu-manager.context";
@@ -30,11 +33,15 @@ export interface RemotePeerMedia {
   isCameraEnabled: boolean;
   isScreenSharing: boolean;
   isAudioEnabled: boolean;
+  mutedByHost: boolean;
 }
 
 export interface UseMediasoupResult {
   state: SfuState;
   remotePeers: RemotePeerMedia[];
+  isRoomLocked: boolean;
+  mutedByHost: boolean;
+  hostControls: HostControls;
   kickPeer: (userId: string) => void;
   wasKicked: boolean;
   produceTrack: (track: MediaStreamTrack) => Promise<boolean>;
@@ -44,27 +51,18 @@ export interface UseMediasoupResult {
   hasProducer: (kind: "audio" | "video") => boolean;
 }
 
-type RemotePeerMap = Map<string, RemotePeerMedia>;
-
-function updateRemotePeer(
-  peers: RemotePeerMap,
-  userId: string,
-  updater: (peer: RemotePeerMedia) => RemotePeerMedia,
-): RemotePeerMap {
-  const next = new Map(peers);
-  const current = next.get(userId) ?? {
-    userId,
-    username: "Participant",
-    cameraStream: new MediaStream(),
-    screenStream: null,
-    audioStream: new MediaStream(),
-    isCameraEnabled: false,
-    isScreenSharing: false,
-    isAudioEnabled: false,
+function toRemotePeer(participant: ZvonokParticipant): RemotePeerMedia {
+  return {
+    userId: participant.userId,
+    username: participant.displayName,
+    cameraStream: participant.cameraStream ?? new MediaStream(),
+    screenStream: participant.screenStream,
+    audioStream: participant.audioStream ?? new MediaStream(),
+    isCameraEnabled: participant.isCameraEnabled,
+    isScreenSharing: participant.isScreenSharing,
+    isAudioEnabled: participant.isAudioEnabled,
+    mutedByHost: participant.mutedByHost,
   };
-
-  next.set(userId, updater(current));
-  return next;
 }
 
 export function useMediasoup({
@@ -80,7 +78,7 @@ export function useMediasoup({
   const isMobile = useIsMobile();
   const sfuManager = useSfuManager();
   const [state, setState] = useState<SfuState>(() => sfuManager.getState());
-  const [remotePeers, setRemotePeers] = useState<RemotePeerMap>(new Map());
+  const [tracker, setTracker] = useState<RoomTracker | null>(null);
   const [wasKicked, setWasKicked] = useState(false);
 
   const joinedRef = useRef(false);
@@ -100,7 +98,7 @@ export function useMediasoup({
     // Snapshot the Set object at effect setup time. Using the snapshot (rather
     // than producedKindsRef.current) in callbacks and cleanup avoids the
     // exhaustive-deps lint warning about accessing .current inside cleanup.
-    // The snapshot is safe because we only call .clear() — never reassign the ref.
+    // The snapshot is safe because we only call .clear() - never reassign the ref.
     const producedKinds = producedKindsRef.current;
 
     const unsubscribeState = sfuManager.onStateChange((nextState) => {
@@ -112,181 +110,36 @@ export function useMediasoup({
       }
     });
 
-    const unsubscribePeerJoined = sfuManager.onPeerJoined((peer: SfuPeerInfo) => {
-      setRemotePeers((prev) =>
-        updateRemotePeer(prev, peer.userId, (current) => ({
-          ...current,
-          username: peer.username || current.username,
-        })),
-      );
-    });
-
-    const unsubscribeTrack = sfuManager.onTrack((track, kind, userId, source) => {
-      setRemotePeers((prev) =>
-        updateRemotePeer(prev, userId, (current) => {
-          if (kind === "video" && source === "screen") {
-            const screenStream = new MediaStream(
-              current.screenStream
-                ? current.screenStream.getTracks().filter((t) => t.id !== track.id)
-                : [],
-            );
-            screenStream.addTrack(track);
-            return {
-              ...current,
-              screenStream,
-              isScreenSharing: true,
-            };
-          }
-
-          if (kind === "video") {
-            const cameraStream = new MediaStream(
-              current.cameraStream.getTracks().filter((t) => t.kind !== "video"),
-            );
-            cameraStream.addTrack(track);
-            return {
-              ...current,
-              cameraStream,
-              isCameraEnabled: track.enabled,
-            };
-          }
-
-          const audioStream = new MediaStream(
-            current.audioStream.getTracks().filter((t) => t.kind !== "audio"),
-          );
-          audioStream.addTrack(track);
-          return {
-            ...current,
-            audioStream,
-            isAudioEnabled: track.enabled,
-          };
-        }),
-      );
-
-      track.onmute = () => {
-        console.log(`[SFU] Track muted: ${kind} from user ${userId}`);
-        setRemotePeers((prev) =>
-          updateRemotePeer(prev, userId, (current) => ({
-            ...current,
-            isCameraEnabled:
-              kind === "video" && source !== "screen" ? false : current.isCameraEnabled,
-            isScreenSharing:
-              kind === "video" && source === "screen" ? false : current.isScreenSharing,
-            isAudioEnabled: kind === "audio" ? false : current.isAudioEnabled,
-          })),
-        );
-      };
-
-      track.onunmute = () => {
-        console.log(`[SFU] Track unmuted: ${kind} from user ${userId}`);
-        setRemotePeers((prev) =>
-          updateRemotePeer(prev, userId, (current) => ({
-            ...current,
-            isCameraEnabled:
-              kind === "video" && source !== "screen" ? true : current.isCameraEnabled,
-            isScreenSharing:
-              kind === "video" && source === "screen" ? true : current.isScreenSharing,
-            isAudioEnabled: kind === "audio" ? true : current.isAudioEnabled,
-          })),
-        );
-      };
-
-      track.onended = () => {
-        console.log(`[SFU] Track ended: ${kind} from user ${userId}`);
-        setRemotePeers((prev) => {
-          const next = new Map(prev);
-          const current = next.get(userId);
-          if (!current) {
-            return prev;
-          }
-
-          if (kind === "video" && source === "screen") {
-            const screenStream = current.screenStream
-              ? new MediaStream(current.screenStream.getTracks().filter((t) => t.id !== track.id))
-              : new MediaStream();
-            next.set(userId, {
-              ...current,
-              screenStream: screenStream.getTracks().length > 0 ? screenStream : null,
-              isScreenSharing: false,
-            });
-          } else if (kind === "video") {
-            const cameraStream = new MediaStream(
-              current.cameraStream.getTracks().filter((t) => t.id !== track.id),
-            );
-            next.set(userId, {
-              ...current,
-              cameraStream,
-              isCameraEnabled: false,
-            });
-          } else {
-            const audioStream = new MediaStream(
-              current.audioStream.getTracks().filter((t) => t.id !== track.id),
-            );
-            next.set(userId, {
-              ...current,
-              audioStream,
-              isAudioEnabled: false,
-            });
-          }
-
-          return next;
-        });
-      };
-    });
-
-    const unsubscribeProducerState = sfuManager.onProducerStateChange((payload) => {
-      const { userId, kind, paused, source } = payload;
-      setRemotePeers((prev) =>
-        updateRemotePeer(prev, userId, (current) => ({
-          ...current,
-          isCameraEnabled:
-            kind === "video" && source !== "screen" ? !paused : current.isCameraEnabled,
-          isAudioEnabled: kind === "audio" ? !paused : current.isAudioEnabled,
-        })),
-      );
-    });
-
-    const unsubscribePeerLeft = sfuManager.onPeerLeft((userId) => {
-      setRemotePeers((prev) => {
-        const next = new Map(prev);
-        next.delete(userId);
-        return next;
-      });
-    });
-
-    const unsubscribeScreenShareStopped = sfuManager.onScreenShareStopped(({ userId }) => {
-      setRemotePeers((prev) =>
-        updateRemotePeer(prev, userId, (current) => ({
-          ...current,
-          isScreenSharing: false,
-          screenStream: null,
-        })),
-      );
-    });
+    const roomTracker = new RoomTracker(sfuManager, { localUserId: identity.userId });
+    setTracker(roomTracker);
 
     const unsubscribeKicked = sfuManager.onKicked(() => {
       joinedRef.current = false;
       setWasKicked(true);
-      setRemotePeers(new Map());
+      roomTracker.reset();
     });
 
     sfuManager.connect();
 
     return () => {
       unsubscribeState();
-      unsubscribePeerJoined();
-      unsubscribeTrack();
-      unsubscribeProducerState();
-      unsubscribePeerLeft();
-      unsubscribeScreenShareStopped();
       unsubscribeKicked();
       producedKinds.clear();
       joinedRef.current = false;
       setWasKicked(false);
-      setRemotePeers(new Map());
+      setTracker(null);
+      roomTracker.stop();
       sfuManager.leaveRoom();
       sfuManager.disconnect();
     };
-  }, [roomId, enabled, sfuManager]);
+  }, [roomId, enabled, sfuManager, identity.userId]);
+
+  const subscribe = useCallback(
+    (listener: () => void) => tracker?.subscribe(listener) ?? (() => {}),
+    [tracker],
+  );
+  const getSnapshot = useCallback(() => tracker?.getSnapshot() ?? EMPTY_ROOM_STATE, [tracker]);
+  const roomState = useSyncExternalStore(subscribe, getSnapshot);
 
   useEffect(() => {
     if (!roomId || !enabled || state.connectionState !== "connected" || joinedRef.current) {
@@ -403,9 +256,15 @@ export function useMediasoup({
     [sfuManager],
   );
 
+  const hostControls = useMemo(() => createHostControls(sfuManager), [sfuManager]);
+  const remotePeers = useMemo(() => roomState.participants.map(toRemotePeer), [roomState]);
+
   return {
     state,
-    remotePeers: useMemo(() => Array.from(remotePeers.values()), [remotePeers]),
+    remotePeers,
+    isRoomLocked: roomState.locked,
+    mutedByHost: roomState.mutedByHost,
+    hostControls,
     kickPeer,
     wasKicked,
     produceTrack,
