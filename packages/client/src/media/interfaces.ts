@@ -1,5 +1,5 @@
-import type { CaptureState } from "./capture-state";
-import type { StateCallback } from "./types";
+import type { CaptureState } from "./capture-state.js";
+import type { StateCallback } from "./types.js";
 
 export interface IMediaCapture {
   getStream(): MediaStream | null;

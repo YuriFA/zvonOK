@@ -1,4 +1,4 @@
-import { calculateRmsLevel } from "./audio-utils";
+import { calculateRmsLevel } from "./audio-utils.js";
 
 const SILENCE_THRESHOLD = 0.01;
 

@@ -20,8 +20,8 @@ import type {
   SfuScreenShareStoppedPayload,
   SfuConsumerClosedPayload,
   SfuGuestJoinRequestPayload,
-} from "./types";
-import type { SfuExistingPeersPayload } from "./types";
+} from "./types.js";
+import type { SfuExistingPeersPayload } from "./types.js";
 
 /**
  * Handler interface for SFU socket events.

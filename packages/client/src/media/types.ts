@@ -1,4 +1,4 @@
-import type { CaptureState } from "./capture-state";
+import type { CaptureState } from "./capture-state.js";
 
 export type StateCallback = (
   state: CaptureState,

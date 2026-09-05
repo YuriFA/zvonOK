@@ -1,8 +1,8 @@
-import { MediaCapture } from "./capture";
-import type { IMediaDeviceService } from "./device-service";
-import type { IErrorClassifier } from "./error-classifier";
-import type { IMediaManager, IMediaCapture } from "./interfaces";
-import type { StateCallback } from "./types";
+import { MediaCapture } from "./capture.js";
+import type { IMediaDeviceService } from "./device-service.js";
+import type { IErrorClassifier } from "./error-classifier.js";
+import type { IMediaManager, IMediaCapture } from "./interfaces.js";
+import type { StateCallback } from "./types.js";
 
 export class MediaStreamManager implements IMediaManager {
   readonly videoCapture: IMediaCapture;

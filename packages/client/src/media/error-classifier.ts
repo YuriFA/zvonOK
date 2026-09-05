@@ -1,4 +1,4 @@
-import { CaptureState } from "./capture-state";
+import { CaptureState } from "./capture-state.js";
 
 export interface ErrorClassification {
   state: CaptureState;

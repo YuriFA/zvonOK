@@ -1,9 +1,9 @@
-import { DEFAULT_AUDIO_CONSTRAINTS, DEFAULT_VIDEO_CONSTRAINTS } from "../config/media";
-import { CaptureState } from "./capture-state";
-import type { IMediaDeviceService } from "./device-service";
-import type { IErrorClassifier } from "./error-classifier";
-import type { IMediaCapture } from "./interfaces";
-import type { StateCallback } from "./types";
+import { DEFAULT_AUDIO_CONSTRAINTS, DEFAULT_VIDEO_CONSTRAINTS } from "../config/media.js";
+import { CaptureState } from "./capture-state.js";
+import type { IMediaDeviceService } from "./device-service.js";
+import type { IErrorClassifier } from "./error-classifier.js";
+import type { IMediaCapture } from "./interfaces.js";
+import type { StateCallback } from "./types.js";
 
 export class MediaCapture implements IMediaCapture {
   private state: CaptureState = CaptureState.STOPPED;

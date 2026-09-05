@@ -22,7 +22,7 @@ import type {
   SimulcastSpatialLayer,
   SfuProduceErrorCode,
   SfuScreenShareStoppedCallback,
-} from "./types";
+} from "./types.js";
 
 /**
  * Responsible for socket connection lifecycle.
