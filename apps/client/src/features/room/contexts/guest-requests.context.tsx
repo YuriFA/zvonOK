@@ -1,7 +1,6 @@
+import { sfuManager } from "@zvonok/client/sfu/manager";
+import type { SfuGuestJoinRequestPayload } from "@zvonok/client/sfu/types";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
-
-import { sfuManager } from "@/lib/sfu/manager";
-import type { SfuGuestJoinRequestPayload } from "@/lib/sfu/types";
 
 import { roomApi } from "../services/room-api";
 

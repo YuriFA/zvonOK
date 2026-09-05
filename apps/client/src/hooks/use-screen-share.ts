@@ -1,10 +1,13 @@
+import {
+  ScreenShareService,
+  browserDisplayMediaService,
+} from "@zvonok/client/screen-share/service";
+import type { ScreenShareState } from "@zvonok/client/screen-share/types";
 import { useEffect, useMemo, useState } from "react";
 
 import { useSfuManager } from "@/features/sfu/contexts/sfu-manager.context";
-import { ScreenShareService, browserDisplayMediaService } from "@/lib/screen-share/service";
-import type { ScreenShareState } from "@/lib/screen-share/types";
 
-export type { ScreenShareError } from "@/lib/screen-share/types";
+export type { ScreenShareError } from "@zvonok/client/screen-share/types";
 
 export interface UseScreenShareResult {
   isSharing: boolean;

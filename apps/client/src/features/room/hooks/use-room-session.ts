@@ -1,3 +1,4 @@
+import type { SfuState } from "@zvonok/client/sfu/types";
 import { useCallback } from "react";
 
 import type { Participant } from "@/components/room/participants-list";
@@ -7,7 +8,6 @@ import { useRoomParticipants } from "@/features/room/hooks/use-room-participants
 import { useRoomSfu } from "@/features/room/hooks/use-room-sfu";
 import type { Room } from "@/features/room/types/room.types";
 import type { RemotePeerMedia } from "@/hooks/use-mediasoup";
-import type { SfuState } from "@/lib/sfu/types";
 
 export interface UseRoomSessionOptions {
   room: Room;

@@ -1,7 +1,7 @@
+import type { QualityScore, QualityStats } from "@zvonok/client/sfu/types";
 import { Mic, MicOff, Video, VideoOff, UserX } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import type { QualityScore, QualityStats } from "@/lib/sfu/types";
 import { cn } from "@/lib/utils";
 import { getAvatarColor } from "@/lib/utils/display-name";
 

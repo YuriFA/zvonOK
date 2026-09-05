@@ -8,8 +8,9 @@
     "lint": "pnpm -r run lint",
     "lint:fix": "pnpm -r run lint:fix",
     "lint:ts": "pnpm -r run lint:ts",
-    "test": "pnpm test:client && pnpm test:server && pnpm -C apps/server test:e2e",
+    "test": "pnpm test:client && pnpm test:package && pnpm test:server && pnpm -C apps/server test:e2e",
     "test:client": "pnpm -C apps/client test:run",
+    "test:package": "pnpm -C packages/client test:run",
     "test:server": "pnpm -C apps/server test",
     "release": "release-it",
     "release:ci": "release-it --ci",
@@ -28,7 +29,19 @@
       "lefthook",
       "unrs-resolver",
       "@scarf/scarf"
-    ]
+    ],
+    "packageExtensions": {
+      "@hookform/resolvers@*": {
+        "peerDependencies": {
+          "zod": "*"
+        },
+        "peerDependenciesMeta": {
+          "zod": {
+            "optional": true
+          }
+        }
+      }
+    }
   },
   "packageManager": "pnpm@10.28.1",
   "devDependencies": {

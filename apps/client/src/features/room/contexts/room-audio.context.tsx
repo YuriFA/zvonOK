@@ -1,9 +1,9 @@
+import { ActiveSpeakerDetector } from "@zvonok/client/audio/active-speaker-detector";
+import { AudioLevelSampler } from "@zvonok/client/audio/audio-level-sampler";
+import { RemoteAudioMixer, type IRemoteAudioMixer } from "@zvonok/client/audio/remote-audio-mixer";
 import { createContext, useContext, useEffect, useRef, type ReactNode } from "react";
 
 import { useRemoteAudio } from "@/hooks/use-remote-audio";
-import { ActiveSpeakerDetector } from "@/lib/audio/active-speaker-detector";
-import { AudioLevelSampler } from "@/lib/audio/audio-level-sampler";
-import { RemoteAudioMixer, type IRemoteAudioMixer } from "@/lib/audio/remote-audio-mixer";
 
 import type { UseRoomSessionResult } from "../hooks/use-room-session";
 import { RoomAudioStore } from "./room-audio.store";

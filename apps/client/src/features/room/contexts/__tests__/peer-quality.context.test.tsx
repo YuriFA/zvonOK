@@ -1,9 +1,9 @@
 import { act, render } from "@testing-library/react";
+import { createMockSfuManager } from "@zvonok/client/sfu/__mocks__/manager";
+import type { PeerQualityStats, QualityLevel, SfuPeerInfo } from "@zvonok/client/sfu/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SfuManagerProvider } from "@/features/sfu/contexts/sfu-manager.context";
-import { createMockSfuManager } from "@/lib/sfu/__mocks__/manager";
-import type { PeerQualityStats, QualityLevel, SfuPeerInfo } from "@/lib/sfu/types";
 
 import { PeerQualityProvider } from "../peer-quality.context";
 

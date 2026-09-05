@@ -3,9 +3,8 @@
  * Provides ISfuManager to components and hooks.
  */
 
+import type { ISfuManager } from "@zvonok/client/sfu/interfaces";
 import { createContext, useContext, type ReactNode } from "react";
-
-import type { ISfuManager } from "@/lib/sfu/interfaces";
 
 const SfuManagerContext = createContext<ISfuManager | null>(null);
 

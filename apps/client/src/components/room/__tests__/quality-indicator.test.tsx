@@ -1,7 +1,6 @@
 import { render, screen } from "@testing-library/react";
+import type { QualityScore, QualityStats } from "@zvonok/client/sfu/types";
 import { describe, expect, it } from "vitest";
-
-import type { QualityScore, QualityStats } from "@/lib/sfu/types";
 
 import { QualityIndicator } from "../quality-indicator";
 

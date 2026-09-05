@@ -3,11 +3,11 @@
  * Uses dependency injection via SfuManagerContext.
  */
 
+import type { SfuPeerInfo, SfuState } from "@zvonok/client/sfu/types";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useAuth } from "@/features/auth/contexts/auth.context";
 import { useSfuManager } from "@/features/sfu/contexts/sfu-manager.context";
-import type { SfuPeerInfo, SfuState } from "@/lib/sfu/types";
 
 import { useIsMobile } from "./use-is-mobile";
 

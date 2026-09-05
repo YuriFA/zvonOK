@@ -1,6 +1,5 @@
+import { CaptureState, isActive } from "@zvonok/client/media/capture-state";
 import { useCallback, useEffect, useState } from "react";
-
-import { CaptureState, isActive } from "@/lib/media/capture-state";
 
 import { useVideoCaptureState, useAudioCaptureState } from "../contexts/media-manager.context";
 

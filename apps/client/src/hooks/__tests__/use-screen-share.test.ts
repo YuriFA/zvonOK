@@ -31,7 +31,7 @@ vi.stubGlobal("navigator", {
 
 // --- subject ---
 
-import { SfuProduceError } from "@/lib/sfu/types";
+import { SfuProduceError } from "@zvonok/client/sfu/types";
 
 import { useScreenShare } from "../use-screen-share";
 

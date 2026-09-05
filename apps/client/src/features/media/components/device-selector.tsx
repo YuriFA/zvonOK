@@ -1,9 +1,9 @@
+import { CaptureState } from "@zvonok/client/media/capture-state";
 import { AlertTriangleIcon, Mic, MicOff, Video, VideoOff } from "lucide-react";
 import { useCallback, useState } from "react";
 
 import { LocalVideo } from "@/components/local-video";
 import { Alert, AlertTitle } from "@/components/ui/alert";
-import { CaptureState } from "@/lib/media/capture-state";
 import { cn } from "@/lib/utils";
 
 import { useVideoCaptureControl, useAudioCaptureControl } from "../contexts/media-manager.context";

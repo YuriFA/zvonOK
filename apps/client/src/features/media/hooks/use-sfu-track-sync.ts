@@ -1,8 +1,8 @@
+import { CaptureState } from "@zvonok/client/media/capture-state";
 import { useEffect } from "react";
 
 import { useCaptureTrackProvider } from "@/features/media/contexts/media-manager.context";
 import { useSfuManager } from "@/features/sfu/contexts/sfu-manager.context";
-import { CaptureState } from "@/lib/media/capture-state";
 
 export function useSfuTrackSync(): void {
   const videoTrackProvider = useCaptureTrackProvider("video");

@@ -1,4 +1,5 @@
-import type { QualityScore, QualityStats } from "@/lib/sfu/types";
+import type { QualityScore, QualityStats } from "@zvonok/client/sfu/types";
+
 import { cn } from "@/lib/utils";
 
 const levelConfig = {
