@@ -16,6 +16,8 @@ export interface ParticipantItemProps {
   isLocalUser?: boolean;
   canKick?: boolean;
   onKick?: (id: string) => void;
+  canMute?: boolean;
+  onMute?: (id: string) => void;
   qualityScore?: QualityScore;
   qualityStats?: QualityStats;
 }
@@ -29,6 +31,8 @@ export function ParticipantItem({
   isLocalUser,
   canKick,
   onKick,
+  canMute,
+  onMute,
   qualityScore,
   qualityStats,
 }: ParticipantItemProps) {
@@ -83,6 +87,18 @@ export function ParticipantItem({
 
       {/* Quality indicator - only show for remote users with quality data */}
       {qualityScore && <QualityIndicator score={qualityScore} stats={qualityStats} />}
+
+      {canMute && onMute && !isLocalUser && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-7 text-muted-foreground hover:text-destructive"
+          onClick={() => onMute(id)}
+          aria-label={`Mute ${username}`}
+        >
+          <MicOff className="size-4" />
+        </Button>
+      )}
 
       {canKick && onKick && !isLocalUser && (
         <Button

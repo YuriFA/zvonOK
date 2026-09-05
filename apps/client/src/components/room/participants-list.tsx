@@ -23,6 +23,7 @@ export interface ParticipantsListProps {
   currentUserId?: string;
   roomOwnerId?: string;
   onKickParticipant?: (participantId: string) => void;
+  onMuteParticipant?: (participantId: string) => void;
   pendingRequests?: SfuGuestJoinRequestPayload[];
   onApproveRequest?: (requestId: string) => Promise<void>;
   onDenyRequest?: (requestId: string) => Promise<void>;
@@ -33,6 +34,7 @@ export function ParticipantsList({
   currentUserId,
   roomOwnerId,
   onKickParticipant,
+  onMuteParticipant,
   pendingRequests,
   onApproveRequest,
   onDenyRequest,
@@ -64,6 +66,8 @@ export function ParticipantsList({
               isLocalUser={participant.id === currentUserId}
               canKick={isOwner}
               onKick={onKickParticipant}
+              canMute={isOwner}
+              onMute={onMuteParticipant}
             />
           ))}
         </ul>
