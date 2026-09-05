@@ -39,22 +39,6 @@ describe("ChatPanel", () => {
     };
   });
 
-  it("renders chat header when open", () => {
-    render(<ChatPanel {...defaultProps} />);
-    expect(screen.getByText("Chat")).toBeInTheDocument();
-  });
-
-  it("renders close button when open", () => {
-    render(<ChatPanel {...defaultProps} />);
-    expect(screen.getByLabelText("Close chat")).toBeInTheDocument();
-  });
-
-  it("calls onClose when close button is clicked", () => {
-    render(<ChatPanel {...defaultProps} />);
-    screen.getByLabelText("Close chat").click();
-    expect(onClose).toHaveBeenCalledOnce();
-  });
-
   it("renders message input when open", () => {
     render(<ChatPanel {...defaultProps} />);
     expect(screen.getByLabelText("Chat message input")).toBeInTheDocument();

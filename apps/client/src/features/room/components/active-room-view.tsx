@@ -10,8 +10,8 @@ import { useChat } from "@/features/chat/hooks/use-chat";
 import { RoomCenterControls } from "@/features/room/components/room-center-controls";
 import { RoomVideo } from "@/features/room/components/room-video";
 import { ScreenShareSpotlight } from "@/features/room/components/screen-share-spotlight";
+import { useKeyboardShortcuts } from "@/features/room/hooks/use-keyboard-shortcuts";
 import type { UseRoomSessionResult } from "@/features/room/hooks/use-room-session";
-import type { Room } from "@/features/room/types/room.types";
 import type { ScreenShareError } from "@/hooks/use-screen-share";
 import { useScreenShare } from "@/hooks/use-screen-share";
 
@@ -174,6 +174,11 @@ export function ActiveRoomView({
       toast.error("Screen share was not started");
     }
   }, [isSharing, startScreenShare, stopScreenShare]);
+  useKeyboardShortcuts({
+    onToggleAudio: handleToggleAudio,
+    onToggleVideo: handleToggleVideo,
+    onToggleScreenShare: handleToggleScreenShare,
+  });
 
   // Sync screenShareState with isSharing (auto-stop via track.ended)
   useEffect(() => {

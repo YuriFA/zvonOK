@@ -303,8 +303,8 @@ describe("useMediasoup", () => {
       expect(sfuMock.produce).toHaveBeenCalledTimes(2);
     });
 
-    expect(sfuMock.produce).toHaveBeenCalledWith(videoTrack);
-    expect(sfuMock.produce).toHaveBeenCalledWith(audioTrack);
+    expect(sfuMock.produce).toHaveBeenCalledWith(videoTrack, { isMobile: false });
+    expect(sfuMock.produce).toHaveBeenCalledWith(audioTrack, { isMobile: false });
   });
 
   it("collects remote peer media and removes it when the peer leaves", async () => {
