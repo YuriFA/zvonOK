@@ -44,6 +44,16 @@
 		reverse_proxy server:3000
 	}
 
+	# Public developer-platform API (API-key authenticated)
+	handle /v1/* {
+		reverse_proxy server:3000
+	}
+
+	# Developer account/project/key management (dev-JWT authenticated)
+	handle /developers/* {
+		reverse_proxy server:3000
+	}
+
 	# Socket.io transport (SFU WebSocket + polling fallback)
 	handle /socket.io/* {
 		reverse_proxy server:3000

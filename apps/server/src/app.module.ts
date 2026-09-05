@@ -6,6 +6,8 @@ import { PrismaModule } from './prisma/prisma.module';
 import { RoomModule } from './room/room.module';
 import { ChatModule } from './chat/chat.module';
 import { SfuModule } from './sfu/sfu.module';
+import { PlatformModule } from './platform/platform.module';
+import { DeveloperModule } from './developer/developer.module';
 import { VersionController } from './version.controller';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
@@ -20,10 +22,11 @@ import { APP_GUARD } from '@nestjs/core';
           'DATABASE_URL',
           'JWT_ACCESS_SECRET',
           'JWT_REFRESH_SECRET',
+          'JWT_DEV_SECRET',
+          'JWT_ROOM_SECRET',
           'JWT_ACCESS_EXPIRES_IN_MINUTES',
           'JWT_REFRESH_EXPIRES_IN_DAYS',
         ];
-
         const missing = required.filter((key) => !config[key]);
         if (missing.length > 0) {
           throw new Error(
@@ -68,6 +71,8 @@ import { APP_GUARD } from '@nestjs/core';
     RoomModule,
     ChatModule,
     SfuModule,
+    DeveloperModule,
+    PlatformModule,
   ],
   controllers: [VersionController],
   providers: [

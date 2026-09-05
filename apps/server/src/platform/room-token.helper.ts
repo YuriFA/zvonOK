@@ -1,0 +1,112 @@
+import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
+
+export interface RoomTokenClaims {
+  roomId: string;
+  projectId: string;
+  keyId: string;
+  participantId: string;
+  name: string;
+  publish: boolean;
+  admin: boolean;
+}
+
+export type RoomTokenFailureCode = 'ROOM_TOKEN_EXPIRED' | 'ROOM_TOKEN_INVALID';
+
+export type RoomTokenVerifyResult =
+  | { ok: true; claims: RoomTokenClaims }
+  | { ok: false; code: RoomTokenFailureCode };
+
+interface DecodedRoomToken {
+  sub: string;
+  projectId: string;
+  keyId: string;
+  participantId: string;
+  name: string;
+  publish: boolean;
+  admin: boolean;
+}
+
+function isDecodedRoomToken(value: unknown): value is DecodedRoomToken {
+  if (typeof value !== 'object' || value === null) return false;
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.sub === 'string' &&
+    typeof candidate.projectId === 'string' &&
+    typeof candidate.keyId === 'string' &&
+    typeof candidate.participantId === 'string' &&
+    typeof candidate.name === 'string' &&
+    typeof candidate.publish === 'boolean' &&
+    typeof candidate.admin === 'boolean'
+  );
+}
+
+@Injectable()
+export class RoomTokenHelper {
+  constructor(
+    private readonly jwt: JwtService,
+    private readonly config: ConfigService,
+  ) {}
+
+  mint(claims: RoomTokenClaims): string {
+    return this.jwt.sign(
+      {
+        projectId: claims.projectId,
+        keyId: claims.keyId,
+        participantId: claims.participantId,
+        name: claims.name,
+        publish: claims.publish,
+        admin: claims.admin,
+      },
+      {
+        subject: claims.roomId,
+        secret: this.config.get<string>('JWT_ROOM_SECRET'),
+        expiresIn: `${this.ttlMinutes()}m`,
+      },
+    );
+  }
+
+  expiresAt(): Date {
+    return new Date(Date.now() + this.ttlMinutes() * 60_000);
+  }
+
+  verify(token: string): RoomTokenVerifyResult {
+    let decoded: unknown;
+    try {
+      decoded = this.jwt.verify(token, {
+        secret: this.config.get<string>('JWT_ROOM_SECRET'),
+      });
+    } catch (error) {
+      const name = error instanceof Error ? error.name : undefined;
+      return {
+        ok: false,
+        code:
+          name === 'TokenExpiredError'
+            ? 'ROOM_TOKEN_EXPIRED'
+            : 'ROOM_TOKEN_INVALID',
+      };
+    }
+
+    if (!isDecodedRoomToken(decoded)) {
+      return { ok: false, code: 'ROOM_TOKEN_INVALID' };
+    }
+
+    return {
+      ok: true,
+      claims: {
+        roomId: decoded.sub,
+        projectId: decoded.projectId,
+        keyId: decoded.keyId,
+        participantId: decoded.participantId,
+        name: decoded.name,
+        publish: decoded.publish,
+        admin: decoded.admin,
+      },
+    };
+  }
+
+  private ttlMinutes(): number {
+    return Number(this.config.get('ROOM_TOKEN_TTL_MINUTES')) || 60;
+  }
+}
