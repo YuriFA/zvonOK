@@ -1,6 +1,6 @@
 # Agent Operating Guide
 
-pnpm monorepo for WebRTC video chat (P2P 1-on-1, mediasoup SFU for groups).
+pnpm monorepo for WebRTC video chat (mediasoup SFU for all calls; no P2P path).
 
 ## Tech Stack
 
