@@ -1,9 +1,9 @@
+import { CaptureState, getCaptureStateDisplay } from "@zvonok/client/media/capture-state";
 import { AlertTriangle, Loader2, Mic, MicOff, Video, VideoOff } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { CaptureState, getCaptureStateDisplay } from "@/lib/media/capture-state";
 import { cn } from "@/lib/utils";
 
 interface Props {

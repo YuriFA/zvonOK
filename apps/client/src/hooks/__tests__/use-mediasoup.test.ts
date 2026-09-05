@@ -1,7 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
+import type { SfuState } from "@zvonok/client/sfu/types";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-import type { SfuState } from "@/lib/sfu/types";
 
 class MockMediaStream {
   private tracks: MediaStreamTrack[];

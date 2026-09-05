@@ -1,3 +1,4 @@
+import type { SfuState } from "@zvonok/client/sfu/types";
 import { useCallback, useEffect } from "react";
 
 import {
@@ -11,7 +12,6 @@ import {
 } from "@/features/media/hooks/use-media-controls";
 import { useSfuTrackSync } from "@/features/media/hooks/use-sfu-track-sync";
 import { useMediasoup, type RemotePeerMedia } from "@/hooks/use-mediasoup";
-import type { SfuState } from "@/lib/sfu/types";
 
 export interface UseRoomSfuOptions {
   roomId: string;

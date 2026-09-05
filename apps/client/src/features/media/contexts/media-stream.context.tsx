@@ -1,3 +1,4 @@
+import { CaptureState } from "@zvonok/client/media/capture-state";
 import {
   createContext,
   useCallback,
@@ -9,7 +10,6 @@ import {
 } from "react";
 
 import { loadSelectedDevices } from "@/features/media/hooks/use-media-devices";
-import { CaptureState } from "@/lib/media/capture-state";
 
 import { useMediaManagerDirect } from "./media-manager.context";
 

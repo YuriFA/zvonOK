@@ -1,12 +1,11 @@
-import { createContext, useContext, type ReactNode } from "react";
-
 import type {
   IMediaManager,
   ICaptureStateReader,
   ICaptureController,
   ICaptureTrackProvider,
   IMediaDeviceService,
-} from "@/lib/media/interfaces";
+} from "@zvonok/client/media/interfaces";
+import { createContext, useContext, type ReactNode } from "react";
 
 const MediaManagerContext = createContext<IMediaManager | null>(null);
 

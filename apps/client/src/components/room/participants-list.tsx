@@ -1,6 +1,7 @@
+import type { SfuGuestJoinRequestPayload } from "@zvonok/client/sfu/types";
+import type { QualityScore, QualityStats } from "@zvonok/client/sfu/types";
+
 import { Button } from "@/components/ui/button";
-import type { SfuGuestJoinRequestPayload } from "@/lib/sfu/types";
-import type { QualityScore, QualityStats } from "@/lib/sfu/types";
 
 import { ParticipantItem } from "./participant-item";
 

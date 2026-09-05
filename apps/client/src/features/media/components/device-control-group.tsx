@@ -1,3 +1,4 @@
+import { CaptureState, canToggle, isActive } from "@zvonok/client/media/capture-state";
 import { ChevronDown, Check } from "lucide-react";
 import { useCallback } from "react";
 
@@ -12,7 +13,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
-import { CaptureState, canToggle, isActive } from "@/lib/media/capture-state";
 
 import type { MediaDevice } from "../hooks/use-media-devices";
 

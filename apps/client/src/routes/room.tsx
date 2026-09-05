@@ -1,3 +1,5 @@
+import { createMediaManager } from "@zvonok/client/media/manager-factory";
+import { sfuManager } from "@zvonok/client/sfu/manager";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams } from "react-router";
 
@@ -14,8 +16,6 @@ import { useGuestJoinRoom } from "@/features/room/hooks/use-guest-join-room";
 import { useRoom } from "@/features/room/hooks/use-room";
 import { roomApi } from "@/features/room/services/room-api";
 import { SfuManagerProvider } from "@/features/sfu/contexts/sfu-manager.context";
-import { createMediaManager } from "@/lib/media/manager-factory";
-import { sfuManager } from "@/lib/sfu/manager";
 import { loadGuestDisplayName, saveGuestDisplayName } from "@/lib/utils/display-name";
 
 type RoomViewState = "prejoin" | "active" | "ended";

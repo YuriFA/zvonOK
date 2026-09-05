@@ -1,7 +1,7 @@
+import type { IRemoteAudioMixer } from "@zvonok/client/audio/remote-audio-mixer";
 import { useEffect, useRef, useState } from "react";
 
 import type { RemotePeerMedia } from "@/hooks/use-mediasoup";
-import type { IRemoteAudioMixer } from "@/lib/audio/remote-audio-mixer";
 
 interface UseRemoteAudioOptions {
   remotePeers: RemotePeerMedia[];

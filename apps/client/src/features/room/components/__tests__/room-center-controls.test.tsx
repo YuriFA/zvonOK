@@ -3,7 +3,6 @@ import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { CaptureState } from "@/lib/media/capture-state";
 
 import { RoomCenterControls } from "../room-center-controls";
 
@@ -12,12 +11,6 @@ function renderControls(overrides?: Partial<React.ComponentProps<typeof RoomCent
     <MemoryRouter>
       <TooltipProvider>
         <RoomCenterControls
-          isVideoEnabled={true}
-          isAudioEnabled={true}
-          videoCaptureState={CaptureState.ACTIVE}
-          audioCaptureState={CaptureState.ACTIVE}
-          onToggleVideo={vi.fn()}
-          onToggleAudio={vi.fn()}
           isScreenSharing={false}
           isScreenShareSupported={true}
           isScreenShareBlocked={false}

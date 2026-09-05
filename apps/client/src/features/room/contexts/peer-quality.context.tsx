@@ -1,9 +1,9 @@
+import { qualityToSpatialLayer } from "@zvonok/client/sfu/quality-score";
+import type { SimulcastSpatialLayer } from "@zvonok/client/sfu/types";
 import { createContext, useContext, useEffect, useRef, type ReactNode } from "react";
 
 import { useSfuManager } from "@/features/sfu/contexts/sfu-manager.context";
 import { useIsMobile } from "@/hooks/use-is-mobile";
-import { qualityToSpatialLayer } from "@/lib/sfu/quality-score";
-import type { SimulcastSpatialLayer } from "@/lib/sfu/types";
 
 import { PeerQualityStore } from "./peer-quality.store";
 

@@ -1,8 +1,8 @@
+import type { IRemoteAudioMixer } from "@zvonok/client/audio/remote-audio-mixer";
 import { Settings, X, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import type { IRemoteAudioMixer } from "@/lib/audio/remote-audio-mixer";
 import { cn } from "@/lib/utils";
 
 import { useDeviceSwitching } from "../hooks/use-device-switching";

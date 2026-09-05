@@ -1,3 +1,4 @@
+import { isActive } from "@zvonok/client/media/capture-state";
 import { useCallback, useRef } from "react";
 
 import {
@@ -6,7 +7,6 @@ import {
   useVideoCaptureState,
   useAudioCaptureState,
 } from "@/features/media/contexts/media-manager.context";
-import { isActive } from "@/lib/media/capture-state";
 
 export interface UseDeviceSwitchingReturn {
   switchVideoDevice: (deviceId: string) => Promise<boolean>;

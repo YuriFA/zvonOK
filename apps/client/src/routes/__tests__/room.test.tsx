@@ -1,9 +1,9 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { CaptureState } from "@zvonok/client/media/capture-state";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { CaptureState } from "@/lib/media/capture-state";
 
 const mockUseRoom = vi.hoisted(() => vi.fn());
 const mockUseEndRoom = vi.hoisted(() => vi.fn());
@@ -40,7 +40,7 @@ vi.mock("@/features/room/services/room-api", () => ({
   },
 }));
 
-vi.mock("@/lib/media/manager-factory", () => ({
+vi.mock("@zvonok/client/media/manager-factory", () => ({
   createMediaManager: () => ({
     start: vi.fn().mockResolvedValue(undefined),
     stop: vi.fn(),
@@ -111,7 +111,7 @@ vi.mock("@/features/media/contexts/media-stream.context", () => ({
 
 const mockOnRoomEnded = vi.hoisted(() => vi.fn(() => () => {}));
 
-vi.mock("@/lib/sfu/manager", () => ({
+vi.mock("@zvonok/client/sfu/manager", () => ({
   sfuManager: {
     onRoomEnded: mockOnRoomEnded,
     onGuestJoinRequest: vi.fn(() => () => {}),
