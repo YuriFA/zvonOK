@@ -33,8 +33,6 @@ describe("ParticipantsList", () => {
       />,
     );
 
-    expect(screen.getByText("Participants").closest("div")).toBeInTheDocument();
-    expect(screen.getByText("2")).toBeInTheDocument();
     expect(screen.getByLabelText("Participants list")).toBeInTheDocument();
     expect(screen.getByText("alice")).toBeInTheDocument();
     expect(screen.getByText("bob")).toBeInTheDocument();

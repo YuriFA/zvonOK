@@ -487,4 +487,24 @@ describe("RoomPage", () => {
       vi.restoreAllMocks();
     });
   });
+
+  describe("keyboard shortcuts", () => {
+    it("toggles audio and video via m/v after joining", async () => {
+      renderRoomPage();
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Join Room" }));
+      });
+
+      await act(async () => {
+        fireEvent.keyDown(window, { key: "m" });
+      });
+      await act(async () => {
+        fireEvent.keyDown(window, { key: "v" });
+      });
+
+      expect(mockToggleAudio).toHaveBeenCalledTimes(1);
+      expect(mockToggleVideo).toHaveBeenCalledTimes(1);
+    });
+  });
 });
