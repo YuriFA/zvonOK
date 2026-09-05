@@ -37,7 +37,7 @@
 ## 6. Publish, docs, verify
 
 - [x] 6.1 Root `LICENSE` (MIT) and final package metadata/readmes
-- [ ] 6.2 Publish `@zvonok/client` and `@zvonok/react` (needs user-owned `@zvonok` npm org and login; pack-verify first)
+- [ ] 6.2 Publish `@zvonok/client` and `@zvonok/react` (DEFERRED by user decision 2026-09-05: needs the `@zvonok` npm org and login; follow docs/deployment.md publish section)
 - [x] 6.3 `docs/quickstart.md`: clean project, curl room + token, React snippet, join on the VPS
 - [x] 6.4 `docs/deployment.md` publish notes; flip roadmap change #2 status
 - [x] 6.5 Full verification: server + client + package suites, e2e, browser smoke of host controls
