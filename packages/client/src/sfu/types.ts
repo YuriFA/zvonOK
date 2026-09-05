@@ -30,6 +30,9 @@ export interface SfuJoinPayload {
   username: string;
   roomOwnerId?: string;
   roomSlug?: string;
+  /** Room token (project rooms). When present, the server derives identity
+   * from the verified token claims instead of the payload fields. */
+  token?: string;
 }
 
 // Joined response from server

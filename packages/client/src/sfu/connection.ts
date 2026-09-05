@@ -6,14 +6,24 @@
 import { io } from "socket.io-client";
 import type { Socket } from "socket.io-client";
 
-const SOCKET_URL =
-  (import.meta.env as { VITE_SOCKET_URL?: string }).VITE_SOCKET_URL ?? "http://localhost:3000";
+const env = (import.meta.env ?? {}) as { VITE_SOCKET_URL?: string };
+
+const DEFAULT_SOCKET_URL = env.VITE_SOCKET_URL ?? "http://localhost:3000";
 
 /**
  * Manages socket.io connection to the SFU server.
  */
 export class SfuConnection {
   private socket: Socket | null = null;
+  private readonly socketUrl: string;
+
+  /**
+   * @param socketUrl base URL of the SFU server; defaults to
+   * VITE_SOCKET_URL or http://localhost:3000.
+   */
+  constructor(socketUrl: string = DEFAULT_SOCKET_URL) {
+    this.socketUrl = socketUrl;
+  }
 
   /**
    * Connect to the SFU namespace.
@@ -24,7 +34,7 @@ export class SfuConnection {
       return this.socket;
     }
 
-    this.socket = io(`${SOCKET_URL}/sfu`, {
+    this.socket = io(`${this.socketUrl}/sfu`, {
       withCredentials: true,
       transports: ["websocket", "polling"],
       reconnection: true,

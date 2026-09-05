@@ -3,7 +3,7 @@
  * Pure functions for calculating stream quality based on WebRTC stats.
  */
 
-import type { QualityStats, QualityScore, QualityLevel, SimulcastSpatialLayer } from "./types";
+import type { QualityStats, QualityScore, QualityLevel, SimulcastSpatialLayer } from "./types.js";
 
 /**
  * Get quality level from score.

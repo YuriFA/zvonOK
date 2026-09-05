@@ -16,7 +16,7 @@ import type {
   ScreenShareError,
   ScreenShareState,
   ScreenShareStateCallback,
-} from "./types";
+} from "./types.js";
 
 export interface ScreenShareServiceOptions {
   sfu: IScreenShareSfuPort;

@@ -5,7 +5,7 @@
 
 import { vi } from "vitest";
 
-import type { IScreenShareService, ScreenShareState, ScreenShareStateCallback } from "../types";
+import type { IScreenShareService, ScreenShareState, ScreenShareStateCallback } from "../types.js";
 
 export interface MockScreenShareService extends IScreenShareService {
   /** Drive state changes in tests */

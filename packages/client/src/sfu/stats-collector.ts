@@ -5,8 +5,8 @@
 
 import type { Consumer, Transport } from "mediasoup-client/types";
 
-import { calculateQualityScore } from "./quality-score";
-import type { QualityStatsCallback, PeerQualityStats, QualityStats } from "./types";
+import { calculateQualityScore } from "./quality-score.js";
+import type { QualityStatsCallback, PeerQualityStats, QualityStats } from "./types.js";
 
 /**
  * Collects quality statistics for SFU consumers.

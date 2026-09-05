@@ -15,10 +15,12 @@ import type {
   Transport,
 } from "mediasoup-client/types";
 
-import { SfuConnection } from "./connection";
-import { SfuEventRouter, type SfuEventHandlers } from "./event-router";
-import type { ISfuManager } from "./interfaces";
-import { SfuStatsCollector } from "./stats-collector";
+import type { Socket } from "socket.io-client";
+
+import { SfuConnection } from "./connection.js";
+import { SfuEventRouter, type SfuEventHandlers } from "./event-router.js";
+import type { ISfuManager } from "./interfaces.js";
+import { SfuStatsCollector } from "./stats-collector.js";
 import type {
   SfuState,
   SfuJoinedPayload,
@@ -46,8 +48,8 @@ import type {
   SfuScreenShareStoppedPayload,
   SfuScreenShareStoppedCallback,
   SfuGuestJoinRequestPayload,
-} from "./types";
-import { SfuProduceError } from "./types";
+} from "./types.js";
+import { SfuProduceError } from "./types.js";
 
 /**
  * Simulcast encoding layers sent to the SFU for video producers.
@@ -64,7 +66,7 @@ const SIMULCAST_ENCODINGS: RtpEncodingParameters[] = [
  * Implements ISfuManager by composing focused modules.
  */
 export class SfuManager implements ISfuManager {
-  private connection = new SfuConnection();
+  private connection: SfuConnection;
   private statsCollector: SfuStatsCollector;
 
   // Internal mediasoup state
@@ -111,7 +113,8 @@ export class SfuManager implements ISfuManager {
     this.createEventHandlers(),
   );
 
-  constructor() {
+  constructor(connection: SfuConnection = new SfuConnection()) {
+    this.connection = connection;
     this.statsCollector = new SfuStatsCollector(
       () => this.recvTransport,
       () => this.consumers.entries(),
@@ -170,7 +173,7 @@ export class SfuManager implements ISfuManager {
     return this.connection.isConnected();
   }
 
-  getSocket() {
+  getSocket(): Socket | null {
     return this.connection.getSocket();
   }
 
@@ -771,7 +774,7 @@ export class SfuManager implements ISfuManager {
       this.consumers.set(consumer.id, consumer);
       console.log("[SFU] Consumer ready:", payload.kind, consumer.id);
 
-      // Resume the consumer — delay for audio to let jitter buffer initialise
+      // Resume the consumer  -  delay for audio to let jitter buffer initialise
       if (payload.kind === "audio") {
         setTimeout(() => {
           this.connection.getSocket()?.emit("sfu:resume-consumer", { consumerId: consumer.id });

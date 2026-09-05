@@ -6,7 +6,7 @@
 import type { Producer } from "mediasoup-client/types";
 import type { Socket } from "socket.io-client";
 
-import type { ISfuManager } from "../interfaces";
+import type { ISfuManager } from "../interfaces.js";
 import type {
   SfuState,
   SfuStateCallback,
@@ -22,7 +22,7 @@ import type {
   SfuProducerStateCallback,
   SfuProduceErrorCode,
   SfuScreenShareStoppedCallback,
-} from "../types";
+} from "../types.js";
 
 export interface MockSfuManagerConfig {
   initialState?: Partial<SfuState>;
