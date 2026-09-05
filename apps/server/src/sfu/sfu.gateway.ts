@@ -26,7 +26,12 @@ import { OnGatewayInit } from '@nestjs/websockets';
 @SkipThrottle()
 @WebSocketGateway({
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    // Any origin may connect: token-authenticated SDK clients come from
+    // arbitrary origins. The /sfu namespace never authenticates via cookies
+    // (identity comes from REST-issued payloads or verified room tokens), so
+    // reflected-origin CORS here opens no cookie surface; cookie-bearing
+    // surfaces (/chat gateway, REST) keep their strict CLIENT_URL CORS.
+    origin: true,
     credentials: true,
   },
   namespace: '/sfu',

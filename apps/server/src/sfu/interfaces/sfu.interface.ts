@@ -12,6 +12,11 @@ import type {
 } from 'mediasoup/types';
 import type { IceServerConfig } from '../config/mediasoup.config';
 
+export interface PeerPermissions {
+  publish: boolean;
+  admin: boolean;
+}
+
 export interface Peer {
   id: string;
   userId: string;
@@ -21,6 +26,7 @@ export interface Peer {
   recvTransport?: WebRtcTransport;
   producers: Map<string, Producer>;
   consumers: Map<string, Consumer>;
+  permissions?: PeerPermissions;
 }
 
 export interface Room {
@@ -35,6 +41,17 @@ export interface SfuJoinPayload {
   username: string;
   roomOwnerId?: string;
   roomSlug?: string;
+  token?: string;
+}
+
+export type SfuJoinErrorCode =
+  | 'ROOM_TOKEN_INVALID'
+  | 'ROOM_TOKEN_EXPIRED'
+  | 'ROOM_TOKEN_ROOM_MISMATCH';
+
+export interface SfuJoinErrorPayload {
+  code: SfuJoinErrorCode;
+  message: string;
 }
 
 export interface SfuJoinedPayload {
@@ -63,15 +80,16 @@ export interface SfuTransportConnectedPayload {
 
 export type SfuMediaSource = 'camera' | 'screen';
 
+export interface SfuProduceAppData {
+  source?: SfuMediaSource;
+}
+
 export type SfuProduceErrorCode =
   | 'SCREEN_SHARE_ALREADY_ACTIVE'
   | 'SEND_TRANSPORT_NOT_READY'
   | 'TRANSPORT_NOT_FOUND'
+  | 'PUBLISH_NOT_ALLOWED'
   | 'PRODUCE_FAILED';
-
-export interface SfuProduceAppData {
-  source?: SfuMediaSource;
-}
 
 export interface SfuProducePayload {
   requestId: string;
