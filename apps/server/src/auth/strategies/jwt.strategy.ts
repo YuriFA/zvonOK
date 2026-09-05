@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { Request } from 'express';
@@ -35,9 +35,19 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   }
 
   async validate(payload: JwtPayload) {
-    // Access tokens are short-lived; tokenVersion validation happens in
-    // refresh token strategy where it matters most. This avoids a DB query
-    // on every authenticated request while maintaining security.
+    const user = await this.userService.user({ id: payload.id });
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid access token');
+    }
+
+    if (
+      payload.tokenVersion !== undefined &&
+      payload.tokenVersion !== user.tokenVersion
+    ) {
+      throw new UnauthorizedException('Token version mismatch');
+    }
+
     return { id: payload.id, email: payload.email, role: payload.role };
   }
 }
