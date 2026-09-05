@@ -8,6 +8,7 @@ import { SfuConnection } from "@zvonok/client/sfu/connection";
 import { SfuManager } from "@zvonok/client/sfu/manager";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { createDeferred } from "./deferred.js";
 import { ZvonokError, ZvonokJoinError } from "./errors.js";
 import type { ZvonokStatus } from "./types.js";
 import { useZvonokSession } from "./zvonok-context.js";
@@ -72,7 +73,7 @@ function toZvonokError(error: unknown, fallbackCode: string): ZvonokError {
 }
 
 function waitForConnectionState(manager: SfuManager, timeoutMs: number): Promise<void> {
-  const { promise, resolve, reject } = Promise.withResolvers<void>();
+  const { promise, resolve, reject } = createDeferred<void>();
   if (manager.getState().connectionState === "connected") {
     resolve();
     return promise;
@@ -110,7 +111,7 @@ function createJoinAckWaiter(
   timeoutMs: number,
   emitJoin: () => void,
 ): { promise: Promise<void>; send: () => void } {
-  const { promise, resolve, reject } = Promise.withResolvers<void>();
+  const { promise, resolve, reject } = createDeferred<void>();
   let timer: ReturnType<typeof setTimeout> | undefined;
   const cleanup = () => {
     clearTimeout(timer);
