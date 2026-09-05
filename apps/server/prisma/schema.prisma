@@ -34,8 +34,10 @@ model Room {
   id              String     @id @default(cuid())
   name            String?
   slug            String     @unique
-  ownerId         String
-  owner           User       @relation("RoomHost", fields: [ownerId], references: [id])
+  ownerId         String?
+  owner           User?      @relation("RoomHost", fields: [ownerId], references: [id])
+  projectId       String?
+  project         Project?   @relation(fields: [projectId], references: [id])
   isPublic        Boolean    @default(true)
   maxParticipants Int        @default(10)
   status          RoomStatus @default(active)
@@ -46,8 +48,45 @@ model Room {
   messages        Message[]
 
   @@index([ownerId])
+  @@index([projectId])
   @@index([status])
   @@index([isPublic])
+}
+
+model DeveloperAccount {
+  id           String    @id @default(cuid())
+  username     String    @unique
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  projects     Project[]
+
+  @@index([username])
+}
+
+model Project {
+  id                 String           @id @default(cuid())
+  name               String
+  developerAccount   DeveloperAccount @relation(fields: [developerAccountId], references: [id], onDelete: Cascade)
+  developerAccountId String
+  apiKeys            ApiKey[]
+  rooms              Room[]
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@index([developerAccountId])
+}
+
+model ApiKey {
+  id        String    @id @default(cuid())
+  keyHash   String    @unique
+  prefix    String
+  projectId String
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
+
+  @@index([projectId])
 }
 
 model Message {

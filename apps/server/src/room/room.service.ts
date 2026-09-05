@@ -21,6 +21,35 @@ export class RoomService {
     });
   }
 
+  async createProjectRoom(projectId: string, dto: CreateRoomDto) {
+    const slug = await this.generateUniqueSlug();
+    return this.prisma.room.create({
+      data: {
+        name: dto.name,
+        slug,
+        projectId,
+        maxParticipants: dto.maxParticipants ?? 10,
+      },
+    });
+  }
+
+  listProjectRooms(projectId: string) {
+    return this.prisma.room.findMany({
+      where: { projectId },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async findProjectRoom(id: string, projectId: string) {
+    const room = await this.prisma.room.findFirst({
+      where: { id, projectId },
+    });
+    if (!room) {
+      throw new NotFoundException('Room not found');
+    }
+    return room;
+  }
+
   async findBySlug(slug: string) {
     const room = await this.prisma.room.findUnique({ where: { slug } });
     if (!room) {
