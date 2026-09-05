@@ -14,6 +14,7 @@ import { useKeyboardShortcuts } from "@/features/room/hooks/use-keyboard-shortcu
 import type { UseRoomSessionResult } from "@/features/room/hooks/use-room-session";
 import type { ScreenShareError } from "@/hooks/use-screen-share";
 import { useScreenShare } from "@/hooks/use-screen-share";
+import type { Room } from "../types/room.types";
 
 import { useGuestRequests } from "../contexts/guest-requests.context";
 import { AsidePanel, AsidePanelContainer, AsidePanelHeader } from "./aside-panel";
