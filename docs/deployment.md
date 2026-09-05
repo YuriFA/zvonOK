@@ -525,3 +525,37 @@ Summary of required open ports:
 - Check logs for the crashing service: `docker compose logs <service>`
 - Common causes: missing env vars, wrong `MEDIASOUP_ANNOUNCED_IP`, database not ready
 - Verify `.env` has no typos or missing required values
+
+## Publishing the SDK packages
+
+The public SDK surface ships as two npm packages: `@zvonok/client`
+(framework-free core) and `@zvonok/react` (headless React bindings). Both live
+in `packages/` and are published manually - there is no CI release pipeline.
+
+Prerequisites (one-time):
+
+- Own the `@zvonok` organization on npm.com
+- `npm login` on the publishing machine (verify with `npm whoami`)
+
+Release flow per package:
+
+```bash
+# 1. Bump the version (independently per package)
+pnpm -C packages/client exec npm version patch   # or minor / major
+
+# 2. Build and inspect the tarball BEFORE publishing
+pnpm -C packages/client build
+pnpm -C packages/client pack
+tar -tzf zvonok-client-*.tgz   # must contain dist/ only, plus README/LICENSE
+
+# 3. Publish (pnpm applies publishConfig: dist-based exports, public access)
+pnpm -C packages/client publish --access public --no-git-checks
+```
+
+Repeat for `packages/react`. Note that plain `npm publish` will NOT apply
+`publishConfig` - always publish with pnpm. After publishing, smoke-test the
+tarball from a clean directory: `npm i @zvonok/react`, then follow
+`docs/quickstart.md` against the production server.
+
+Versioning: semver per package; keep the two in lockstep while the React
+binding remains 0.x.
