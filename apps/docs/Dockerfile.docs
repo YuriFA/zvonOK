@@ -1,0 +1,41 @@
+# Builds the VitePress docs site (pnpm docs:build) and serves the static
+# output with nginx. Context is the repository root; CI tags it as
+# ghcr.io/<repo>/docs (build-docs job in deploy.yml).
+FROM node:22-alpine AS base
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
+
+FROM base AS build
+WORKDIR /app
+
+# Switch to non-root user before installing deps.
+# chown ensures the node user can write to WORKDIR.
+RUN chown node:node /app
+USER node
+
+# Copy workspace manifests first so pnpm install is cached independently of
+# source changes. Every workspace manifest is needed for the frozen-lockfile
+# check, but the docs build only installs root deps (vitepress), not the
+# apps' native stacks.
+COPY --chown=node:node pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+COPY --chown=node:node apps/server/package.json ./apps/server/
+COPY --chown=node:node apps/client/package.json ./apps/client/
+COPY --chown=node:node packages/client/package.json ./packages/client/
+COPY --chown=node:node packages/video-layout/package.json ./packages/video-layout/
+
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store,uid=1000 \
+    pnpm install --frozen-lockfile --filter webrtc-chat
+
+# Copy the docs source (the working markdown is the site source)
+COPY --chown=node:node docs ./docs
+
+RUN pnpm run docs:build
+
+# Runtime: nginx serving the baked static output on plain HTTP :80
+# (TLS is terminated by the Traefik gateway in front of this container)
+FROM nginx:alpine
+
+COPY --from=build /app/docs/.vitepress/dist /usr/share/nginx/html
+
+EXPOSE 80

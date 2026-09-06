@@ -124,6 +124,30 @@ services:
       - web
     restart: unless-stopped
 
+  # --- Docs site (static VitePress output served by nginx) ---
+  # Behind the shared Traefik gateway: docs.<domain> routes here over the
+  # shared `web` network. Independent from the app's Caddy edge - a docs
+  # rebuild never restarts the main site.
+  docs:
+    image: ghcr.io/${GHCR_REPO}/docs:${IMAGE_TAG:-latest}
+    container_name: zvonok-docs
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    expose:
+      - "80"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.zvonok-docs.rule=Host(`docs.${SITE_ADDRESS}`)"
+      - "traefik.http.routers.zvonok-docs.entrypoints=websecure"
+      - "traefik.http.routers.zvonok-docs.tls.certresolver=le"
+      - "traefik.http.services.zvonok-docs.loadbalancer.server.port=80"
+    networks:
+      - web
+    restart: unless-stopped
+
   # --- coturn TURN/STUN server ---
   coturn:
     image: coturn/coturn:alpine

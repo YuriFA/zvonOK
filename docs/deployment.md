@@ -20,7 +20,7 @@ Internet
 
 In production, a shared **Traefik** gateway (`~/gateway` on the VPS) owns ports 80/443, terminates TLS (Let's Encrypt), and routes by hostname to this stack's Caddy over the shared `web` Docker network. For local/standalone runs Traefik is absent and Caddy manages TLS itself.
 
-**Five services** run via `docker-compose.yml`:
+**Five services** run via `docker-compose.yml`; production adds a sixth, the docs site:
 
 | Service    | Image / Dockerfile         | Role |
 |------------|---------------------------|------|
@@ -29,10 +29,11 @@ In production, a shared **Traefik** gateway (`~/gateway` on the VPS) owns ports 
 | `server`   | `apps/server/Dockerfile` (target: `production`) | NestJS API + mediasoup SFU |
 | `caddy`    | `apps/client/Dockerfile`   | Caddy reverse proxy with baked-in client static assets; TLS at the edge (Traefik in prod, Caddy itself in dev) |
 | `coturn`   | `coturn/coturn:alpine`     | STUN/TURN server for NAT traversal (host network mode) |
+| `docs`     | `apps/docs/Dockerfile.docs` | Static documentation site (VitePress build served by nginx); prod compose only, behind Traefik at `docs.<domain>` |
 
 ### `docker-compose.yml` vs `docker-compose.prod.yml`
 
-Both files define the same five services but differ intentionally:
+Both files define the same five app services (the `docs` site service exists only in prod) but differ intentionally:
 
 | Difference | `docker-compose.yml` | `docker-compose.prod.yml` | Reason |
 |------------|---------------------|---------------------------|--------|
@@ -43,7 +44,7 @@ Both files define the same five services but differ intentionally:
 
 ## Traefik Gateway (Multi-Site Production)
 
-The VPS hosts several independent sites, each in its own repository, each on its own subdomain. A single Traefik container (`~/gateway`) owns host ports 80/443, obtains Let's Encrypt certificates for every domain, and routes by `Host` header to containers on the shared external Docker network `web`. Full details: [traefik-migration-plan.md](./traefik-migration-plan.md). The first-time gateway setup is walked through by `scripts/setup-traefik-gateway.sh`.
+The VPS hosts several independent sites, each in its own repository, each on its own subdomain. A single Traefik container (`~/gateway`) owns host ports 80/443, obtains Let's Encrypt certificates for every domain, and routes by `Host` header to containers on the shared external Docker network `web`. Full details: `docs/traefik-migration-plan.md` in the repository. The first-time gateway setup is walked through by `scripts/setup-traefik-gateway.sh`.
 
 Why prod uses `Caddyfile.traefik` instead of the dev `Caddyfile`: with a real domain, the dev config enables automatic HTTPS and redirects every plain-HTTP request to HTTPS. Traefik forwards plain HTTP, so that redirect would loop forever. `Caddyfile.traefik` serves plain HTTP only — no TLS, no redirects; routing rules are shared via `Caddyfile.routes`.
 
@@ -78,6 +79,12 @@ Each new repository deploys independently — no changes to the gateway or to zv
 5. **DNS** — A record `shop.example.com → VPS IP`.
 
 The certificate is issued automatically by Traefik on the first request. Router names (`shop`) must be unique across all containers on the gateway.
+
+## Docs Site
+
+`docs.<domain>` serves the documentation site. It is its own container in the prod stack: `apps/docs/Dockerfile.docs` builds the curated markdown under `docs/` with VitePress and serves the static output with nginx. The `build-docs` CI job publishes it as `ghcr.io/<repo>/docs` with the same `sha-*` / `latest` tags as the app images; `docker compose pull && docker compose up -d` on the VPS picks it up like the other services. For local preview, run `pnpm docs:dev`.
+
+Docs rebuilds are independent from the app edge: the docs container is a separate site on the shared `web` network with its own Traefik router, so redeploying the docs never restarts Caddy (and rebuilding the app never restarts the docs).
 
 ## Prerequisites
 
@@ -117,11 +124,14 @@ Before deploying, point your domain to the server:
 ```bash
 # Create a DNS A record:
 #   chat.example.com  →  YOUR_SERVER_PUBLIC_IP
+#   docs.example.com  →  YOUR_SERVER_PUBLIC_IP   (docs site, before the first deploy)
 #
 # Verify propagation:
 dig +short chat.example.com
 # Should return your server IP
 ```
+
+The `docs.example.com` record must exist before the first deploy; Traefik obtains its certificate on the first request.
 
 If you don't have a domain yet, you can use `SITE_ADDRESS=localhost` for initial testing (Caddy will use a self-signed certificate).
 
