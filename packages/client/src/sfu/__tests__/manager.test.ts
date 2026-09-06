@@ -294,6 +294,89 @@ describe("SfuManager", () => {
     expect(testContext.mockProducer.replaceTrack).toHaveBeenCalledWith({ track: nextTrack });
   });
 
+  it("buffers a produce call that arrives before the send transport and flushes it once created", async () => {
+    manager.connect();
+
+    testContext.mockSocket.connected = true;
+    await testContext.emitSocketEvent("connect");
+    await testContext.emitSocketEvent("sfu:joined", {
+      routerRtpCapabilities: { codecs: [] },
+    });
+
+    const earlyTrack = { kind: "video", readyState: "live" } as MediaStreamTrack;
+    const producePromise = manager.produce(earlyTrack);
+
+    // Device/transport creation is still in flight: nothing produced yet.
+    expect(testContext.mockSendTransport.produce).not.toHaveBeenCalled();
+
+    await testContext.emitSocketEvent("sfu:transport-created", {
+      ...transportPayload,
+      direction: "send",
+      transportId: "send-transport",
+    });
+
+    const producer = await producePromise;
+    expect(producer).toBe(testContext.mockProducer);
+    expect(testContext.mockSendTransport.produce).toHaveBeenCalledWith(
+      expect.objectContaining({ track: earlyTrack }),
+    );
+  });
+
+  it("rejects buffered produce calls when the session is torn down", async () => {
+    manager.connect();
+
+    testContext.mockSocket.connected = true;
+    await testContext.emitSocketEvent("connect");
+    await testContext.emitSocketEvent("sfu:joined", {
+      routerRtpCapabilities: { codecs: [] },
+    });
+
+    const producePromise = manager.produce({ kind: "audio", readyState: "live" } as MediaStreamTrack);
+    manager.disconnect();
+
+    await expect(producePromise).rejects.toThrow("Transport closed");
+  });
+
+  it("derives the join roomId from the token's sub claim, not from the slug-named field", async () => {
+    manager.connect();
+
+    testContext.mockSocket.connected = true;
+    await testContext.emitSocketEvent("connect");
+
+    const token = `header.${btoa(JSON.stringify({ sub: "room-id-123" })).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")}.sig`;
+    await manager.joinRoom({
+      roomId: "i-was-slug",
+      roomSlug: "i-was-slug",
+      userId: "user-1",
+      username: "Alice",
+      token,
+    });
+
+    expect(testContext.mockSocket.emit).toHaveBeenCalledWith(
+      "sfu:join",
+      expect.objectContaining({ roomId: "room-id-123", roomSlug: "i-was-slug" }),
+    );
+  });
+
+  it("keeps the caller's roomId when the token carries no readable sub", async () => {
+    manager.connect();
+
+    testContext.mockSocket.connected = true;
+    await testContext.emitSocketEvent("connect");
+
+    await manager.joinRoom({
+      roomId: "room-from-caller",
+      userId: "user-1",
+      username: "Alice",
+      token: "not-a-jwt",
+    });
+
+    expect(testContext.mockSocket.emit).toHaveBeenCalledWith(
+      "sfu:join",
+      expect.objectContaining({ roomId: "room-from-caller" }),
+    );
+  });
+
   describe("handleDisconnected", () => {
     it("transitions connectionState to 'connecting' (not 'disconnected') on socket disconnect", async () => {
       const stateCallback = vi.fn();

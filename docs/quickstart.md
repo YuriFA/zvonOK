@@ -39,7 +39,7 @@ curl -s -X POST "$ZVONOK_URL/v1/rooms" \
 curl -s -X POST "$ZVONOK_URL/v1/rooms/<roomId>/tokens" \
   -H "Authorization: Bearer $ZVONOK_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"displayName": "Alice"}'
+  -d '{"name": "Alice"}'
 ```
 
 Both endpoints return JSON; keep the room `slug` and the token `token` value
