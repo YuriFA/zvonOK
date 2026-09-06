@@ -48,6 +48,39 @@ so mint a fresh one per session.
 
 ## 3. Join the room from React
 
+Two ways to render the room: the drop-in `ZvonokRoom` component (next), or
+the headless hooks (the rest of this section) when you want full control of
+the UI.
+
+### Drop-in: ZvonokRoom
+
+`main.jsx`:
+
+```jsx
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import { ZvonokRoom } from "@zvonok/react";
+
+createRoot(document.getElementById("root")).render(
+  <StrictMode>
+    <ZvonokRoom
+      serverUrl="https://your-zvonok-server.example"
+      roomSlug="<slug from step 2>"
+      token="<token from step 2>"
+    />
+  </StrictMode>,
+);
+```
+
+That is the whole app: pre-join card, video grid, and mic, camera, screen
+share, and leave controls. Pass `displayName` to skip the pre-join card,
+`onLeft` to react to leaving, and `onError` to observe typed join failures.
+The widget imports its own stylesheet (`zvonok.css`, all classes `zvk-`
+prefixed); for manual stylesheet control it is also exported as
+`@zvonok/react/zvonok.css`.
+
+### Headless: provider + hooks
+
 `index.html`:
 
 ```html
@@ -123,6 +156,8 @@ events.
 ## What the SDK exposes
 
 - `ZvonokProvider` - carries the server URL and the shared media manager
+- `ZvonokRoom` - drop-in meeting room component (see the drop-in variant
+  in step 3); renders its own provider from a `serverUrl` prop
 - `useZvonokConnection({ roomSlug, token })` - join lifecycle plus publishing
   controls (`produceTrack`, `pauseProducer`, `resumeProducer`, `replaceTrack`)
   and the underlying `manager` for advanced use

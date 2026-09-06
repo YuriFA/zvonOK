@@ -146,14 +146,22 @@ describe("useZvonokConnection", () => {
     try {
       const { result } = renderConnection();
 
-      let promise: Promise<void> = Promise.resolve();
+      // Mirror the rejection into a settled value immediately, so the
+      // joined promise never carries an unhandled rejection past the tick
+      // that fires the join timeout.
+      let outcome: unknown;
       act(() => {
-        promise = result.current.join();
+        outcome = result.current.join().then(
+          () => null,
+          (error: unknown) => error,
+        );
       });
+      let rejection: unknown;
       await act(async () => {
         await vi.advanceTimersByTimeAsync(10_000);
+        rejection = await outcome;
       });
-      await expect(promise).rejects.toMatchObject({ code: "JOIN_TIMEOUT" });
+      expect(rejection).toMatchObject({ code: "JOIN_TIMEOUT" });
       expect(result.current.status).toBe("error");
     } finally {
       vi.useRealTimers();
