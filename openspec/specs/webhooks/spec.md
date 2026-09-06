@@ -1,0 +1,74 @@
+# webhooks
+
+## Purpose
+
+Per-project server-to-server event delivery: project-owned room lifecycle reaches the consumer's endpoint as signed HTTP POSTs with retries.
+
+## Requirements
+
+### Requirement: Webhook configuration
+A project SHALL have at most one webhook endpoint: a URL and a signing secret
+set via the developer module. Setting the endpoint SHALL generate a new secret
+and return it in the response; removing the endpoint SHALL stop all deliveries
+for the project immediately.
+
+#### Scenario: Configure endpoint
+- **WHEN** an authenticated developer sets a webhook URL for their project
+- **THEN** the endpoint is stored together with a generated signing secret and the secret is returned once in the response
+
+#### Scenario: Remove endpoint
+- **WHEN** the developer removes the webhook configuration
+- **THEN** subsequent room events for that project are not delivered anywhere
+
+### Requirement: Signed event delivery
+Every webhook delivery SHALL be an HTTP `POST` with a JSON body containing at
+least `type`, `timestamp`, and `data`, and with `X-Zvonok-Timestamp` and
+`X-Zvonok-Signature` headers where the signature is
+`sha256=HMAC-SHA256(secret, "{timestamp}.{rawBody}")`. A receiver following
+only this contract can verify authenticity and freshness of every event.
+
+#### Scenario: Receiver verifies a genuine event
+- **WHEN** the consumer recomputes HMAC-SHA256 over `"{timestamp}.{rawBody}"` with their secret
+- **THEN** the computed digest matches `X-Zvonok-Signature`
+
+#### Scenario: Forged event rejected
+- **WHEN** an attacker POSTs a fabricated event without knowing the secret
+- **THEN** the recomputed digest does not match the claimed signature and the receiver rejects it
+
+### Requirement: Room lifecycle events
+Project-owned rooms SHALL emit `room.started` when the first participant joins,
+`participant.joined` and `participant.left` on every participant arrival and
+departure, and `room.ended` when the room ends. Events SHALL identify the room
+(id, slug) and the participant (id, display name) where applicable; a left
+event SHALL include the departure reason (leave, kick, disconnect, room end).
+User-owned rooms SHALL NOT emit webhook events.
+
+#### Scenario: First participant opens a room
+- **WHEN** the first participant joins a project-owned room
+- **THEN** the project's endpoint receives `room.started` followed by `participant.joined` for that participant
+
+#### Scenario: Participant departs
+- **WHEN** a participant leaves, is kicked, or disconnects
+- **THEN** the endpoint receives `participant.left` carrying the departure reason
+
+#### Scenario: Room ends
+- **WHEN** a project room is ended via the public API
+- **THEN** the endpoint receives `room.ended` after the participants are torn down
+
+#### Scenario: User-owned rooms stay silent
+- **WHEN** participants join and leave a user-owned room
+- **THEN** no webhook events are emitted for it
+
+### Requirement: Delivery retries
+A delivery that fails (network error, timeout, or non-2xx response) SHALL be
+retried up to 5 times with exponentially increasing delays, and then dropped.
+Each attempt SHALL carry a fresh timestamp and signature. Deliveries are
+best-effort: events are not persisted for redelivery across server restarts.
+
+#### Scenario: Temporary endpoint outage
+- **WHEN** the endpoint returns 500 for the initial attempt
+- **THEN** the delivery is retried with growing delays until it succeeds or the attempts are exhausted
+
+#### Scenario: Endpoint down for good
+- **WHEN** every attempt fails
+- **THEN** the event is dropped and delivery of later events continues independently
