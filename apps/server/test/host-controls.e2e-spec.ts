@@ -114,6 +114,14 @@ describe('SFU host controls (e2e)', () => {
         project: {
           findFirst: jest.fn().mockResolvedValue({ id: 'project-e2e' }),
         },
+        egress: {
+          findUnique: jest.fn().mockResolvedValue(null),
+          findFirst: jest.fn().mockResolvedValue(null),
+          findMany: jest.fn().mockResolvedValue([]),
+          create: jest.fn(),
+          update: jest.fn(),
+          updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+        },
         room: {
           findUnique: jest.fn().mockResolvedValue(null),
           findFirst: jest.fn(

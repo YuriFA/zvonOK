@@ -395,4 +395,81 @@ describe('WebhookDispatcher', () => {
 
     expect(stub.requests).toHaveLength(0);
   });
+  it('delivers egress lifecycle events carrying session and reason fields', async () => {
+    const stub = await startStub();
+    prisma.project.findUnique.mockResolvedValue({
+      ...project,
+      webhookUrl: stub.url,
+    });
+    const { dispatcher } = makeDispatcher(prisma);
+
+    dispatcher.egressStarted('room-1', 'room-slug', 'egress-1', {
+      rtmpEndpoints: ['rtmp://example.com/live'],
+      hls: true,
+    });
+    dispatcher.egressStopped(
+      'room-1',
+      'room-slug',
+      'egress-1',
+      { rtmpEndpoints: ['rtmp://example.com/live'], hls: true },
+      'stopped',
+    );
+    dispatcher.egressFailed(
+      'room-1',
+      'room-slug',
+      'egress-1',
+      { rtmpEndpoints: [], hls: true },
+      'pipeline exited unexpectedly',
+    );
+    await waitForRequests(stub, 3);
+    await stub.close();
+
+    expect(stub.requests.map((r) => r.parsed.type)).toEqual([
+      'egress.started',
+      'egress.stopped',
+      'egress.failed',
+    ]);
+    const outputs = { rtmpEndpoints: ['rtmp://example.com/live'], hls: true };
+    expect(stub.requests[0].parsed.data).toMatchObject({
+      roomId: 'room-1',
+      roomSlug: 'room-slug',
+      egress: { id: 'egress-1', outputs },
+    });
+    expect(stub.requests[1].parsed.data).toMatchObject({
+      egress: { id: 'egress-1' },
+      reason: 'stopped',
+    });
+    expect(stub.requests[2].parsed.data).toMatchObject({
+      egress: { id: 'egress-1' },
+      error: 'pipeline exited unexpectedly',
+    });
+  });
+
+  it('is silent for egress events on user-owned rooms', async () => {
+    const stub = await startStub();
+    prisma.room.findUnique.mockResolvedValue({
+      slug: 'user-room-slug',
+      projectId: null,
+    });
+    const { dispatcher } = makeDispatcher(prisma);
+
+    dispatcher.egressStarted('room-1', 'user-room-slug', 'egress-1', {
+      rtmpEndpoints: ['rtmp://example.com/live'],
+      hls: false,
+    });
+    await expectNoRequests(stub, 0);
+    await stub.close();
+  });
+
+  it('does not throw into callers when an egress emission fails', async () => {
+    prisma.room.findUnique.mockRejectedValue(new Error('db down'));
+    const { dispatcher } = makeDispatcher(prisma);
+
+    expect(() =>
+      dispatcher.egressStarted('room-1', undefined, 'egress-1', {
+        rtmpEndpoints: [],
+        hls: false,
+      }),
+    ).not.toThrow();
+  });
 });

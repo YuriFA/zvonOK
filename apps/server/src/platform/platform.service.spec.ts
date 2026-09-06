@@ -97,6 +97,12 @@ describe('PlatformService', () => {
     softDeleteRoom: jest.Mock;
   };
   let sfuService: { endRoom: jest.Mock };
+  let egressService: {
+    start: jest.Mock;
+    listForRoom: jest.Mock;
+    get: jest.Mock;
+    stop: jest.Mock;
+  };
   let roomTokenHelper: { mint: jest.Mock; expiresAt: jest.Mock };
 
   beforeEach(() => {
@@ -107,6 +113,12 @@ describe('PlatformService', () => {
       softDeleteRoom: jest.fn(),
     };
     sfuService = { endRoom: jest.fn() };
+    egressService = {
+      start: jest.fn(),
+      listForRoom: jest.fn(),
+      get: jest.fn(),
+      stop: jest.fn(),
+    };
     roomTokenHelper = {
       mint: jest.fn().mockReturnValue('signed-token'),
       expiresAt: jest.fn().mockReturnValue(new Date('2026-01-01T00:00:00Z')),
@@ -116,6 +128,7 @@ describe('PlatformService', () => {
       roomService as unknown as RoomService,
       sfuService as unknown as SfuService,
       roomTokenHelper as unknown as RoomTokenHelper,
+      egressService as never,
     );
   });
 

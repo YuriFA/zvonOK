@@ -27,6 +27,7 @@ export default defineConfig({
         items: [
           { text: "Quickstart", link: "/quickstart" },
           { text: "Deployment", link: "/deployment" },
+          { text: "Egress", link: "/egress" },
           { text: "Platform Roadmap", link: "/platform-roadmap" },
         ],
       },

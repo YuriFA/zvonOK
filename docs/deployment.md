@@ -39,6 +39,7 @@ Both files define the same five app services (the `docs` site service exists onl
 |------------|---------------------|---------------------------|--------|
 | Images | Builds from local Dockerfiles | Pulls pre-built images from GHCR | Prod uses CI-built images; dev builds locally |
 | Server `TURN_*` env vars | Not set | `TURN_URL`, `TURNS_URL`, `TURN_AUTH_SECRET` | In local dev coturn runs without auth; prod mints ephemeral TURN credentials and passes them to clients via `sfu:transport-created` |
+| Server `EGRESS_*` env vars | Defaults | `EGRESS_FFMPEG_PATH`, `EGRESS_MEDIA_PORT_MIN/MAX`, `EGRESS_HLS_DIR`, `EGRESS_ALLOW_PRIVATE_TARGETS` | Egress (HLS/RTMP) needs an ffmpeg binary on the server host and a UDP range disjoint from the mediasoup RTC range |
 | Caddy `certs` volume | `./certs:/srv/certs:ro` | Not mounted | Dev uses self-signed certs from `./certs`; prod terminates TLS at Traefik |
 | Caddy entrypoint | Host ports 80/443, `Caddyfile` | `expose: 80` behind Traefik, `Caddyfile.traefik` | Prod shares ports 80/443 with other sites via the gateway |
 
@@ -114,6 +115,7 @@ The following ports must be open on the server firewall:
 | 5349 | UDP + TCP | coturn | TURNS (TLS) |
 | 40000–40099 | UDP + TCP | mediasoup | WebRTC media transport |
 | 49152–49252 | UDP | coturn | TURN relay range |
+| 42000–42100 | UDP | server (egress) | FFmpeg RTP ingest range |
 
 > For local testing without a domain, `SITE_ADDRESS=localhost` uses Caddy's self-signed certificate.
 
@@ -161,7 +163,9 @@ sudo ufw allow 40000:40099/udp
 # coturn relay range
 sudo ufw allow 49152:49252/udp
 
-# Enable if not already active
+# Egress RTP ingest (HLS/RTMP live streaming)
+sudo ufw allow 42000:42100/udp
+
 sudo ufw enable
 ```
 
@@ -486,6 +490,7 @@ Summary of required open ports:
 | 5349 | UDP + TCP | coturn | TURNS (TLS) |
 | 40000–40099 | UDP + TCP | mediasoup | WebRTC media transport |
 | 49152–49252 | UDP | coturn | TURN relay range |
+| 42000–42100 | UDP | server (egress) | FFmpeg RTP ingest range |
 
 ## Troubleshooting
 

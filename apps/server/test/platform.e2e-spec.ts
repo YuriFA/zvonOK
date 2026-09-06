@@ -10,6 +10,19 @@ import { ApiKeyHelper } from '../src/developer/api-key.helper';
 import { WorkerManager } from '../src/sfu/worker-manager';
 import type { Server as NetServer } from 'node:net';
 
+jest.mock('../src/egress/ffmpeg/ffmpeg-process', () => ({
+  FFmpegProcess: {
+    spawn: jest.fn(() => ({
+      on: jest.fn(),
+      stop: jest.fn().mockResolvedValue(undefined),
+    })),
+  },
+}));
+jest.mock('../src/egress/ffmpeg/args-composer', () => ({
+  generateSdp: jest.fn(() => 'sdp'),
+  composeEgressArgs: jest.fn(() => ['-nostdin']),
+}));
+
 interface TestRoom {
   id: string;
   name?: string;
@@ -34,6 +47,10 @@ describe('Developer platform (e2e)', () => {
     revokedAt: null as Date | null,
   };
   const rooms = new Map<string, TestRoom>();
+  const egresses = new Map<
+    string,
+    Record<string, unknown> & { id: string; roomId: string; status: string }
+  >();
 
   function connectSocket(): Socket {
     const socket = io(`${httpUrl}/sfu`, {
@@ -86,8 +103,47 @@ describe('Developer platform (e2e)', () => {
         project: {
           findFirst: jest.fn().mockResolvedValue({ id: 'project-e2e' }),
         },
+        egress: {
+          findUnique: jest.fn(
+            async ({ where }) => egresses.get(where.id) ?? null,
+          ),
+          findUniqueOrThrow: jest.fn(async ({ where }) =>
+            egresses.get(where.id),
+          ),
+          findFirst: jest.fn(({ where }) => {
+            for (const row of egresses.values()) {
+              if (row.roomId !== where.roomId) continue;
+              if (where.status?.in?.includes(row.status)) return row;
+            }
+            return null;
+          }),
+          findMany: jest.fn(() =>
+            [...egresses.values()].filter(
+              (row) => row.projectId === 'project-e2e',
+            ),
+          ),
+          create: jest.fn(({ data }) => {
+            const row = {
+              id: `egress-${egresses.size + 1}`,
+              status: 'starting',
+              endedReason: null,
+              error: null,
+              startedAt: new Date(),
+              endedAt: null,
+              ...data,
+            };
+            egresses.set(row.id, row);
+            return row;
+          }),
+          update: jest.fn(({ where, data }) => {
+            const next = { ...(egresses.get(where.id) ?? {}), ...data };
+            egresses.set(where.id, next);
+            return next;
+          }),
+          updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+        },
         room: {
-          findUnique: jest.fn().mockResolvedValue(null),
+          findUnique: jest.fn(({ where }) => rooms.get(where.id) ?? null),
           findFirst: jest.fn(
             ({ where }: { where: { id: string; projectId?: string } }) => {
               const room = rooms.get(where.id);
@@ -282,6 +338,90 @@ describe('Developer platform (e2e)', () => {
 
     const error: { code?: string } = await joinError;
     expect(error.code).toBe('ROOM_TOKEN_ROOM_MISMATCH');
+  });
+
+  it('rejects egress start without outputs', async () => {
+    const room = await request(app.getHttpServer())
+      .post('/v1/rooms')
+      .set(bearer)
+      .send({});
+    const response = await request(app.getHttpServer())
+      .post(`/v1/rooms/${room.body.id}/egress`)
+      .set(bearer)
+      .send({});
+
+    expect(response.status).toBe(400);
+  });
+
+  it('rejects egress start with a non-RTMP endpoint', async () => {
+    const room = await request(app.getHttpServer())
+      .post('/v1/rooms')
+      .set(bearer)
+      .send({});
+    const response = await request(app.getHttpServer())
+      .post(`/v1/rooms/${room.body.id}/egress`)
+      .set(bearer)
+      .send({ rtmpEndpoints: ['https://example.com/live'] });
+
+    expect(response.status).toBe(400);
+  });
+
+  it('starts, inspects, and stops an egress session', async () => {
+    const room = await request(app.getHttpServer())
+      .post('/v1/rooms')
+      .set(bearer)
+      .send({});
+    const roomId = room.body.id as string;
+
+    const started = await request(app.getHttpServer())
+      .post(`/v1/rooms/${roomId}/egress`)
+      .set(bearer)
+      .send({ hls: true });
+
+    expect(started.status).toBe(201);
+    expect(started.body.status).toBe('starting');
+    expect(started.body.outputs).toEqual({ rtmpEndpoints: [], hls: true });
+    expect(started.body.hlsUrl).toBe(
+      `/egress/hls/${started.body.id}/index.m3u8`,
+    );
+
+    // A second active session for the same room is refused.
+    const second = await request(app.getHttpServer())
+      .post(`/v1/rooms/${roomId}/egress`)
+      .set(bearer)
+      .send({ rtmpEndpoints: ['rtmp://example.com/live'] });
+    expect(second.status).toBe(409);
+
+    const list = await request(app.getHttpServer())
+      .get(`/v1/rooms/${roomId}/egress`)
+      .set(bearer);
+    expect(list.status).toBe(200);
+    expect(list.body).toHaveLength(1);
+
+    const inspect = await request(app.getHttpServer())
+      .get(`/v1/egress/${started.body.id}`)
+      .set(bearer);
+    expect(inspect.status).toBe(200);
+    expect(inspect.body.roomId).toBe(roomId);
+
+    const stopped = await request(app.getHttpServer())
+      .post(`/v1/egress/${started.body.id}/stop`)
+      .set(bearer);
+    expect(stopped.status).toBe(200);
+    expect(stopped.body.status).toBe('ended');
+    expect(stopped.body.endedReason).toBe('stopped');
+
+    const again = await request(app.getHttpServer())
+      .post(`/v1/egress/${started.body.id}/stop`)
+      .set(bearer);
+    expect(again.status).toBe(409);
+
+    // The room accepts a fresh session after the previous one ended.
+    const restarted = await request(app.getHttpServer())
+      .post(`/v1/rooms/${roomId}/egress`)
+      .set(bearer)
+      .send({ hls: true });
+    expect(restarted.status).toBe(201);
   });
 
   it('ends a room via the public API', async () => {

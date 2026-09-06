@@ -23,6 +23,14 @@ describe('App (e2e)', () => {
           update: jest.fn(),
           count: jest.fn(),
         },
+        egress: {
+          findUnique: jest.fn().mockResolvedValue(null),
+          findFirst: jest.fn().mockResolvedValue(null),
+          findMany: jest.fn().mockResolvedValue([]),
+          create: jest.fn(),
+          update: jest.fn(),
+          updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+        },
         room: {
           deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
           findMany: jest.fn(),

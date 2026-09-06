@@ -5,15 +5,17 @@ jest.mock('src/prisma/prisma.service', () => ({
 import type { Socket } from 'socket.io';
 import type {
   AppData,
-  Producer,
+  PlainTransport,
   Router,
   RtpCapabilities,
   RtpParameters,
   WebRtcTransport,
 } from 'mediasoup/types';
+import { NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import type { TestingModule } from '@nestjs/testing';
 import { SfuService } from './sfu.service';
+import type { Producer } from 'mediasoup/types';
 import { WorkerManager } from './worker-manager';
 import type {
   Peer,
@@ -24,6 +26,8 @@ import { RoomTokenHelper } from '../platform/room-token.helper';
 import { PrismaService } from 'src/prisma/prisma.service';
 import type { RoomTokenVerifyResult } from '../platform/room-token.helper';
 import { WebhookDispatcher } from '../webhooks/webhook-dispatcher.service';
+import { egressPlainTransportOptions } from '../egress/egress.config';
+import type { EgressTapDescriptor } from '../egress/egress.types';
 
 type SfuServiceState = {
   peers: Map<string, unknown>;
@@ -1354,5 +1358,224 @@ describe('webhook emissions', () => {
 
     expect(webhooks.roomEnded).toHaveBeenCalledWith('room-empty', undefined);
     expect(workerManager.closeRouter).not.toHaveBeenCalled();
+  });
+});
+
+describe('egress taps', () => {
+  const serviceState = () =>
+    service as unknown as {
+      peers: Map<string, Peer>;
+      rooms: Map<string, Set<string>>;
+    };
+
+  const addPeerWithProducers = (
+    socketId: string,
+    producers: Array<{
+      id: string;
+      kind: 'audio' | 'video';
+      appData?: Record<string, unknown>;
+    }>,
+  ) => {
+    serviceState().peers.set(socketId, {
+      id: socketId,
+      userId: `user-${socketId}`,
+      username: socketId,
+      socket: createSocket(socketId),
+      producers: new Map(
+        producers.map((producer) => [
+          producer.id,
+          {
+            id: producer.id,
+            kind: producer.kind,
+            paused: false,
+            appData: producer.appData ?? {},
+          },
+        ]),
+      ),
+      consumers: new Map(),
+    } as unknown as Peer);
+  };
+
+  it('lists room producers across peers with sources, defaulting audio to camera', () => {
+    addPeerWithProducers('socket-1', [
+      { id: 'producer-video', kind: 'video', appData: { source: 'camera' } },
+      { id: 'producer-screen', kind: 'video', appData: { source: 'screen' } },
+    ]);
+    addPeerWithProducers('socket-2', [
+      { id: 'producer-audio', kind: 'audio', appData: {} },
+    ]);
+    serviceState().rooms.set('room-1', new Set(['socket-1', 'socket-2']));
+
+    expect(service.listRoomProducers('room-1')).toEqual([
+      { producerId: 'producer-video', kind: 'video', source: 'camera' },
+      { producerId: 'producer-screen', kind: 'video', source: 'screen' },
+      { producerId: 'producer-audio', kind: 'audio', source: 'camera' },
+    ]);
+  });
+
+  it('lists no producers for an unknown room', () => {
+    expect(service.listRoomProducers('room-404')).toEqual([]);
+  });
+
+  it('creates an egress plain transport with the shared options', async () => {
+    const createPlainTransport = jest.fn().mockResolvedValue({ id: 'plain-1' });
+    workerManager.getRouter.mockImplementation(
+      () => ({ createPlainTransport }) as unknown as Router<AppData>,
+    );
+
+    const transport = await service.createEgressTransport('room-1');
+
+    expect(transport).toEqual({ id: 'plain-1' });
+    expect(createPlainTransport).toHaveBeenCalledTimes(1);
+    expect(createPlainTransport.mock.calls[0][0]).toBe(
+      egressPlainTransportOptions,
+    );
+  });
+
+  it('rejects egress transport creation for an unknown room', async () => {
+    workerManager.getRouter.mockReturnValue(
+      undefined as unknown as Router<AppData>,
+    );
+
+    await expect(service.createEgressTransport('room-404')).rejects.toThrow(
+      NotFoundException,
+    );
+  });
+
+  it('creates an unpaused egress consumer and returns its RTP parameters', async () => {
+    const routerRtpCapabilities = { codecs: [] } as unknown as RtpCapabilities;
+    const rtpParameters = { mid: '0' } as unknown as RtpParameters;
+    const consume = jest
+      .fn()
+      .mockResolvedValue({ id: 'consumer-1', rtpParameters });
+    workerManager.getRouter.mockReturnValue({
+      rtpCapabilities: routerRtpCapabilities,
+    } as unknown as Router<AppData>);
+    const transport = { consume } as unknown as PlainTransport;
+
+    const result = await service.createEgressConsumer(
+      'room-1',
+      transport,
+      'producer-video',
+    );
+
+    expect(consume).toHaveBeenCalledWith({
+      producerId: 'producer-video',
+      rtpCapabilities: routerRtpCapabilities,
+      paused: false,
+      appData: { egress: true },
+    });
+    expect(consume.mock.calls[0][0].rtpCapabilities).toBe(
+      routerRtpCapabilities,
+    );
+    expect(result.consumer).toEqual({ id: 'consumer-1', rtpParameters });
+    expect(result.rtpParameters).toBe(rtpParameters);
+  });
+
+  it('notifies egress handlers per room and honors unsubscribe', async () => {
+    const produce = jest.fn().mockResolvedValue({
+      id: 'producer-live',
+      kind: 'video',
+      paused: false,
+      appData: { source: 'camera' },
+    });
+    const state = serviceState();
+    state.peers.set(socket.id, {
+      id: socket.id,
+      userId: 'user-1',
+      username: 'alice',
+      socket,
+      sendTransport: { id: 'send-1', produce } as unknown as WebRtcTransport,
+      producers: new Map(),
+      consumers: new Map(),
+    } as unknown as Peer);
+    state.rooms.set('room-1', new Set([socket.id]));
+    state.rooms.set('room-2', new Set(['socket-other']));
+
+    const room1Events: EgressTapDescriptor[] = [];
+    const room2Events: EgressTapDescriptor[] = [];
+    const unsubscribe = service.onRoomProducerAdded('room-1', (descriptor) =>
+      room1Events.push(descriptor),
+    );
+    service.onRoomProducerAdded('room-2', (descriptor) =>
+      room2Events.push(descriptor),
+    );
+
+    await service.createProducer(socket, {
+      requestId: 'req-1',
+      transportId: 'send-1',
+      kind: 'video',
+      rtpParameters: {} as unknown as RtpParameters,
+      appData: { source: 'camera' },
+    });
+
+    expect(room1Events).toEqual([
+      { producerId: 'producer-live', kind: 'video', source: 'camera' },
+    ]);
+    expect(room2Events).toEqual([]);
+
+    unsubscribe();
+    await service.createProducer(socket, {
+      requestId: 'req-2',
+      transportId: 'send-1',
+      kind: 'video',
+      rtpParameters: {} as unknown as RtpParameters,
+      appData: { source: 'camera' },
+    });
+
+    expect(room1Events).toHaveLength(1);
+  });
+
+  const addBarePeer = (socketId: string) => {
+    serviceState().peers.set(socketId, {
+      id: socketId,
+      userId: `user-${socketId}`,
+      username: socketId,
+      socket: createSocket(socketId),
+      producers: new Map(),
+      consumers: new Map(),
+    } as unknown as Peer);
+  };
+
+  it('fires room-closed handlers once when a populated room is ended', async () => {
+    addBarePeer('socket-1');
+    serviceState().rooms.set('room-1', new Set(['socket-1']));
+    const closed = jest.fn();
+    service.onRoomClosed('room-1', closed);
+
+    await service.endRoom('room-1');
+
+    expect(closed).toHaveBeenCalledTimes(1);
+    expect(closed.mock.invocationCallOrder[0]).toBeLessThan(
+      workerManager.closeRouter.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('fires room-closed handlers when the last peer leaves the room', async () => {
+    addBarePeer('socket-1');
+    serviceState().rooms.set('room-1', new Set(['socket-1']));
+    const closed = jest.fn();
+    service.onRoomClosed('room-1', closed);
+
+    await service.closePeer(createSocket('socket-1'));
+
+    expect(closed).toHaveBeenCalledTimes(1);
+    expect(closed.mock.invocationCallOrder[0]).toBeLessThan(
+      workerManager.closeRouter.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('honors room-closed unsubscribe and fires only for the closed room', async () => {
+    const room1Closed = jest.fn();
+    const room2Closed = jest.fn();
+    const unsubscribe = service.onRoomClosed('room-1', room1Closed);
+    service.onRoomClosed('room-2', room2Closed);
+    unsubscribe();
+
+    await service.endRoom('room-1');
+    await service.endRoom('room-2');
+
+    expect(room1Closed).not.toHaveBeenCalled();
+    expect(room2Closed).toHaveBeenCalledTimes(1);
   });
 });
