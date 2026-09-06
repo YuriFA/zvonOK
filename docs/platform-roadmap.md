@@ -1,6 +1,6 @@
 # Platform Roadmap (living)
 
-Direction and rationale: [ADR 0002](./adr/0002-adopt-developer-platform-direction.md).
+Direction and rationale: ADR 0002 (`docs/adr/0002-adopt-developer-platform-direction.md` in the repository).
 Behavior source of truth: `openspec/specs/`. This file tracks the staged plan;
 it changes as stages complete - it is not a spec.
 
@@ -36,7 +36,8 @@ dogfooded SDK taught us about the API surface.
 3. **Ephemeral TURN credentials** - HMAC auth-secret in coturn, replacing the
    static shared credentials.
 4. **Docs site** - static `docs.<domain>` site via the existing Traefik
-   add-a-site pattern; content grows from the quickstart.
+   add-a-site pattern; content grows from the quickstart. Implemented in
+   `add-docs-site` (2026-09-06).
 5. **Prebuilt widget** - drop-in UI component on top of `@zvonok/react`.
 6. **HLS/RTMP egress** - live streaming out of rooms.
 7. **Whiteboard** - integrate before building (Yjs/tldraw class), never from
