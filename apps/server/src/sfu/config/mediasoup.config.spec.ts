@@ -74,12 +74,11 @@ describe('getIceServers', () => {
     expect(servers[0].urls).toEqual(STUN_BASELINE);
   });
 
-  it('delivers a URL-only TURN entry when TURN_AUTH_SECRET is absent', () => {
+  it('omits the TURN entry when TURN_AUTH_SECRET is absent (browsers reject credential-less turn URLs)', () => {
     setTurnEnv({ TURN_URL: 'turn:localhost:3478' });
-    const turn = getIceServers()[1];
-    expect(turn.urls).toEqual(['turn:localhost:3478']);
-    expect(turn).not.toHaveProperty('username');
-    expect(turn).not.toHaveProperty('credential');
+    const servers = getIceServers();
+    expect(servers).toHaveLength(1);
+    expect(servers[0].urls).toEqual(STUN_BASELINE);
   });
 
   it('mints ephemeral credentials with the :zvonok suffix when the secret is set', () => {

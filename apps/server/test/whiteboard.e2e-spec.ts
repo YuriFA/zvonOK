@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { io, Socket } from 'socket.io-client';
 import { App } from 'supertest/types';
 import type { Server as NetServer } from 'node:net';
@@ -11,8 +12,6 @@ import { configureApp } from '../src/bootstrap';
 import { WorkerManager } from '../src/sfu/worker-manager';
 import { RoomTokenHelper } from '../src/platform/room-token.helper';
 
-process.env.JWT_GUEST_SECRET =
-  process.env.JWT_GUEST_SECRET ?? 'guest-e2e-secret';
 
 interface TestRoom {
   id: string;
@@ -36,6 +35,7 @@ describe('Whiteboard (e2e)', () => {
   let app: INestApplication<App>;
   let httpUrl: string;
   let jwtService: JwtService;
+  let guestSecret: string;
   const sockets: Socket[] = [];
   let ownerSocket: Socket;
   function connectWhiteboard(options: {
@@ -155,6 +155,7 @@ describe('Whiteboard (e2e)', () => {
     const port = typeof address === 'object' && address ? address.port : 3000;
     httpUrl = `http://127.0.0.1:${port}`;
     jwtService = app.get(JwtService);
+    guestSecret = app.get(ConfigService).get<string>('JWT_GUEST_SECRET') ?? '';
   });
 
   afterAll(async () => {
@@ -196,7 +197,7 @@ describe('Whiteboard (e2e)', () => {
         roomSlug: ROOM.slug,
         scope: 'room',
       },
-      { secret: 'guest-e2e-secret' },
+      { secret: guestSecret },
     );
     const guest = connectWhiteboard({
       cookie: `zvonok_guest_${ROOM.slug}=${guestToken}`,
@@ -216,7 +217,7 @@ describe('Whiteboard (e2e)', () => {
         roomSlug: 'other-slug',
         scope: 'room',
       },
-      { secret: 'guest-e2e-secret' },
+      { secret: guestSecret },
     );
     const stranger = connectWhiteboard({
       cookie: `zvonok_guest_other-slug=${strangerToken}`,
@@ -300,7 +301,7 @@ describe('Whiteboard (e2e)', () => {
         roomSlug: ROOM.slug,
         scope: 'room',
       },
-      { secret: 'guest-e2e-secret' },
+      { secret: guestSecret },
     );
     const rejoining = connectWhiteboard({
       cookie: `zvonok_guest_${ROOM.slug}=${guestToken}`,
