@@ -3,7 +3,7 @@ import { Circle, Loader2, Monitor, MonitorOff, PhoneOff, Square } from "lucide-r
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { LinkButton } from "@/components/ui/link-button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { LocalRecorderState } from "@/features/media/hooks/use-local-recorder";
+import type { MediaRecorderHookState } from "@/features/media/hooks/use-media-recorder";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -12,7 +12,7 @@ interface Props {
   isScreenShareBlocked: boolean;
   screenShareState: "idle" | "starting" | "sharing";
   onToggleScreenShare: () => Promise<void>;
-  recordingState: LocalRecorderState;
+  recordingState: MediaRecorderHookState;
   elapsedSeconds: number;
   isRecordingSupported: boolean;
   isRecordingEnabled: boolean;
@@ -54,7 +54,7 @@ export function RoomCenterControls({
   const isRecording = recordingState === "recording";
   const recordTooltip = isRecording
     ? "Stop recording - saves a .webm to your device"
-    : "Start recording";
+    : "Record the call - saves a .webm with all participants to your device";
   const isRecordingDisabled = recordingState === "saving" || !isRecordingEnabled;
 
   return (

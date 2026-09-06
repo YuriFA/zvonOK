@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-export type LocalRecorderState = "idle" | "recording" | "saving";
+export type MediaRecorderHookState = "idle" | "recording" | "saving";
 
-export interface UseLocalRecorderOptions {
-  videoStream: MediaStream | null;
-  audioStream: MediaStream | null;
-  roomSlug: string;
+export interface UseMediaRecorderOptions {
+  /** Stream to record. Its tracks are snapshotted when recording starts. */
+  stream: MediaStream | null;
+  /** File name without the timestamp and extension. */
+  filenameBase: string;
 }
 
-export interface UseLocalRecorderResult {
-  state: LocalRecorderState;
+export interface UseMediaRecorderResult {
+  state: MediaRecorderHookState;
   elapsedSeconds: number;
   isSupported: boolean;
   start: () => void;
@@ -34,9 +35,9 @@ function pickMimeType(): string | null {
   return null;
 }
 
-function sanitizeRoomSlug(slug: string): string {
-  const sanitized = slug.replace(/[^a-zA-Z0-9_-]+/g, "-").replace(/^-+|-+$/g, "");
-  return sanitized.length > 0 ? sanitized : "room";
+function sanitizeFilenameBase(base: string): string {
+  const sanitized = base.replace(/[^a-zA-Z0-9_-]+/g, "-").replace(/^-+|-+$/g, "");
+  return sanitized.length > 0 ? sanitized : "call";
 }
 
 function formatFileTimestamp(date: Date): string {
@@ -55,12 +56,11 @@ function saveBlob(blob: Blob, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
-export function useLocalRecorder({
-  videoStream,
-  audioStream,
-  roomSlug,
-}: UseLocalRecorderOptions): UseLocalRecorderResult {
-  const [state, setState] = useState<LocalRecorderState>("idle");
+export function useMediaRecorder({
+  stream,
+  filenameBase,
+}: UseMediaRecorderOptions): UseMediaRecorderResult {
+  const [state, setState] = useState<MediaRecorderHookState>("idle");
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -69,6 +69,7 @@ export function useLocalRecorder({
   const filenameRef = useRef<string>("");
   const startedAtRef = useRef<number>(0);
   const isSupported = useMemo(() => pickMimeType() !== null, []);
+
   const stopAndSave = useCallback(() => {
     const recorder = recorderRef.current;
     if (!recorder || recorder.state === "inactive") {
@@ -86,23 +87,17 @@ export function useLocalRecorder({
     if (!mimeType) {
       return;
     }
-    const videoTracks = (videoStream?.getTracks() ?? []).filter(
-      (track) => track.readyState === "live",
-    );
-    const audioTracks = (audioStream?.getTracks() ?? []).filter(
-      (track) => track.readyState === "live",
-    );
-    const tracks = [...videoTracks, ...audioTracks];
+    const tracks = (stream?.getTracks() ?? []).filter((track) => track.readyState === "live");
     if (tracks.length === 0) {
       return;
     }
 
-    const combined = new MediaStream(tracks);
-    const recorder = new MediaRecorder(combined, { mimeType });
+    const recorded = new MediaStream(tracks);
+    const recorder = new MediaRecorder(recorded, { mimeType });
     chunksRef.current = [];
     tracksRef.current = tracks;
     recorderRef.current = recorder;
-    filenameRef.current = `zvonok-${sanitizeRoomSlug(roomSlug)}-${formatFileTimestamp(new Date())}.webm`;
+    filenameRef.current = `${sanitizeFilenameBase(filenameBase)}-${formatFileTimestamp(new Date())}.webm`;
     startedAtRef.current = Date.now();
 
     recorder.ondataavailable = (event: BlobEvent) => {
@@ -131,7 +126,7 @@ export function useLocalRecorder({
     recorder.start(1000);
     setElapsedSeconds(0);
     setState("recording");
-  }, [videoStream, audioStream, roomSlug, stopAndSave]);
+  }, [stream, filenameBase, stopAndSave]);
 
   // Elapsed time derives from the start timestamp so it never drifts.
   useEffect(() => {
@@ -149,7 +144,7 @@ export function useLocalRecorder({
     };
   }, [state]);
 
-  // Leaving the room mid-recording still saves what was captured.
+  // Leaving the page mid-recording still saves what was captured.
   useEffect(() => {
     return () => {
       const recorder = recorderRef.current;

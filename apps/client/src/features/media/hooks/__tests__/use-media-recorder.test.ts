@@ -1,13 +1,13 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useLocalRecorder } from "../use-local-recorder";
+import { useMediaRecorder } from "../use-media-recorder";
 
 // --- fakes (jsdom has no MediaRecorder/MediaStream) ---
 
 class FakeMediaRecorder {
   static instances: FakeMediaRecorder[] = [];
-  static isTypeSupported = vi.fn((_mimeType: string) => false);
+  static isTypeSupported = vi.fn<(mimeType: string) => boolean>(() => false);
 
   stream: MediaStream;
   mimeType: string;
@@ -70,16 +70,14 @@ function fireTrackEnded(track: MediaStreamTrack) {
 
 function renderRecorder(
   overrides?: Partial<{
-    videoStream: MediaStream | null;
-    audioStream: MediaStream | null;
-    roomSlug: string;
+    stream: MediaStream | null;
+    filenameBase: string;
   }>,
 ) {
   return renderHook(() =>
-    useLocalRecorder({
-      videoStream: makeStream([makeTrack("video")]),
-      audioStream: makeStream([makeTrack("audio")]),
-      roomSlug: "my-room",
+    useMediaRecorder({
+      stream: makeStream([makeTrack("video"), makeTrack("audio")]),
+      filenameBase: "zvonok-my-room",
       ...overrides,
     }),
   );
@@ -87,11 +85,11 @@ function renderRecorder(
 
 // --- subject ---
 
-const createObjectURL = vi.fn((_blob: Blob | MediaSource) => "blob:mock-url");
+const createObjectURL = vi.fn<(blob: Blob | MediaSource) => string>(() => "blob:mock-url");
 const revokeObjectURL = vi.fn();
 let clickedAnchors: HTMLAnchorElement[] = [];
 
-describe("useLocalRecorder", () => {
+describe("useMediaRecorder", () => {
   beforeEach(() => {
     FakeMediaRecorder.instances = [];
     FakeMediaRecorder.isTypeSupported.mockReset().mockImplementation(() => true);
@@ -186,7 +184,7 @@ describe("useLocalRecorder", () => {
     ]);
   });
 
-  it("combines live video and audio tracks into one stream at start", () => {
+  it("snapshots live tracks into one stream at start", () => {
     const { result } = renderRecorder();
     act(() => {
       result.current.start();
@@ -194,37 +192,36 @@ describe("useLocalRecorder", () => {
     expect(result.current.state).toBe("recording");
     const recorder = FakeMediaRecorder.instances[0];
     expect(recorder.startTimeslice).toBe(1000);
-    const combined = recorder.stream as unknown as { getTracks(): MediaStreamTrack[] };
-    expect(combined.getTracks().map((track) => track.kind)).toEqual(["video", "audio"]);
+    const recorded = recorder.stream as unknown as { getTracks(): MediaStreamTrack[] };
+    expect(recorded.getTracks().map((track) => track.kind)).toEqual(["video", "audio"]);
   });
 
-  it("records audio only when the camera stream is absent", () => {
-    const { result } = renderRecorder({ videoStream: null });
-    act(() => {
-      result.current.start();
-    });
-    const combined = FakeMediaRecorder.instances[0].stream as unknown as {
-      getTracks(): MediaStreamTrack[];
-    };
-    expect(combined.getTracks().map((track) => track.kind)).toEqual(["audio"]);
-  });
-
-  it("records video only when the microphone stream is absent", () => {
-    const { result } = renderRecorder({ audioStream: null });
-    act(() => {
-      result.current.start();
-    });
-    const combined = FakeMediaRecorder.instances[0].stream as unknown as {
-      getTracks(): MediaStreamTrack[];
-    };
-    expect(combined.getTracks().map((track) => track.kind)).toEqual(["video"]);
-  });
-
-  it("start is a no-op when no stream has live tracks", () => {
+  it("skips tracks that already ended", () => {
     const { result } = renderRecorder({
-      videoStream: makeStream([makeEndedTrack("video")]),
-      audioStream: makeStream([makeEndedTrack("audio")]),
+      stream: makeStream([makeEndedTrack("video"), makeTrack("audio")]),
     });
+    act(() => {
+      result.current.start();
+    });
+    const recorded = FakeMediaRecorder.instances[0].stream as unknown as {
+      getTracks(): MediaStreamTrack[];
+    };
+    expect(recorded.getTracks().map((track) => track.kind)).toEqual(["audio"]);
+  });
+
+  it("start is a no-op when the stream has no live tracks", () => {
+    const { result } = renderRecorder({
+      stream: makeStream([makeEndedTrack("video"), makeEndedTrack("audio")]),
+    });
+    act(() => {
+      result.current.start();
+    });
+    expect(FakeMediaRecorder.instances).toHaveLength(0);
+    expect(result.current.state).toBe("idle");
+  });
+
+  it("start is a no-op when the stream is absent", () => {
+    const { result } = renderRecorder({ stream: null });
     act(() => {
       result.current.start();
     });
@@ -257,8 +254,8 @@ describe("useLocalRecorder", () => {
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:mock-url");
   });
 
-  it("sanitizes the room slug in the file name", () => {
-    const { result } = renderRecorder({ roomSlug: "my room/slug!!" });
+  it("sanitizes the file name base", () => {
+    const { result } = renderRecorder({ filenameBase: "zvonok-my room/slug!!" });
     act(() => {
       result.current.start();
     });
@@ -288,10 +285,7 @@ describe("useLocalRecorder", () => {
   it("stops and saves when a recorded track ends", () => {
     const videoTrack = makeTrack("video");
     const audioTrack = makeTrack("audio");
-    const { result } = renderRecorder({
-      videoStream: makeStream([videoTrack]),
-      audioStream: makeStream([audioTrack]),
-    });
+    const { result } = renderRecorder({ stream: makeStream([videoTrack, audioTrack]) });
     act(() => {
       result.current.start();
     });
@@ -324,10 +318,7 @@ describe("useLocalRecorder", () => {
 
   it("does not save twice when a track ends after a manual stop", () => {
     const audioTrack = makeTrack("audio");
-    const { result } = renderRecorder({
-      videoStream: null,
-      audioStream: makeStream([audioTrack]),
-    });
+    const { result } = renderRecorder({ stream: makeStream([audioTrack]) });
     act(() => {
       result.current.start();
     });
