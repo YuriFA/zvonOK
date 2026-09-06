@@ -69,6 +69,8 @@ model Project {
   name               String
   developerAccount   DeveloperAccount @relation(fields: [developerAccountId], references: [id], onDelete: Cascade)
   developerAccountId String
+  webhookUrl         String?
+  webhookSecret      String?
   apiKeys            ApiKey[]
   rooms              Room[]
   createdAt          DateTime         @default(now())
