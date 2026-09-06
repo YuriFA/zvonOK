@@ -1,3 +1,4 @@
+import { createHmac } from 'node:crypto';
 import type {
   WorkerSettings,
   RouterOptions,
@@ -44,9 +45,27 @@ export interface IceServerConfig {
 }
 
 /**
+ * TTL for ephemeral TURN credentials: 6 hours. Generous enough for long
+ * meetings (an allocation survives past its expiry), short enough that a
+ * leaked credential stops working within hours.
+ */
+export const TURN_CREDENTIAL_TTL_SECONDS = 6 * 60 * 60;
+
+/**
+ * coturn REST auth-secret password (draft-uberti-rtcweb-turn-rest):
+ * base64(HMAC-SHA1(secret, username)).
+ */
+export function mintTurnPassword(secret: string, username: string): string {
+  return createHmac('sha1', secret).update(username).digest('base64');
+}
+
+/**
  * Build ICE servers list from environment variables.
  * Always includes Google public STUN as a baseline.
- * Appends TURN server when TURN_URL + TURN_USER + TURN_PASSWORD are set.
+ * Appends a TURN entry when TURN_URL is set. With TURN_AUTH_SECRET set, the
+ * entry carries ephemeral credentials (username `<unix-expiry>:zvonok`, 6h
+ * TTL) that coturn verifies via use-auth-secret; without a secret the entry
+ * is URL-only for an unauthenticated development coturn.
  */
 export function getIceServers(): IceServerConfig[] {
   const servers: IceServerConfig[] = [
@@ -57,15 +76,19 @@ export function getIceServers(): IceServerConfig[] {
 
   const turnUrl = process.env.TURN_URL;
   const turnsUrl = process.env.TURNS_URL;
-  const turnUser = process.env.TURN_USER;
-  const turnPassword = process.env.TURN_PASSWORD;
+  const authSecret = process.env.TURN_AUTH_SECRET;
 
-  if (turnUrl && turnUser && turnPassword) {
-    servers.push({
-      urls: [turnUrl, ...(turnsUrl ? [turnsUrl] : [])],
-      username: turnUser,
-      credential: turnPassword,
-    });
+  if (turnUrl) {
+    const turn: IceServerConfig = {
+      urls: turnsUrl ? [turnUrl, turnsUrl] : [turnUrl],
+    };
+    if (authSecret) {
+      const expiry =
+        Math.floor(Date.now() / 1000) + TURN_CREDENTIAL_TTL_SECONDS;
+      turn.username = `${expiry}:zvonok`;
+      turn.credential = mintTurnPassword(authSecret, turn.username);
+    }
+    servers.push(turn);
   }
 
   return servers;

@@ -37,7 +37,7 @@ Both files define the same five services but differ intentionally:
 | Difference | `docker-compose.yml` | `docker-compose.prod.yml` | Reason |
 |------------|---------------------|---------------------------|--------|
 | Images | Builds from local Dockerfiles | Pulls pre-built images from GHCR | Prod uses CI-built images; dev builds locally |
-| Server `TURN_*` env vars | Not set | `TURN_URL`, `TURNS_URL`, `TURN_USER`, `TURN_PASSWORD` | In local dev coturn runs without auth; prod passes TURN credentials to clients via `sfu:transport-created` |
+| Server `TURN_*` env vars | Not set | `TURN_URL`, `TURNS_URL`, `TURN_AUTH_SECRET` | In local dev coturn runs without auth; prod mints ephemeral TURN credentials and passes them to clients via `sfu:transport-created` |
 | Caddy `certs` volume | `./certs:/srv/certs:ro` | Not mounted | Dev uses self-signed certs from `./certs`; prod terminates TLS at Traefik |
 | Caddy entrypoint | Host ports 80/443, `Caddyfile` | `expose: 80` behind Traefik, `Caddyfile.traefik` | Prod shares ports 80/443 with other sites via the gateway |
 
@@ -175,7 +175,7 @@ Key values to change:
 - `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` — generate with `openssl rand -hex 64`
 - `MEDIASOUP_ANNOUNCED_IP` — your server's public IPv4 address
 - `TURN_EXTERNAL_IP` — same public IP as `MEDIASOUP_ANNOUNCED_IP`
-- `TURN_PASSWORD` — generate a strong password for TURN auth
+- `TURN_AUTH_SECRET` (generate with `openssl rand -base64 32`): shared secret for ephemeral TURN auth, identical on the server and coturn containers
 
 ## Step 4: Deploy
 
@@ -263,15 +263,25 @@ All variables are set in the root `.env` file. Copy from `.env.production.exampl
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `TURN_USER` | Yes | — | Username for TURN authentication (long-term credentials) |
-| `TURN_PASSWORD` | Yes | — | Password for TURN authentication. Use a strong random value. |
+| `TURN_AUTH_SECRET` | **Yes** | - | Shared secret for ephemeral TURN credentials (coturn `use-auth-secret`). Generate with `openssl rand -base64 32`. Must be identical on the server and coturn containers. |
 | `TURN_EXTERNAL_IP` | **Yes** | — | **Server's public IP address** (same as `MEDIASOUP_ANNOUNCED_IP`). coturn uses this to rewrite relay candidates. |
 | `TURN_URL` | Yes | — | TURN server URL for clients. Format: `turn:YOUR_SERVER_IP:3478` |
 | `TURNS_URL` | No | — | TURNS (TLS) server URL. Format: `turns:YOUR_SERVER_IP:5349` |
 
 > coturn runs in `network_mode: host` to avoid NAT hairpin issues. Its listening ports (3478, 5349) and relay ports (49152–49252) are bound directly to the host.
 >
-> TURN credentials are never exposed in client source code — the server sends them via the `sfu:transport-created` WebSocket event.
+> TURN credentials are never exposed in client source code: the server mints a fresh ephemeral username (`<unix-expiry>:zvonok`, 6h TTL) and password (`base64(HMAC-SHA1(secret, username))`) per transport and sends them via the `sfu:transport-created` WebSocket event. coturn verifies them against the shared secret with `use-auth-secret`.
+
+### coturn auth switch and cutover
+
+coturn runs `use-auth-secret` (ephemeral REST credentials, draft-uberti-rtcweb-turn-rest) instead of static long-term credentials (`lt-cred-mech`). The shared secret is passed to the coturn container as a CLI argument (`--static-auth-secret=$TURN_AUTH_SECRET`) because coturn does not interpolate environment variables in conf files; `turnserver.conf` never contains the real secret.
+
+Upgrading an existing deployment is a single cutover (old static and new REST auth cannot mix):
+
+1. Generate a secret: `openssl rand -base64 32`
+2. Set `TURN_AUTH_SECRET` on the server container
+3. Add `--static-auth-secret=$TURN_AUTH_SECRET` to the coturn container command, replacing the old `--user=...` argument
+4. Restart both containers; clients reconnect and receive ephemeral credentials on their next transport creation
 
 ## Example `.env` for Production
 
@@ -299,9 +309,8 @@ MEDIASOUP_ANNOUNCED_IP=203.0.113.42
 RTC_MIN_PORT=40000
 RTC_MAX_PORT=40099
 
-# TURN (coturn)
-TURN_USER=zvonok
-TURN_PASSWORD=super-secret-turn-password-here
+# TURN (coturn; generate TURN_AUTH_SECRET with: openssl rand -base64 32)
+TURN_AUTH_SECRET=super-secret-turn-auth-secret-here
 TURN_EXTERNAL_IP=203.0.113.42
 TURN_URL=turn:203.0.113.42:3478
 TURNS_URL=turns:203.0.113.42:5349
@@ -485,10 +494,10 @@ Summary of required open ports:
 4. Ensure ports 3478, 5349 (UDP+TCP) and 49152–49252 (UDP) are open
 5. Test TURN with [Trickle ICE](https://webrtc.github.io/samples/src/content/peerconnection/trickle-ice/):
    - STUN/TURN URI: `turn:YOUR_SERVER_IP:3478`
-   - Username: value of `TURN_USER`
-   - Credential: value of `TURN_PASSWORD`
+   - Username: the ephemeral `<unix-expiry>:zvonok` value the server minted (grab both fields from a `sfu:transport-created` socket payload)
+   - Credential: the matching `base64(HMAC-SHA1(secret, username))` value from the same payload
    - You should see `relay` candidates in the results
-6. If coturn logs show `error 401`, the username/password in `.env` doesn't match what clients send — check `TURN_USER` and `TURN_PASSWORD`
+6. If coturn logs show `error 401`, the secret coturn runs with does not match the server's `TURN_AUTH_SECRET`: verify both containers use the same `--static-auth-secret` value
 
 ### 405 Method Not Allowed on POST /rooms
 
