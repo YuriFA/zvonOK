@@ -83,6 +83,15 @@ export class SfuManager implements ISfuManager {
     { resolve: (id: string) => void; reject: (error: Error) => void; source: SfuMediaSource }
   >();
   private localUserId: string | null = null;
+  // Local produce calls that arrived before the send transport existed
+  // (device still loading after join). Flushed when the transport is ready.
+  private pendingLocalProduces: Array<{
+    track: MediaStreamTrack;
+    source?: SfuMediaSource;
+    options: { isMobile?: boolean };
+    resolve: (producer: Producer | null) => void;
+    reject: (error: Error) => void;
+  }> = [];
 
   // State and callbacks
   private state: SfuState = {
@@ -184,7 +193,15 @@ export class SfuManager implements ISfuManager {
       throw new Error("Socket not connected");
     }
     this.localUserId = payload.userId;
-    socket.emit("sfu:join", payload);
+    // The room token is authoritative: its `sub` claim is the room id the
+    // server minted it for. Callers frequently only know the room slug, and
+    // sending a slug as roomId fails verification with
+    // ROOM_TOKEN_ROOM_MISMATCH whenever slug !== id.
+    const tokenRoomId = payload.token ? readRoomIdFromToken(payload.token) : null;
+    socket.emit("sfu:join", {
+      ...payload,
+      roomId: tokenRoomId ?? payload.roomId,
+    });
   }
 
   leaveRoom(): void {
@@ -232,8 +249,25 @@ export class SfuManager implements ISfuManager {
     { isMobile }: { isMobile?: boolean } = {},
   ): Promise<Producer | null> {
     if (!this.sendTransport) {
-      console.error("[SFU] Send transport not ready");
-      return null;
+      // The join flow loads the device and creates transports asynchronously;
+      // early produce calls (camera/mic right after join) are buffered and
+      // flushed once the send transport exists instead of being dropped.
+      if (!this.connection.isConnected()) {
+        console.error("[SFU] Send transport not ready and not connected");
+        return null;
+      }
+      if (this.pendingLocalProduces.length >= 8) {
+        console.warn("[SFU] Local produce queue full, dropping request");
+        return null;
+      }
+      if (track.readyState === "ended") {
+        console.warn("[SFU] Not queueing produce for an ended track");
+        return null;
+      }
+      console.log("[SFU] Send transport not ready yet, buffering produce for:", track.kind);
+      return new Promise<Producer | null>((resolve, reject) => {
+        this.pendingLocalProduces.push({ track, source, options: { isMobile }, resolve, reject });
+      });
     }
 
     const kind = track.kind as "audio" | "video";
@@ -623,6 +657,19 @@ export class SfuManager implements ISfuManager {
           }
         },
       );
+      // Flush produce calls that arrived before the transport existed.
+      // mediasoup-client waits for the transport "connect" handshake, so
+      // producing now is safe even before DTLS completes.
+      if (this.pendingLocalProduces.length > 0) {
+        const pending = this.pendingLocalProduces.splice(0);
+        console.log("[SFU] Flushing", pending.length, "buffered local produce(s)");
+        for (const entry of pending) {
+          this.produceWithSource(entry.track, entry.source, entry.options).then(
+            entry.resolve,
+            entry.reject,
+          );
+        }
+      }
     } else {
       this.recvTransport = this.device.createRecvTransport(transportOptions);
 
@@ -986,6 +1033,9 @@ export class SfuManager implements ISfuManager {
       pending.reject(new Error("Transport closed"));
     }
     this.pendingProduceRequests.clear();
+    for (const pending of this.pendingLocalProduces.splice(0)) {
+      pending.reject(new Error("Transport closed"));
+    }
     this.sendTransport?.close();
     this.recvTransport?.close();
     this.sendTransport = null;
@@ -1014,6 +1064,7 @@ export class SfuManager implements ISfuManager {
     this.pendingProduceRequests.clear();
     this.peers.clear();
     this.pendingNewProducers = [];
+    this.pendingLocalProduces = [];
     this.localUserId = null;
     this.state = {
       connectionState: "disconnected",
@@ -1038,6 +1089,22 @@ export class SfuManager implements ISfuManager {
     this.stateCallbacks.forEach((callback) => {
       callback(this.getState());
     });
+  }
+}
+
+/**
+ * Reads the room id (`sub` claim) from an unverified room token. The server
+ * verifies the signature; this only routes the join to the right room.
+ */
+export function readRoomIdFromToken(token: string): string | null {
+  try {
+    const [, payloadPart] = token.split(".");
+    if (!payloadPart) return null;
+    const normalized = payloadPart.replace(/-/g, "+").replace(/_/g, "/");
+    const payload = JSON.parse(atob(normalized)) as { sub?: unknown };
+    return typeof payload.sub === "string" && payload.sub.length > 0 ? payload.sub : null;
+  } catch {
+    return null;
   }
 }
 
