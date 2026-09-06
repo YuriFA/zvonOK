@@ -1,4 +1,4 @@
-import { MessageSquare, Users } from "lucide-react";
+import { MessageSquare, Presentation, Users } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button, type ButtonProps } from "@/components/ui/button";
@@ -13,6 +13,8 @@ interface Props {
   onToggleParticipants: () => void;
   isChatOpen: boolean;
   onToggleChat: () => void;
+  isBoardOpen: boolean;
+  onToggleBoard: () => void;
   pendingRequestsCount?: number;
   unreadCount?: number;
 }
@@ -25,6 +27,8 @@ export const RoomRightControls = ({
   onToggleParticipants,
   isChatOpen,
   onToggleChat,
+  isBoardOpen,
+  onToggleBoard,
   pendingRequestsCount = 0,
   unreadCount = 0,
 }: Props) => {
@@ -82,6 +86,23 @@ export const RoomRightControls = ({
           </div>
         </TooltipTrigger>
         <TooltipContent>Chat</TooltipContent>
+      </Tooltip>
+
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Button
+              type="button"
+              variant={isBoardOpen ? buttonInactiveVariant : buttonVariant}
+              size="icon"
+              onClick={onToggleBoard}
+              aria-label="Toggle whiteboard"
+            />
+          }
+        >
+          <Presentation className="size-4" />
+        </TooltipTrigger>
+        <TooltipContent>Whiteboard</TooltipContent>
       </Tooltip>
     </div>
   );

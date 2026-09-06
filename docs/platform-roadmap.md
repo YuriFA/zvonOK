@@ -43,7 +43,7 @@ dogfooded SDK taught us about the API surface.
 6. **HLS/RTMP egress** - live streaming out of rooms. Implemented in
    `add-hls-rtmp-egress` (2026-09-06).
 7. **Whiteboard** - integrate before building (Yjs/tldraw class), never from
-   scratch.
+   scratch. Implemented in `add-whiteboard` (2026-09-06).
 8. **Billing/metering** - only if the business option activates.
 9. **Multi-node SFU** - multi-worker + Redis socket fan-out; revisited when
    single-node capacity is a real limit.
