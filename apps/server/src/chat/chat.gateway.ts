@@ -15,11 +15,11 @@ import { JwtService } from '@nestjs/jwt';
 import { ChatService } from './chat.service';
 import { SendMessageDto } from './dto/send-message.dto';
 import { GuestService } from '../room/guest.service';
+import {
+  resolveRoomSocketIdentity,
+  RoomSocketIdentity,
+} from '../auth/helpers/room-socket-auth.helper';
 import { RoomService } from '../room/room.service';
-
-type ClientIdentity =
-  | { type: 'user'; userId: string }
-  | { type: 'guest'; guestId: string; roomSlug: string; displayName: string };
 
 @SkipThrottle()
 @WebSocketGateway({
@@ -73,7 +73,7 @@ export class ChatGateway
     @MessageBody() payload: SendMessageDto,
   ): Promise<void> {
     const identity = (client.data as Record<string, unknown>)
-      .identity as ClientIdentity;
+      .identity as RoomSocketIdentity;
 
     if (identity.type === 'guest') {
       const room = await this.roomService.findBySlug(identity.roomSlug);
@@ -133,7 +133,7 @@ export class ChatGateway
     @MessageBody() { roomId }: { roomId: string },
   ) {
     const identity = (client.data as Record<string, unknown>)
-      .identity as ClientIdentity;
+      .identity as RoomSocketIdentity;
 
     if (identity.type === 'guest') {
       const room = await this.roomService.findBySlug(identity.roomSlug);
@@ -159,63 +159,11 @@ export class ChatGateway
     }
   }
 
-  private extractToken(client: Socket): string | null {
-    const auth = client.handshake.auth as Record<string, string | undefined>;
-    if (auth?.token) return auth.token;
-
-    const cookieHeader = client.handshake.headers?.cookie;
-    if (!cookieHeader) return null;
-
-    const cookies = cookieHeader.split('; ');
-
-    const accessCookie = cookies.find((c: string) =>
-      c.startsWith('access_token='),
+  private authenticate(client: Socket): RoomSocketIdentity | null {
+    return resolveRoomSocketIdentity(
+      client,
+      this.jwtService,
+      this.guestService,
     );
-    if (accessCookie) return accessCookie.split('=').slice(1).join('=') || null;
-
-    const guestCookie = cookies.find((c: string) =>
-      c.startsWith('zvonok_guest_'),
-    );
-    if (guestCookie) return guestCookie.split('=').slice(1).join('=') || null;
-
-    return null;
-  }
-
-  private extractGuestSlugFromCookie(client: Socket): string | null {
-    const cookieHeader = client.handshake.headers?.cookie;
-    if (!cookieHeader) return null;
-    const match = cookieHeader
-      .split('; ')
-      .find((c: string) => c.startsWith('zvonok_guest_'));
-    if (!match) return null;
-    const key = match.split('=')[0];
-    return key.replace('zvonok_guest_', '') || null;
-  }
-
-  private authenticate(client: Socket): ClientIdentity | null {
-    const token = this.extractToken(client);
-    if (!token) return null;
-
-    // Try guest token first (uses a separate secret)
-    const roomSlug = this.extractGuestSlugFromCookie(client);
-    if (roomSlug) {
-      const guest = this.guestService.validateGuestToken(token, roomSlug);
-      if (guest) {
-        return {
-          type: 'guest',
-          guestId: guest.guestId,
-          roomSlug,
-          displayName: guest.displayName,
-        };
-      }
-    }
-
-    // Fall back to user token
-    try {
-      const payload = this.jwtService.verify<{ id: string }>(token);
-      return { type: 'user', userId: payload.id };
-    } catch {
-      return null;
-    }
   }
 }

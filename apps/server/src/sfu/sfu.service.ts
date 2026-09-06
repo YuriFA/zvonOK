@@ -63,6 +63,13 @@ export class SfuService implements OnModuleDestroy {
     return null;
   }
 
+  /** Whether a registered user is currently an active SFU peer in the room. */
+  hasPeerInSlug(roomSlug: string, userId: string): boolean {
+    const roomId = this.slugToRoomId.get(roomSlug);
+    if (!roomId) return false;
+    return this.getRoomPeers(roomId).some((peer) => peer.userId === userId);
+  }
+
   constructor(
     private readonly workerManager: WorkerManager,
     private readonly roomTokenHelper: RoomTokenHelper,

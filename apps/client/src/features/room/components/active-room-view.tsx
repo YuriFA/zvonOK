@@ -14,6 +14,8 @@ import { RoomVideo } from "@/features/room/components/room-video";
 import { ScreenShareSpotlight } from "@/features/room/components/screen-share-spotlight";
 import { useKeyboardShortcuts } from "@/features/room/hooks/use-keyboard-shortcuts";
 import type { UseRoomSessionResult } from "@/features/room/hooks/use-room-session";
+import { WhiteboardPanel } from "@/features/whiteboard/components/whiteboard-panel";
+import { useWhiteboard } from "@/features/whiteboard/hooks/use-whiteboard";
 import type { ScreenShareError } from "@/hooks/use-screen-share";
 import { useScreenShare } from "@/hooks/use-screen-share";
 
@@ -161,9 +163,14 @@ export function ActiveRoomView({
     await toggleAudio();
   }, [toggleAudio]);
 
-  const [asideState, setAsideState] = useState<"participants" | "chat" | null>(null);
+  const [asideState, setAsideState] = useState<"participants" | "chat" | "board" | null>(null);
 
   const isOwner = currentUserId === room.ownerId;
+
+  const whiteboard = useWhiteboard({
+    roomSlug: room.slug,
+    enabled: asideState === "board",
+  });
 
   const handleMuteAll = useCallback(async () => {
     try {
@@ -310,6 +317,17 @@ export function ActiveRoomView({
           )}
         </VideoGrid>
 
+        {asideState === "board" && (
+          <WhiteboardPanel
+            mode={whiteboard.mode}
+            status={whiteboard.status}
+            isOwner={isOwner}
+            onEditorMount={whiteboard.handleEditorMount}
+            onToggleMode={whiteboard.setBoardMode}
+            onClose={() => setAsideState(null)}
+          />
+        )}
+
         <AsidePanelContainer data-state={asideState ? "open" : "closed"}>
           {asideState === "participants" && (
             <AsidePanel>
@@ -407,6 +425,8 @@ export function ActiveRoomView({
             setAsideState((v) => (v === "participants" ? null : "participants"))
           }
           isChatOpen={asideState === "chat"}
+          isBoardOpen={asideState === "board"}
+          onToggleBoard={() => setAsideState((v) => (v === "board" ? null : "board"))}
           onToggleChat={() => {
             setAsideState((v) => {
               const next = v === "chat" ? null : "chat";
