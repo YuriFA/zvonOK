@@ -3,21 +3,28 @@ jest.mock('src/prisma/prisma.service', () => ({
 }));
 
 import {
+  BadRequestException,
   ConflictException,
   NotFoundException,
   UnauthorizedException,
+  ValidationPipe,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { DeveloperService } from './developer.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { PasswordHelper } from 'src/auth/helpers/password.helper';
 import { ApiKeyHelper } from './api-key.helper';
+import { SetWebhookDto } from './dto/developer.dto';
 
 describe('DeveloperService', () => {
   let service: DeveloperService;
   let prisma: {
     developerAccount: { findUnique: jest.Mock; create: jest.Mock };
-    project: { create: jest.Mock; findFirst: jest.Mock };
+    project: {
+      create: jest.Mock;
+      findFirst: jest.Mock;
+      update: jest.Mock;
+    };
     apiKey: {
       create: jest.Mock;
       findMany: jest.Mock;
@@ -29,7 +36,7 @@ describe('DeveloperService', () => {
   beforeEach(() => {
     prisma = {
       developerAccount: { findUnique: jest.fn(), create: jest.fn() },
-      project: { create: jest.fn(), findFirst: jest.fn() },
+      project: { create: jest.fn(), findFirst: jest.fn(), update: jest.fn() },
       apiKey: {
         create: jest.fn(),
         findMany: jest.fn(),
@@ -215,5 +222,123 @@ describe('DeveloperService', () => {
       expect(first.key).not.toEqual(second.key);
       expect(ApiKeyHelper.hash(first.key)).toBe(first.keyHash);
     });
+  });
+});
+
+describe('DeveloperService webhook config', () => {
+  const ownedProject = { id: 'project-1', developerAccountId: 'dev-1' };
+  let service: DeveloperService;
+  let prisma: {
+    project: { findFirst: jest.Mock; update: jest.Mock };
+  };
+
+  beforeEach(() => {
+    prisma = {
+      project: { findFirst: jest.fn(), update: jest.fn() },
+    };
+    prisma.project.findFirst.mockResolvedValue(ownedProject);
+
+    service = new DeveloperService(
+      prisma as unknown as PrismaService,
+      { sign: jest.fn() } as unknown as JwtService,
+      { get: jest.fn() } as never,
+    );
+  });
+
+  it('stores the endpoint with a 43+ char base64url secret and returns both', async () => {
+    const result = await service.setWebhook(
+      'dev-1',
+      'project-1',
+      'https://example.com/hooks',
+    );
+
+    expect(result.url).toBe('https://example.com/hooks');
+    expect(result.secret).toMatch(/^[A-Za-z0-9_-]{43,}$/);
+    expect(prisma.project.update).toHaveBeenCalledWith({
+      where: { id: 'project-1' },
+      data: {
+        webhookUrl: 'https://example.com/hooks',
+        webhookSecret: result.secret,
+      },
+    });
+  });
+
+  it('generates a fresh secret when replacing the endpoint', async () => {
+    const first = await service.setWebhook(
+      'dev-1',
+      'project-1',
+      'https://example.com/hooks',
+    );
+    const second = await service.setWebhook(
+      'dev-1',
+      'project-1',
+      'https://example.com/hooks-v2',
+    );
+
+    expect(second.secret).not.toBe(first.secret);
+    expect(second.url).toBe('https://example.com/hooks-v2');
+  });
+
+  it('rejects a webhook config for a foreign project with 404', async () => {
+    prisma.project.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.setWebhook('dev-1', 'foreign-project', 'https://example.com'),
+    ).rejects.toThrow(NotFoundException);
+    expect(prisma.project.update).not.toHaveBeenCalled();
+  });
+
+  it('clears the endpoint and secret on removal', async () => {
+    await service.removeWebhook('dev-1', 'project-1');
+
+    expect(prisma.project.update).toHaveBeenCalledWith({
+      where: { id: 'project-1' },
+      data: { webhookUrl: null, webhookSecret: null },
+    });
+  });
+
+  it('rejects removal for a foreign project with 404', async () => {
+    prisma.project.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.removeWebhook('dev-1', 'foreign-project'),
+    ).rejects.toThrow(NotFoundException);
+    expect(prisma.project.update).not.toHaveBeenCalled();
+  });
+});
+
+describe('SetWebhookDto validation', () => {
+  const pipe = new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true,
+  });
+
+  const transform = (value: unknown) =>
+    pipe.transform(value, {
+      type: 'body',
+      metatype: SetWebhookDto,
+    });
+
+  it('accepts an https URL, including loopback hosts', async () => {
+    for (const url of [
+      'https://example.com/hooks',
+      'https://localhost:8443/hook',
+      'https://127.0.0.1:9000/hook',
+    ]) {
+      const dto = await transform({ url });
+      expect(dto).toEqual({ url });
+    }
+  });
+
+  it('rejects plain http and non-URL values with a BadRequestException', async () => {
+    for (const url of [
+      'http://example.com/hooks',
+      'ftp://example.com/hooks',
+      'not-a-url',
+      '',
+    ]) {
+      await expect(transform({ url })).rejects.toThrow(BadRequestException);
+    }
   });
 });

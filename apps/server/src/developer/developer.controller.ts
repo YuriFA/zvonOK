@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Param,
   Post,
+  Put,
   UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -20,6 +21,7 @@ import {
   CreateProjectDto,
   LoginDeveloperDto,
   RegisterDeveloperDto,
+  SetWebhookDto,
 } from './dto/developer.dto';
 
 @ApiTags('developers')
@@ -90,5 +92,32 @@ export class DeveloperController {
     @Param('id') keyId: string,
   ) {
     await this.developerService.revokeApiKey(account.id, keyId);
+  }
+
+  @Put('projects/:id/webhooks')
+  @SkipAuthGuard()
+  @UseGuards(DevJwtGuard)
+  @ApiOperation({
+    summary:
+      'Set or replace the project webhook endpoint (signing secret returned)',
+  })
+  setWebhook(
+    @DevAccount() account: DevAccountIdentity,
+    @Param('id') projectId: string,
+    @Body() dto: SetWebhookDto,
+  ) {
+    return this.developerService.setWebhook(account.id, projectId, dto.url);
+  }
+
+  @Delete('projects/:id/webhooks')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @SkipAuthGuard()
+  @UseGuards(DevJwtGuard)
+  @ApiOperation({ summary: 'Remove the project webhook endpoint' })
+  async removeWebhook(
+    @DevAccount() account: DevAccountIdentity,
+    @Param('id') projectId: string,
+  ) {
+    await this.developerService.removeWebhook(account.id, projectId);
   }
 }

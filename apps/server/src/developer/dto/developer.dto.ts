@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
   IsString,
+  IsUrl,
   Matches,
   MaxLength,
   MinLength,
@@ -65,4 +66,21 @@ export class CreateProjectDto {
   @MinLength(1)
   @MaxLength(50)
   name: string;
+}
+
+export class SetWebhookDto {
+  @ApiProperty({
+    description: 'Webhook endpoint URL (https only)',
+    nullable: false,
+    required: true,
+    type: 'string',
+    example: 'https://example.com/hooks/zvonok',
+  })
+  @IsUrl({
+    protocols: ['https'],
+    require_protocol: true,
+    require_tld: false,
+  })
+  @MaxLength(2048)
+  url: string;
 }

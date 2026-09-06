@@ -1,3 +1,5 @@
+import { randomBytes } from 'node:crypto';
+
 import {
   ConflictException,
   Injectable,
@@ -114,6 +116,27 @@ export class DeveloperService {
     await this.prisma.apiKey.update({
       where: { id: keyId },
       data: { revokedAt: new Date() },
+    });
+  }
+
+  async setWebhook(developerId: string, projectId: string, url: string) {
+    const project = await this.findOwnedProject(developerId, projectId);
+
+    const secret = randomBytes(32).toString('base64url');
+    await this.prisma.project.update({
+      where: { id: project.id },
+      data: { webhookUrl: url, webhookSecret: secret },
+    });
+
+    return { url, secret };
+  }
+
+  async removeWebhook(developerId: string, projectId: string): Promise<void> {
+    const project = await this.findOwnedProject(developerId, projectId);
+
+    await this.prisma.project.update({
+      where: { id: project.id },
+      data: { webhookUrl: null, webhookSecret: null },
     });
   }
 
