@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { VideoGrid } from "@/components/video-grid";
 import { ChatPanel } from "@/features/chat/components/chat-panel";
 import { useChat } from "@/features/chat/hooks/use-chat";
-import { useLocalRecorder } from "@/features/media/hooks/use-local-recorder";
+import { useCallRecording } from "@/features/media/hooks/use-call-recording";
 import { RoomCenterControls } from "@/features/room/components/room-center-controls";
 import { RoomVideo } from "@/features/room/components/room-video";
 import { ScreenShareSpotlight } from "@/features/room/components/screen-share-spotlight";
@@ -65,22 +65,6 @@ export function ActiveRoomView({
   const { isSharing, screenStream, isScreenShareBlocked, startScreenShare, stopScreenShare } =
     useScreenShare();
   const [screenShareState, setScreenShareState] = useState<"idle" | "starting" | "sharing">("idle");
-  const recorder = useLocalRecorder({
-    videoStream: localVideoStream,
-    audioStream: localAudioStream,
-    roomSlug: room.slug,
-  });
-  const isRecordingEnabled =
-    (localVideoStream?.getTracks() ?? []).some((track) => track.readyState === "live") ||
-    (localAudioStream?.getTracks() ?? []).some((track) => track.readyState === "live");
-
-  const handleToggleRecord = () => {
-    if (recorder.state === "recording") {
-      recorder.stop();
-    } else {
-      recorder.start();
-    }
-  };
 
   const isScreenShareSupported =
     typeof navigator !== "undefined" &&
@@ -113,6 +97,37 @@ export function ActiveRoomView({
   }, [isSharing, screenStream, localUserId, currentUsername, remotePeers]);
 
   const isSpotlightMode = activeScreenShare !== null;
+
+  const recorder = useCallRecording({
+    roomSlug: room.slug,
+    localUserId,
+    localDisplayName: currentUsername ?? "You",
+    localVideoStream,
+    localAudioStream,
+    remotePeers,
+    activeScreenShare:
+      activeScreenShare === null
+        ? null
+        : {
+            userId: activeScreenShare.userId,
+            label: activeScreenShare.sharerName,
+            stream: activeScreenShare.stream,
+          },
+  });
+
+  // Recording is possible as long as anyone in the room publishes media.
+  const isRecordingEnabled =
+    (localVideoStream?.getTracks() ?? []).some((track) => track.readyState === "live") ||
+    (localAudioStream?.getTracks() ?? []).some((track) => track.readyState === "live") ||
+    remotePeers.some((peer) => peer.isCameraEnabled || peer.isAudioEnabled || peer.isScreenSharing);
+
+  const handleToggleRecord = () => {
+    if (recorder.state === "recording") {
+      recorder.stop();
+    } else {
+      recorder.start();
+    }
+  };
 
   const layout = useMemo(
     () =>

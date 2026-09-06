@@ -92,12 +92,20 @@ describe("RoomCenterControls - screen share button", () => {
 describe("RoomCenterControls - record button", () => {
   it("renders record button when supported", () => {
     renderControls();
-    expect(screen.getByRole("button", { name: "Start recording" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: "Record the call - saves a .webm with all participants to your device",
+      }),
+    ).toBeInTheDocument();
   });
 
   it("hides record button when not supported", () => {
     renderControls({ isRecordingSupported: false });
-    expect(screen.queryByRole("button", { name: "Start recording" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: "Record the call - saves a .webm with all participants to your device",
+      }),
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Stop recording - saves a .webm to your device" }),
     ).not.toBeInTheDocument();
@@ -105,17 +113,29 @@ describe("RoomCenterControls - record button", () => {
 
   it("disables record button when no track is active", () => {
     renderControls({ isRecordingEnabled: false });
-    expect(screen.getByRole("button", { name: "Start recording" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", {
+        name: "Record the call - saves a .webm with all participants to your device",
+      }),
+    ).toBeDisabled();
   });
 
   it("disables record button while saving", () => {
     renderControls({ recordingState: "saving", isRecordingEnabled: false });
-    expect(screen.getByRole("button", { name: "Start recording" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", {
+        name: "Record the call - saves a .webm with all participants to your device",
+      }),
+    ).toBeDisabled();
   });
 
   it("enables record button when idle with an active track", () => {
     renderControls({ recordingState: "idle", isRecordingEnabled: true });
-    expect(screen.getByRole("button", { name: "Start recording" })).not.toBeDisabled();
+    expect(
+      screen.getByRole("button", {
+        name: "Record the call - saves a .webm with all participants to your device",
+      }),
+    ).not.toBeDisabled();
   });
 
   it("shows stop state with aria-pressed while recording", () => {
@@ -130,10 +150,11 @@ describe("RoomCenterControls - record button", () => {
 
   it("shows start state with aria-pressed=false when idle", () => {
     renderControls({ recordingState: "idle" });
-    expect(screen.getByRole("button", { name: "Start recording" })).toHaveAttribute(
-      "aria-pressed",
-      "false",
-    );
+    expect(
+      screen.getByRole("button", {
+        name: "Record the call - saves a .webm with all participants to your device",
+      }),
+    ).toHaveAttribute("aria-pressed", "false");
   });
 
   it("shows elapsed time as mm:ss while recording", () => {
@@ -155,7 +176,11 @@ describe("RoomCenterControls - record button", () => {
     const onToggleRecord = vi.fn();
     renderControls({ onToggleRecord });
 
-    fireEvent.click(screen.getByRole("button", { name: "Start recording" }));
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Record the call - saves a .webm with all participants to your device",
+      }),
+    );
 
     expect(onToggleRecord).toHaveBeenCalledOnce();
   });
