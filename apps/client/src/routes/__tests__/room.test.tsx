@@ -102,8 +102,8 @@ vi.mock("@/features/media/contexts/media-manager.context", () => ({
 
 vi.mock("@/features/media/contexts/media-stream.context", () => ({
   useMediaStreamContext: () => ({
-    videoStream: { id: "local-video-stream" } as unknown as MediaStream,
-    audioStream: { id: "local-audio-stream" } as unknown as MediaStream,
+    videoStream: { id: "local-video-stream", getTracks: () => [] } as unknown as MediaStream,
+    audioStream: { id: "local-audio-stream", getTracks: () => [] } as unknown as MediaStream,
     stop: vi.fn(),
   }),
   MediaStreamProvider: ({ children }: { children: React.ReactNode }) => children,
@@ -242,8 +242,8 @@ describe("RoomPage", () => {
       },
     });
     mockUseRoomSession.mockReturnValue({
-      localVideoStream: { id: "local-video-stream" } as unknown as MediaStream,
-      localAudioStream: { id: "local-audio-stream" } as unknown as MediaStream,
+      localVideoStream: { id: "local-video-stream", getTracks: () => [] } as unknown as MediaStream,
+      localAudioStream: { id: "local-audio-stream", getTracks: () => [] } as unknown as MediaStream,
       mediaControls: {
         isVideoEnabled: true,
         isAudioEnabled: true,

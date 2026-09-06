@@ -1,5 +1,5 @@
-import type { HostControls } from "@zvonok/react";
 import type { SfuState } from "@zvonok/client/sfu/types";
+import type { HostControls } from "@zvonok/react";
 import { useCallback } from "react";
 
 import type { Participant } from "@/components/room/participants-list";
