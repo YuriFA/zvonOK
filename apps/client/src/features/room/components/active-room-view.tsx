@@ -3,11 +3,12 @@ import { Lock, LockOpen, MessageSquare, MicOff, Users } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
 import { ParticipantsList } from "@/components/room/participants-list";
+import { Button } from "@/components/ui/button";
 import { VideoGrid } from "@/components/video-grid";
 import { ChatPanel } from "@/features/chat/components/chat-panel";
 import { useChat } from "@/features/chat/hooks/use-chat";
+import { useLocalRecorder } from "@/features/media/hooks/use-local-recorder";
 import { RoomCenterControls } from "@/features/room/components/room-center-controls";
 import { RoomVideo } from "@/features/room/components/room-video";
 import { ScreenShareSpotlight } from "@/features/room/components/screen-share-spotlight";
@@ -15,9 +16,9 @@ import { useKeyboardShortcuts } from "@/features/room/hooks/use-keyboard-shortcu
 import type { UseRoomSessionResult } from "@/features/room/hooks/use-room-session";
 import type { ScreenShareError } from "@/hooks/use-screen-share";
 import { useScreenShare } from "@/hooks/use-screen-share";
-import type { Room } from "../types/room.types";
 
 import { useGuestRequests } from "../contexts/guest-requests.context";
+import type { Room } from "../types/room.types";
 import { AsidePanel, AsidePanelContainer, AsidePanelHeader } from "./aside-panel";
 import { RoomLeftControls } from "./room-left-controls";
 import { RoomRightControls } from "./room-right-controls";
@@ -44,6 +45,7 @@ export function ActiveRoomView({
 }: ActiveRoomViewProps) {
   const {
     localVideoStream,
+    localAudioStream,
     mediaControls,
     toggleVideo,
     toggleAudio,
@@ -61,6 +63,22 @@ export function ActiveRoomView({
   const { isSharing, screenStream, isScreenShareBlocked, startScreenShare, stopScreenShare } =
     useScreenShare();
   const [screenShareState, setScreenShareState] = useState<"idle" | "starting" | "sharing">("idle");
+  const recorder = useLocalRecorder({
+    videoStream: localVideoStream,
+    audioStream: localAudioStream,
+    roomSlug: room.slug,
+  });
+  const isRecordingEnabled =
+    (localVideoStream?.getTracks() ?? []).some((track) => track.readyState === "live") ||
+    (localAudioStream?.getTracks() ?? []).some((track) => track.readyState === "live");
+
+  const handleToggleRecord = () => {
+    if (recorder.state === "recording") {
+      recorder.stop();
+    } else {
+      recorder.start();
+    }
+  };
 
   const isScreenShareSupported =
     typeof navigator !== "undefined" &&
@@ -235,7 +253,7 @@ export function ActiveRoomView({
         <VideoGrid ref={containerRef}>
           {hasValidDimensions && (
             <>
-              {/* Screen share spotlight — rendered only in spotlight mode */}
+              {/* Screen share spotlight - rendered only in spotlight mode */}
               {isSpotlightMode && layout.spotlightArea && (
                 <ScreenShareSpotlight
                   key={activeScreenShare.userId}
@@ -319,7 +337,11 @@ export function ActiveRoomView({
                     className="h-7 gap-1.5 text-xs"
                     onClick={handleToggleLock}
                   >
-                    {isRoomLocked ? <LockOpen className="size-3.5" /> : <Lock className="size-3.5" />}
+                    {isRoomLocked ? (
+                      <LockOpen className="size-3.5" />
+                    ) : (
+                      <Lock className="size-3.5" />
+                    )}
                     {isRoomLocked ? "Unlock room" : "Lock room"}
                   </Button>
                 </div>
@@ -372,8 +394,12 @@ export function ActiveRoomView({
           isScreenShareBlocked={isScreenShareBlocked}
           screenShareState={screenShareState}
           onToggleScreenShare={handleToggleScreenShare}
+          recordingState={recorder.state}
+          elapsedSeconds={recorder.elapsedSeconds}
+          isRecordingSupported={recorder.isSupported}
+          isRecordingEnabled={isRecordingEnabled}
+          onToggleRecord={handleToggleRecord}
         />
-
         <RoomRightControls
           pendingRequestsCount={isOwner ? pendingRequests.length : undefined}
           isParticipantsVisible={asideState === "participants"}

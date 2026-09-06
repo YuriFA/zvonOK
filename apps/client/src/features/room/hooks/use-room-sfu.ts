@@ -1,7 +1,7 @@
-import type { HostControls } from "@zvonok/react";
 import type { SfuState } from "@zvonok/client/sfu/types";
-import { toast } from "sonner";
+import type { HostControls } from "@zvonok/react";
 import { useCallback, useEffect, useRef } from "react";
+import { toast } from "sonner";
 
 import {
   useVideoCaptureControl,

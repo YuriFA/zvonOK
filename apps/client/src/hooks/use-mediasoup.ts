@@ -5,8 +5,14 @@
  * actions from the SDK host controls factory.
  */
 
-import { createHostControls, EMPTY_ROOM_STATE, RoomTracker, type HostControls, type ZvonokParticipant } from "@zvonok/react";
 import type { SfuState } from "@zvonok/client/sfu/types";
+import {
+  createHostControls,
+  EMPTY_ROOM_STATE,
+  RoomTracker,
+  type HostControls,
+  type ZvonokParticipant,
+} from "@zvonok/react";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import { useAuth } from "@/features/auth/contexts/auth.context";
