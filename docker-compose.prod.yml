@@ -50,8 +50,7 @@ services:
       # TURN credentials (sent to clients as ICE servers)
       TURN_URL: ${TURN_URL:-}
       TURNS_URL: ${TURNS_URL:-}
-      TURN_USER: ${TURN_USER:-}
-      TURN_PASSWORD: ${TURN_PASSWORD:-}
+      TURN_AUTH_SECRET: ${TURN_AUTH_SECRET:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -142,7 +141,7 @@ services:
       - /etc/coturn/turnserver.conf
       - --external-ip=${TURN_EXTERNAL_IP}
       - --realm=${SITE_ADDRESS:-localhost}
-      - --user=${TURN_USER}:${TURN_PASSWORD}
+      - --static-auth-secret=${TURN_AUTH_SECRET}
     restart: unless-stopped
 
 networks:

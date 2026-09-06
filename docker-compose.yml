@@ -147,7 +147,6 @@ services:
       - /etc/coturn/turnserver.conf
       - --external-ip=${TURN_EXTERNAL_IP}
       - --realm=${SITE_ADDRESS:-localhost}
-      - --user=${TURN_USER}:${TURN_PASSWORD}
     restart: unless-stopped
 
 volumes:
