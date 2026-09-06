@@ -30,7 +30,7 @@ dogfooded SDK taught us about the API surface.
 
 ## Stage 2 candidate queue (ordered; each item = one OpenSpec change)
 
-1. **Webhooks** - session/participant events with signatures and retries.
+1. **Webhooks** - session/participant events with signatures and retries. Implemented in `add-platform-webhooks` (archived 2026-09-06).
 2. **Recording** - local-first (`MediaRecorder`), then server-side pipeline;
    storage on VPS disk (S3 later if needed).
 3. **Ephemeral TURN credentials** - HMAC auth-secret in coturn, replacing the
