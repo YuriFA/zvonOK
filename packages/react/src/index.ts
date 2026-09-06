@@ -1,6 +1,7 @@
 /**
  * @zvonok/react public entry point: headless React bindings over
- * {@link https://www.npmjs.com/package/@zvonok/client | @zvonok/client}.
+ * {@link https://www.npmjs.com/package/@zvonok/client | @zvonok/client}
+ * plus the prebuilt {@link ZvonokRoom} drop-in component.
  */
 
 export { ZvonokProvider, type ZvonokProviderProps } from "./zvonok-context.js";
@@ -27,3 +28,4 @@ export {
   type ZvonokServerJoinErrorCode,
 } from "./errors.js";
 export type { ZvonokParticipant, ZvonokStatus } from "./types.js";
+export { ZvonokRoom, type ZvonokRoomProps } from "./prebuilt/ZvonokRoom.js";

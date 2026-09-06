@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "license": "MIT",
-  "sideEffects": false,
+  "sideEffects": ["*.css"],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/YuriFA/zvonOK.git",
@@ -13,7 +13,8 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
-    }
+    },
+    "./zvonok.css": "./src/prebuilt/zvonok.css"
   },
   "publishConfig": {
     "access": "public",
@@ -21,14 +22,15 @@
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
-      }
+      },
+      "./zvonok.css": "./dist/prebuilt/zvonok.css"
     }
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && cp src/prebuilt/zvonok.css dist/prebuilt/zvonok.css",
     "clean": "rm -rf dist",
     "test": "vitest",
     "test:run": "vitest run",

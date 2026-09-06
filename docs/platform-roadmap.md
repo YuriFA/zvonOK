@@ -39,6 +39,7 @@ dogfooded SDK taught us about the API surface.
    add-a-site pattern; content grows from the quickstart. Implemented in
    `add-docs-site` (2026-09-06).
 5. **Prebuilt widget** - drop-in UI component on top of `@zvonok/react`.
+   Implemented in `add-prebuilt-widget` (2026-09-06).
 6. **HLS/RTMP egress** - live streaming out of rooms.
 7. **Whiteboard** - integrate before building (Yjs/tldraw class), never from
    scratch.
