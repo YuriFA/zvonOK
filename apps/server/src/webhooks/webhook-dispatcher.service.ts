@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { WebhookDeliveryService } from './webhook-delivery.service';
 import { WebhookQueue } from './webhook-queue';
+import type { EgressOutputs } from '../egress/egress.types';
 
 export type WebhookLeaveReason = 'leave' | 'kick' | 'disconnect' | 'room-end';
 
@@ -9,7 +10,10 @@ export type WebhookEventType =
   | 'room.started'
   | 'participant.joined'
   | 'participant.left'
-  | 'room.ended';
+  | 'room.ended'
+  | 'egress.started'
+  | 'egress.stopped'
+  | 'egress.failed';
 
 export interface WebhookParticipant {
   id: string;
@@ -56,6 +60,43 @@ export class WebhookDispatcher {
 
   roomEnded(roomId: string, roomSlug?: string): void {
     this.emit(roomId, roomSlug, 'room.ended');
+  }
+
+  egressStarted(
+    roomId: string,
+    roomSlug: string | undefined,
+    egressId: string,
+    outputs: EgressOutputs,
+  ): void {
+    this.emit(roomId, roomSlug, 'egress.started', {
+      egress: { id: egressId, outputs },
+    });
+  }
+
+  egressStopped(
+    roomId: string,
+    roomSlug: string | undefined,
+    egressId: string,
+    outputs: EgressOutputs,
+    reason: 'stopped' | 'room-ended',
+  ): void {
+    this.emit(roomId, roomSlug, 'egress.stopped', {
+      egress: { id: egressId, outputs },
+      reason,
+    });
+  }
+
+  egressFailed(
+    roomId: string,
+    roomSlug: string | undefined,
+    egressId: string,
+    outputs: EgressOutputs,
+    error: string,
+  ): void {
+    this.emit(roomId, roomSlug, 'egress.failed', {
+      egress: { id: egressId, outputs },
+      error,
+    });
   }
 
   private emit(

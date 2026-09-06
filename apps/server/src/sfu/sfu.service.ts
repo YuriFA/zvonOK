@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import type { OnModuleDestroy } from '@nestjs/common';
 import type { Socket } from 'socket.io';
 import { WorkerManager } from './worker-manager';
@@ -13,13 +13,25 @@ import type {
   SfuMediaSource,
   SfuJoinErrorCode,
   SfuHostErrorPayload,
+  SfuProduceAppData,
 } from './interfaces/sfu.interface';
-import type { Consumer, Producer, WebRtcTransport } from 'mediasoup/types';
+import type {
+  Consumer,
+  PlainTransport,
+  Producer,
+  RtpParameters,
+  WebRtcTransport,
+} from 'mediasoup/types';
 import { config, getIceServers } from './config/mediasoup.config';
 import { RoomTokenHelper } from '../platform/room-token.helper';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { WebhookDispatcher } from '../webhooks/webhook-dispatcher.service';
 import type { WebhookLeaveReason } from '../webhooks/webhook-dispatcher.service';
+import { egressPlainTransportOptions } from '../egress/egress.config';
+import type {
+  EgressTapDescriptor,
+  EgressTapSource,
+} from '../egress/egress.types';
 
 @Injectable()
 export class SfuService implements OnModuleDestroy {
@@ -30,6 +42,11 @@ export class SfuService implements OnModuleDestroy {
   private roomScreenShare: Map<string, string> = new Map();
   private roomLocks: Map<string, boolean> = new Map();
   private slugToRoomId: Map<string, string> = new Map();
+  private egressTapHandlers: Map<
+    string,
+    Set<(descriptor: EgressTapDescriptor) => void>
+  > = new Map();
+  private roomClosedHandlers: Map<string, Set<() => void>> = new Map();
 
   registerSlug(slug: string, roomId: string): void {
     this.slugToRoomId.set(slug, roomId);
@@ -67,6 +84,8 @@ export class SfuService implements OnModuleDestroy {
     this.rooms.clear();
     this.roomOwners.clear();
     this.roomLocks.clear();
+    this.egressTapHandlers.clear();
+    this.roomClosedHandlers.clear();
     this.slugToRoomId.clear();
     this.logger.log('SFU Service closed');
   }
@@ -245,6 +264,8 @@ export class SfuService implements OnModuleDestroy {
     }
 
     if (this.rooms.get(roomId)?.size === 0) {
+      // Stop egress taps while the room is still resolvable.
+      this.notifyRoomClosed(roomId);
       await this.workerManager.closeRouter(roomId);
       this.rooms.delete(roomId);
       this.roomOwners.delete(roomId);
@@ -586,10 +607,75 @@ export class SfuService implements OnModuleDestroy {
     });
 
     this.notifyPeersToConsume(socket, producer);
+
+    this.notifyEgressTapHandlers(roomId, producer);
   }
 
   closeProducer(socketId: string, producerId: string): void {
     this.closeProducerForPeer(socketId, producerId);
+  }
+
+  listRoomProducers(roomId: string): EgressTapDescriptor[] {
+    return this.getRoomPeers(roomId).flatMap((peer) =>
+      Array.from(peer.producers.values(), (producer) => ({
+        producerId: producer.id,
+        kind: producer.kind,
+        source: this.producerTapSource(producer),
+      })),
+    );
+  }
+
+  async createEgressTransport(roomId: string): Promise<PlainTransport> {
+    const router = this.workerManager.getRouter(roomId);
+    if (!router) {
+      throw new NotFoundException(`Room ${roomId} not found`);
+    }
+    return router.createPlainTransport(egressPlainTransportOptions);
+  }
+
+  async createEgressConsumer(
+    roomId: string,
+    transport: PlainTransport,
+    producerId: string,
+  ): Promise<{ consumer: Consumer; rtpParameters: RtpParameters }> {
+    const router = this.workerManager.getRouter(roomId);
+    if (!router) {
+      throw new NotFoundException(`Room ${roomId} not found`);
+    }
+    const consumer = await transport.consume({
+      producerId,
+      rtpCapabilities: router.rtpCapabilities,
+      paused: false,
+      appData: { egress: true },
+    });
+    return { consumer, rtpParameters: consumer.rtpParameters };
+  }
+
+  onRoomProducerAdded(
+    roomId: string,
+    handler: (descriptor: EgressTapDescriptor) => void,
+  ): () => void {
+    let handlers = this.egressTapHandlers.get(roomId);
+    if (!handlers) {
+      handlers = new Set();
+      this.egressTapHandlers.set(roomId, handlers);
+    }
+    handlers.add(handler);
+    return () => {
+      handlers.delete(handler);
+    };
+  }
+
+  onRoomClosed(roomId: string, handler: () => void): () => void {
+    let handlers = this.roomClosedHandlers.get(roomId);
+    if (!handlers) {
+      handlers = new Set();
+      this.roomClosedHandlers.set(roomId, handlers);
+    }
+    handlers.add(handler);
+    return () => {
+      handlers.delete(handler);
+    };
   }
 
   async createConsumer(
@@ -868,6 +954,9 @@ export class SfuService implements OnModuleDestroy {
     // A /v1 DELETE teardown must clear a lock even when the room has no SFU
     // peers left, so a recreated room can be joined again.
     this.roomLocks.delete(roomId);
+    // Fire room-closed handlers up front so egress pipelines stop before any
+    // teardown; removePeer's empty branch is a no-op afterwards.
+    this.notifyRoomClosed(roomId);
     const roomSlug = this.findRoomSlug(roomId);
     const roomPeerIds = this.rooms.get(roomId);
     if (!roomPeerIds || roomPeerIds.size === 0) {
@@ -930,6 +1019,37 @@ export class SfuService implements OnModuleDestroy {
       if (roomPeer.id !== socket.id && roomPeer.recvTransport) {
         this.emitNewProducer(roomPeer.socket, producer, peer);
       }
+    }
+  }
+
+  private producerTapSource(producer: Producer): EgressTapSource {
+    const appData = producer.appData as SfuProduceAppData | undefined;
+    return appData?.source ?? 'camera';
+  }
+
+  private notifyEgressTapHandlers(roomId: string, producer: Producer): void {
+    const handlers = this.egressTapHandlers.get(roomId);
+    if (!handlers) return;
+
+    const descriptor: EgressTapDescriptor = {
+      producerId: producer.id,
+      kind: producer.kind,
+      source: this.producerTapSource(producer),
+    };
+    for (const handler of handlers) {
+      handler(descriptor);
+    }
+  }
+
+  private notifyRoomClosed(roomId: string): void {
+    const handlers = this.roomClosedHandlers.get(roomId);
+    if (!handlers) return;
+
+    // Clear before firing: endRoom funnels through removePeer, so the
+    // natural-empty branch must not notify a second time.
+    this.roomClosedHandlers.delete(roomId);
+    for (const handler of handlers) {
+      handler();
     }
   }
 }

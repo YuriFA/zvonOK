@@ -1,8 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
   IsBoolean,
   IsOptional,
   IsString,
+  Matches,
   MaxLength,
   Min,
   Max,
@@ -53,4 +57,35 @@ export class MintRoomTokenDto {
   @IsOptional()
   @IsBoolean()
   admin?: boolean;
+}
+
+export class StartEgressDto {
+  @ApiProperty({
+    required: false,
+    type: 'array',
+    items: { type: 'string' },
+    maxItems: 3,
+    description: 'RTMP(S) push endpoints (1-3)',
+    example: ['rtmp://a.rtmp.youtube.com/live2'],
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(3)
+  @Matches(/^rtmps?:\/\//, {
+    each: true,
+    message: 'each endpoint must use the rtmp or rtmps scheme',
+  })
+  @MaxLength(2048, { each: true })
+  rtmpEndpoints?: string[];
+
+  @ApiProperty({
+    required: false,
+    type: 'boolean',
+    default: false,
+    description: 'Write a live HLS playlist served by the server',
+  })
+  @IsOptional()
+  @IsBoolean()
+  hls?: boolean;
 }

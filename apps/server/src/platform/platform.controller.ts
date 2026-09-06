@@ -17,7 +17,11 @@ import { ApiKeyGuard } from './guards/api-key.guard';
 import { PlatformThrottlerGuard } from './guards/platform-throttler.guard';
 import { ApiKey } from './decorators/api-key.decorator';
 import type { ApiKeyContext } from './guards/api-key.guard';
-import { CreatePlatformRoomDto, MintRoomTokenDto } from './dto/platform.dto';
+import {
+  CreatePlatformRoomDto,
+  MintRoomTokenDto,
+  StartEgressDto,
+} from './dto/platform.dto';
 
 @ApiTags('platform')
 @Controller('v1')
@@ -62,5 +66,36 @@ export class PlatformController {
       roomId,
       dto,
     );
+  }
+
+  @Post('rooms/:id/egress')
+  @HttpCode(HttpStatus.CREATED)
+  @Throttle({ short: { limit: 60, ttl: 60000 } })
+  @ApiOperation({ summary: 'Start an egress session for a project room' })
+  startEgress(
+    @ApiKey() key: ApiKeyContext,
+    @Param('id') roomId: string,
+    @Body() dto: StartEgressDto,
+  ) {
+    return this.platformService.startEgress(key.projectId, roomId, dto);
+  }
+
+  @Get('rooms/:id/egress')
+  @ApiOperation({ summary: "List a project room's egress sessions" })
+  listEgress(@ApiKey() key: ApiKeyContext, @Param('id') roomId: string) {
+    return this.platformService.listEgress(key.projectId, roomId);
+  }
+
+  @Get('egress/:id')
+  @ApiOperation({ summary: 'Inspect an egress session' })
+  getEgress(@ApiKey() key: ApiKeyContext, @Param('id') egressId: string) {
+    return this.platformService.getEgress(key.projectId, egressId);
+  }
+
+  @Post('egress/:id/stop')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Stop an active egress session' })
+  stopEgress(@ApiKey() key: ApiKeyContext, @Param('id') egressId: string) {
+    return this.platformService.stopEgress(key.projectId, egressId);
   }
 }
