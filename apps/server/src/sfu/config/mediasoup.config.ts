@@ -62,10 +62,13 @@ export function mintTurnPassword(secret: string, username: string): string {
 /**
  * Build ICE servers list from environment variables.
  * Always includes Google public STUN as a baseline.
- * Appends a TURN entry when TURN_URL is set. With TURN_AUTH_SECRET set, the
- * entry carries ephemeral credentials (username `<unix-expiry>:zvonok`, 6h
- * TTL) that coturn verifies via use-auth-secret; without a secret the entry
- * is URL-only for an unauthenticated development coturn.
+ * Appends a TURN entry only when both TURN_URL and TURN_AUTH_SECRET are set:
+ * the entry then carries ephemeral credentials (username
+ * `<unix-expiry>:zvonok`, TTL below) that coturn verifies via
+ * use-auth-secret. A credential-less `turn:` URL is rejected by the browser
+ * RTCConfiguration ("Both username and credential are required..."), so an
+ * unauthenticated development coturn cannot be advertised - clients fall
+ * back to STUN and host candidates.
  */
 export function getIceServers(): IceServerConfig[] {
   const servers: IceServerConfig[] = [
@@ -78,17 +81,14 @@ export function getIceServers(): IceServerConfig[] {
   const turnsUrl = process.env.TURNS_URL;
   const authSecret = process.env.TURN_AUTH_SECRET;
 
-  if (turnUrl) {
-    const turn: IceServerConfig = {
+  if (turnUrl && authSecret) {
+    const expiry = Math.floor(Date.now() / 1000) + TURN_CREDENTIAL_TTL_SECONDS;
+    const username = `${expiry}:zvonok`;
+    servers.push({
       urls: turnsUrl ? [turnUrl, turnsUrl] : [turnUrl],
-    };
-    if (authSecret) {
-      const expiry =
-        Math.floor(Date.now() / 1000) + TURN_CREDENTIAL_TTL_SECONDS;
-      turn.username = `${expiry}:zvonok`;
-      turn.credential = mintTurnPassword(authSecret, turn.username);
-    }
-    servers.push(turn);
+      username,
+      credential: mintTurnPassword(authSecret, username),
+    });
   }
 
   return servers;
