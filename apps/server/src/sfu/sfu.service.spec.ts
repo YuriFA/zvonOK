@@ -15,10 +15,15 @@ import { Test } from '@nestjs/testing';
 import type { TestingModule } from '@nestjs/testing';
 import { SfuService } from './sfu.service';
 import { WorkerManager } from './worker-manager';
-import type { Peer, PeerPermissions } from './interfaces/sfu.interface';
+import type {
+  Peer,
+  PeerPermissions,
+  SfuJoinPayload,
+} from './interfaces/sfu.interface';
 import { RoomTokenHelper } from '../platform/room-token.helper';
 import { PrismaService } from 'src/prisma/prisma.service';
 import type { RoomTokenVerifyResult } from '../platform/room-token.helper';
+import { WebhookDispatcher } from '../webhooks/webhook-dispatcher.service';
 
 type SfuServiceState = {
   peers: Map<string, unknown>;
@@ -27,6 +32,12 @@ let service: SfuService;
 let workerManager: jest.Mocked<WorkerManager>;
 let roomTokenHelper: RoomTokenHelper;
 let prisma: { apiKey: { findUnique: jest.Mock } };
+let webhooks: {
+  roomStarted: jest.Mock;
+  participantJoined: jest.Mock;
+  participantLeft: jest.Mock;
+  roomEnded: jest.Mock;
+};
 
 const socket = {
   id: 'socket-1',
@@ -42,6 +53,12 @@ const createSocket = (id: string) =>
 beforeEach(async () => {
   roomTokenHelper = { verify: jest.fn() } as unknown as RoomTokenHelper;
   prisma = { apiKey: { findUnique: jest.fn() } };
+  webhooks = {
+    roomStarted: jest.fn(),
+    participantJoined: jest.fn(),
+    participantLeft: jest.fn(),
+    roomEnded: jest.fn(),
+  };
 
   const module: TestingModule = await Test.createTestingModule({
     providers: [
@@ -57,6 +74,7 @@ beforeEach(async () => {
       },
       { provide: RoomTokenHelper, useValue: roomTokenHelper },
       { provide: PrismaService, useValue: prisma },
+      { provide: WebhookDispatcher, useValue: webhooks },
     ],
   }).compile();
 
@@ -1158,6 +1176,183 @@ describe('host controls', () => {
     await service.endRoom('room-empty');
 
     expect(state().roomLocks.has('room-empty')).toBe(false);
+    expect(workerManager.closeRouter).not.toHaveBeenCalled();
+  });
+});
+
+describe('webhook emissions', () => {
+  type WebhookState = {
+    peers: Map<string, Peer>;
+    rooms: Map<string, Set<string>>;
+    roomOwners: Map<string, string>;
+  };
+
+  const state = () => service as unknown as WebhookState;
+
+  function seedPeer(
+    sock: Socket,
+    userId: string,
+    roomId: string,
+    options: { ownerId?: string } = {},
+  ): Peer {
+    const peer: Peer = {
+      id: sock.id,
+      userId,
+      username: userId,
+      socket: sock,
+      producers: new Map(),
+      consumers: new Map(),
+    };
+    state().peers.set(peer.id, peer);
+    const roomPeers = state().rooms.get(roomId) ?? new Set<string>();
+    roomPeers.add(peer.id);
+    state().rooms.set(roomId, roomPeers);
+    if (options.ownerId) {
+      state().roomOwners.set(roomId, options.ownerId);
+    }
+    return peer;
+  }
+
+  function joinViaPayload(
+    sock: Socket,
+    userId: string,
+    overrides: Partial<SfuJoinPayload> = {},
+  ): Promise<void> {
+    workerManager.createRouter.mockResolvedValue({} as Router<AppData>);
+    workerManager.getRtpCapabilities.mockReturnValue(
+      {} as unknown as RtpCapabilities,
+    );
+    return service.joinRoom(sock, {
+      roomId: 'room-1',
+      userId,
+      username: userId,
+      roomSlug: 'room-1-slug',
+      ...overrides,
+    });
+  }
+
+  it('emits room.started and participant.joined when the first peer joins', async () => {
+    await joinViaPayload(socket, 'user-1');
+
+    expect(webhooks.roomStarted).toHaveBeenCalledWith('room-1', 'room-1-slug');
+    expect(webhooks.participantJoined).toHaveBeenCalledWith(
+      'room-1',
+      'room-1-slug',
+      { id: 'user-1', displayName: 'user-1' },
+    );
+  });
+
+  it('emits only participant.joined for subsequent peers', async () => {
+    const second = createSocket('socket-2');
+    await joinViaPayload(socket, 'user-1');
+    await joinViaPayload(second, 'user-2');
+
+    expect(webhooks.roomStarted).toHaveBeenCalledTimes(1);
+    expect(webhooks.participantJoined).toHaveBeenCalledTimes(2);
+    expect(webhooks.participantJoined).toHaveBeenLastCalledWith(
+      'room-1',
+      'room-1-slug',
+      { id: 'user-2', displayName: 'user-2' },
+    );
+  });
+
+  it('emits participant.joined with the token identity for token joins', async () => {
+    (roomTokenHelper.verify as jest.Mock).mockReturnValue({
+      ok: true,
+      claims: {
+        roomId: 'room-1',
+        projectId: 'project-1',
+        keyId: 'key-1',
+        participantId: 'participant-1',
+        name: 'Alice',
+        publish: true,
+        admin: false,
+      },
+    });
+    prisma.apiKey.findUnique.mockResolvedValue({ revokedAt: null });
+
+    await joinViaPayload(socket, 'ignored', { token: 'signed-token' });
+
+    expect(webhooks.participantJoined).toHaveBeenCalledWith(
+      'room-1',
+      'room-1-slug',
+      { id: 'participant-1', displayName: 'Alice' },
+    );
+  });
+
+  it('emits participant.left with reason leave on an explicit leave', async () => {
+    seedPeer(socket, 'user-1', 'room-1');
+
+    await service.leaveRoom(socket);
+
+    expect(webhooks.participantLeft).toHaveBeenCalledWith(
+      'room-1',
+      undefined,
+      { id: 'user-1', displayName: 'user-1' },
+      'leave',
+    );
+  });
+
+  it('emits participant.left with reason kick on a host kick', async () => {
+    const ownerSocket = createSocket('socket-owner');
+    seedPeer(ownerSocket, 'user-1', 'room-1', { ownerId: 'user-1' });
+    seedPeer(createSocket('socket-target'), 'user-2', 'room-1');
+
+    await service.kickPeer(ownerSocket, 'user-2');
+
+    expect(webhooks.participantLeft).toHaveBeenCalledWith(
+      'room-1',
+      undefined,
+      { id: 'user-2', displayName: 'user-2' },
+      'kick',
+    );
+  });
+
+  it('emits participant.left with reason disconnect on socket close', async () => {
+    seedPeer(socket, 'user-1', 'room-1');
+
+    await service.closePeer(socket);
+
+    expect(webhooks.participantLeft).toHaveBeenCalledWith(
+      'room-1',
+      undefined,
+      { id: 'user-1', displayName: 'user-1' },
+      'disconnect',
+    );
+  });
+
+  it('emits participant.left(room-end) for every peer, then room.ended', async () => {
+    seedPeer(socket, 'user-1', 'room-1');
+    const second = createSocket('socket-2');
+    seedPeer(second, 'user-2', 'room-1');
+
+    await service.endRoom('room-1');
+
+    expect(webhooks.participantLeft).toHaveBeenCalledTimes(2);
+    expect(webhooks.participantLeft).toHaveBeenCalledWith(
+      'room-1',
+      undefined,
+      { id: 'user-1', displayName: 'user-1' },
+      'room-end',
+    );
+    expect(webhooks.participantLeft).toHaveBeenLastCalledWith(
+      'room-1',
+      undefined,
+      { id: 'user-2', displayName: 'user-2' },
+      'room-end',
+    );
+
+    const lastLeftCall =
+      webhooks.participantLeft.mock.invocationCallOrder.slice(-1)[0];
+    const endedCall = webhooks.roomEnded.mock.invocationCallOrder[0];
+    expect(endedCall).toBeGreaterThan(lastLeftCall);
+    expect(webhooks.roomEnded).toHaveBeenCalledWith('room-1', undefined);
+  });
+
+  it('emits room.ended even when the room has no SFU peers', async () => {
+    await service.endRoom('room-empty');
+
+    expect(webhooks.roomEnded).toHaveBeenCalledWith('room-empty', undefined);
     expect(workerManager.closeRouter).not.toHaveBeenCalled();
   });
 });

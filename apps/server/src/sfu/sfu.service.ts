@@ -18,6 +18,8 @@ import type { Consumer, Producer, WebRtcTransport } from 'mediasoup/types';
 import { config, getIceServers } from './config/mediasoup.config';
 import { RoomTokenHelper } from '../platform/room-token.helper';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { WebhookDispatcher } from '../webhooks/webhook-dispatcher.service';
+import type { WebhookLeaveReason } from '../webhooks/webhook-dispatcher.service';
 
 @Injectable()
 export class SfuService implements OnModuleDestroy {
@@ -48,6 +50,7 @@ export class SfuService implements OnModuleDestroy {
     private readonly workerManager: WorkerManager,
     private readonly roomTokenHelper: RoomTokenHelper,
     private readonly prisma: PrismaService,
+    private readonly webhooks: WebhookDispatcher,
   ) {}
 
   async onModuleDestroy(): Promise<void> {
@@ -198,6 +201,7 @@ export class SfuService implements OnModuleDestroy {
 
   private async removePeer(
     socketId: string,
+    reason?: WebhookLeaveReason,
   ): Promise<{ roomId: string; userId: string } | null> {
     const peer = this.getPeer(socketId);
     const roomId = this.getRoomIdBySocketId(socketId);
@@ -231,6 +235,14 @@ export class SfuService implements OnModuleDestroy {
     peer.recvTransport?.close();
     this.peers.delete(socketId);
     this.notifyPeerLeft(roomId, peer.userId, socketId);
+    if (reason) {
+      this.webhooks.participantLeft(
+        roomId,
+        this.findRoomSlug(roomId),
+        { id: peer.userId, displayName: peer.username },
+        reason,
+      );
+    }
 
     if (this.rooms.get(roomId)?.size === 0) {
       await this.workerManager.closeRouter(roomId);
@@ -246,6 +258,13 @@ export class SfuService implements OnModuleDestroy {
       roomId,
       userId: peer.userId,
     };
+  }
+
+  private findRoomSlug(roomId: string): string | undefined {
+    for (const [slug, rid] of this.slugToRoomId) {
+      if (rid === roomId) return slug;
+    }
+    return undefined;
   }
 
   async joinRoom(socket: Socket, payload: SfuJoinPayload): Promise<void> {
@@ -286,6 +305,7 @@ export class SfuService implements OnModuleDestroy {
       return;
     }
 
+    const firstPeer = roomPeers.size === 0;
     roomPeers.add(peerId);
     if (roomOwnerId && !payload.token) {
       this.roomOwners.set(roomId, roomOwnerId);
@@ -318,10 +338,21 @@ export class SfuService implements OnModuleDestroy {
 
     const routerRtpCapabilities = this.workerManager.getRtpCapabilities(roomId);
     socket.emit('sfu:joined', { routerRtpCapabilities });
+
+    // Webhook emission is fire-and-forget and must never delay or break the
+    // join path; ordering (room.started before participant.joined) is kept by
+    // the dispatcher's per-project FIFO queue.
+    if (firstPeer) {
+      this.webhooks.roomStarted(roomId, roomSlug);
+    }
+    this.webhooks.participantJoined(roomId, roomSlug, {
+      id: peer.userId,
+      displayName: peer.username,
+    });
   }
 
   async leaveRoom(socket: Socket): Promise<void> {
-    const removedPeer = await this.removePeer(socket.id);
+    const removedPeer = await this.removePeer(socket.id, 'leave');
     if (removedPeer) {
       this.logger.log(`Peer ${socket.id} left SFU room ${removedPeer.roomId}`);
     }
@@ -675,7 +706,7 @@ export class SfuService implements OnModuleDestroy {
     }
 
     targetPeer.socket.emit('sfu:kicked', { roomId });
-    await this.removePeer(targetPeer.id);
+    await this.removePeer(targetPeer.id, 'kick');
     targetPeer.socket.disconnect();
   }
 
@@ -799,7 +830,7 @@ export class SfuService implements OnModuleDestroy {
   }
 
   async closePeer(socket: Socket): Promise<void> {
-    await this.removePeer(socket.id);
+    await this.removePeer(socket.id, 'disconnect');
   }
 
   /**
@@ -837,31 +868,32 @@ export class SfuService implements OnModuleDestroy {
     // A /v1 DELETE teardown must clear a lock even when the room has no SFU
     // peers left, so a recreated room can be joined again.
     this.roomLocks.delete(roomId);
+    const roomSlug = this.findRoomSlug(roomId);
     const roomPeerIds = this.rooms.get(roomId);
     if (!roomPeerIds || roomPeerIds.size === 0) {
       this.logger.log(`No SFU peers in room ${roomId}, nothing to clean up`);
+      this.webhooks.roomEnded(roomId, roomSlug);
       return;
     }
 
-    // Notify every peer that the room has ended, then clean up
+    // Notify every peer that the room has ended before tearing peers down.
     for (const peerId of Array.from(roomPeerIds)) {
       const peer = this.peers.get(peerId);
-      if (!peer) continue;
-
-      peer.socket.emit('sfu:room-ended', { roomId });
-      peer.sendTransport?.close();
-      peer.recvTransport?.close();
-      this.peers.delete(peerId);
+      if (peer) {
+        peer.socket.emit('sfu:room-ended', { roomId });
+      }
     }
 
-    this.rooms.delete(roomId);
-    this.roomOwners.delete(roomId);
+    // Tear each peer down through the shared removePeer funnel so producers,
+    // transports and screen-share state stay consistent with departures, and
+    // webhook participant.left(room-end) events keep their emission order.
+    for (const peerId of Array.from(roomPeerIds)) {
+      await this.removePeer(peerId, 'room-end');
+    }
+
     this.roomScreenShare.delete(roomId);
-    for (const [slug, rid] of this.slugToRoomId) {
-      if (rid === roomId) this.slugToRoomId.delete(slug);
-    }
-    await this.workerManager.closeRouter(roomId);
-    this.logger.log(`Room ${roomId} ended — all peers notified and cleaned up`);
+    this.webhooks.roomEnded(roomId, roomSlug);
+    this.logger.log(`Room ${roomId} ended - all peers notified and cleaned up`);
   }
 
   private notifyProducerStateChanged(
