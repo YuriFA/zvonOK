@@ -139,3 +139,41 @@ events.
 - Room lifecycle (end room, list rooms) lives in the same `/v1` API
 - Everything above works against a locally running server too
   (`http://localhost:3000`)
+
+## Webhooks
+
+Want your backend to know what happens in a room without polling? Configure a
+webhook endpoint for your project (developer API, bearer = developer session
+token):
+
+```bash
+curl -X PUT "$ZVONOK_URL/developers/projects/<projectId>/webhooks" \
+  -H "Authorization: Bearer $DEV_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://your-backend.example/zvonok/webhooks"}'
+```
+
+The response contains your signing secret. Your project's rooms then deliver
+`room.started`, `participant.joined`, `participant.left` (with a reason), and
+`room.ended` as `POST` requests. Verify every delivery before trusting it:
+
+```js
+import { createHmac, timingSafeEqual } from "node:crypto";
+
+function verify(req, rawBody, secret) {
+  const [tsHeader, sigHeader] = [
+    req.headers["x-zvonok-timestamp"],
+    req.headers["x-zvonok-signature"],
+  ];
+  const expected = createHmac("sha256", secret)
+    .update(`${tsHeader}.${rawBody}`)
+    .digest("hex");
+  return timingSafeEqual(
+    Buffer.from(`sha256=${expected}`),
+    Buffer.from(sigHeader),
+  );
+}
+```
+
+Deliveries retry up to 5 times with growing delays and then drop - respond
+`2xx` as soon as you have persisted the event.
