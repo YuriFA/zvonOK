@@ -9,6 +9,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 describe('RoomService', () => {
   let service: RoomService;
   let prisma: {
+    $transaction: jest.Mock;
     room: {
       create: jest.Mock;
       findFirst: jest.Mock;
@@ -16,16 +17,25 @@ describe('RoomService', () => {
       findUnique: jest.Mock;
       update: jest.Mock;
     };
+    callRecord: {
+      create: jest.Mock;
+    };
   };
 
   beforeEach(async () => {
     prisma = {
+      $transaction: jest.fn((callback: (tx: unknown) => unknown) =>
+        callback(prisma),
+      ),
       room: {
         create: jest.fn(),
         findFirst: jest.fn(),
         findMany: jest.fn(),
         findUnique: jest.fn().mockResolvedValue(null),
         update: jest.fn(),
+      },
+      callRecord: {
+        create: jest.fn().mockResolvedValue({ id: 'record-1' }),
       },
     };
 
@@ -91,7 +101,21 @@ describe('RoomService', () => {
   });
 
   describe('softDeleteRoom', () => {
+    function aRoom(overrides: Record<string, unknown> = {}) {
+      return {
+        id: 'room-1',
+        name: 'Standup',
+        slug: 'abc123',
+        ownerId: 'user-1',
+        projectId: null,
+        createdAt: new Date('2026-09-07T10:00:00Z'),
+        messages: [],
+        ...overrides,
+      };
+    }
+
     it('marks the room ended with an endedAt timestamp', async () => {
+      prisma.room.findUnique.mockResolvedValue(aRoom());
       prisma.room.update.mockResolvedValue({ id: 'room-1', status: 'ended' });
 
       await service.softDeleteRoom('room-1');
@@ -100,6 +124,81 @@ describe('RoomService', () => {
         where: { id: 'room-1' },
         data: { status: 'ended', endedAt: expect.any(Date) },
       });
+    });
+
+    it('snapshots the call into the owner history with labeled messages', async () => {
+      prisma.room.findUnique.mockResolvedValue(
+        aRoom({
+          messages: [
+            {
+              content: 'hello',
+              createdAt: new Date('2026-09-07T10:01:00Z'),
+              user: { username: 'alice' },
+            },
+            {
+              content: 'hi from guest',
+              createdAt: new Date('2026-09-07T10:02:00Z'),
+              user: null,
+            },
+          ],
+        }),
+      );
+      prisma.room.update.mockResolvedValue({ id: 'room-1', status: 'ended' });
+
+      await service.softDeleteRoom('room-1');
+
+      expect(prisma.callRecord.create).toHaveBeenCalledWith({
+        data: {
+          ownerId: 'user-1',
+          roomName: 'Standup',
+          roomSlug: 'abc123',
+          startedAt: new Date('2026-09-07T10:00:00Z'),
+          endedAt: expect.any(Date),
+          messageCount: 2,
+          messages: [
+            {
+              author: 'alice',
+              content: 'hello',
+              createdAt: '2026-09-07T10:01:00.000Z',
+            },
+            {
+              author: 'Guest',
+              content: 'hi from guest',
+              createdAt: '2026-09-07T10:02:00.000Z',
+            },
+          ],
+        },
+      });
+    });
+
+    it('falls back to the room slug as the record name', async () => {
+      prisma.room.findUnique.mockResolvedValue(aRoom({ name: null }));
+      prisma.room.update.mockResolvedValue({ id: 'room-1', status: 'ended' });
+
+      await service.softDeleteRoom('room-1');
+
+      expect(prisma.callRecord.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ roomName: 'abc123' }),
+        }),
+      );
+    });
+
+    it('skips the snapshot for project-owned rooms', async () => {
+      prisma.room.findUnique.mockResolvedValue(aRoom({ ownerId: null }));
+      prisma.room.update.mockResolvedValue({ id: 'room-1', status: 'ended' });
+
+      await service.softDeleteRoom('room-1');
+
+      expect(prisma.callRecord.create).not.toHaveBeenCalled();
+    });
+
+    it('throws NotFound and writes nothing for a missing room', async () => {
+      await expect(service.softDeleteRoom('missing')).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(prisma.room.update).not.toHaveBeenCalled();
+      expect(prisma.callRecord.create).not.toHaveBeenCalled();
     });
   });
 

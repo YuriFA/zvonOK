@@ -58,6 +58,15 @@ interface DbRoom {
   projectId?: string;
   status: string;
   maxParticipants: number;
+  createdAt?: Date;
+}
+
+interface DbMessage {
+  id: string;
+  content: string;
+  userId: string | null;
+  roomId: string;
+  createdAt: Date;
 }
 
 describe('Project webhooks (e2e)', () => {
@@ -87,6 +96,7 @@ describe('Project webhooks (e2e)', () => {
       revokedAt: Date | null;
     }>,
     rooms: [] as DbRoom[],
+    messages: [] as DbMessage[],
     users: [] as Array<Record<string, unknown>>,
   };
 
@@ -183,133 +193,154 @@ describe('Project webhooks (e2e)', () => {
       lockedUntil: null,
     });
 
+    const prismaMock = {
+      $connect: jest.fn(),
+      $disconnect: jest.fn(),
+      $transaction: jest.fn((callback: (tx: unknown) => unknown) =>
+        callback(prismaMock),
+      ),
+      developerAccount: {
+        findUnique: jest.fn(
+          ({ where }) =>
+            db.developers.find((d) => d.username === where.username) ?? null,
+        ),
+        create: jest.fn(({ data }) => {
+          const record = {
+            id: `dev-${db.developers.length + 1}`,
+            ...data,
+          };
+          db.developers.push(record);
+          return record;
+        }),
+      },
+      project: {
+        create: jest.fn(({ data }) => {
+          const record = {
+            id: `project-${db.projects.length + 1}`,
+            webhookUrl: null,
+            webhookSecret: null,
+            ...data,
+          };
+          db.projects.push(record);
+          return record;
+        }),
+        findFirst: jest.fn(
+          ({ where }) =>
+            db.projects.find(
+              (p) =>
+                p.id === where.id &&
+                p.developerAccountId === where.developerAccountId,
+            ) ?? null,
+        ),
+        findUnique: jest.fn(
+          ({ where }) => db.projects.find((p) => p.id === where.id) ?? null,
+        ),
+        update: jest.fn(({ where, data }) => {
+          const record = db.projects.find((p) => p.id === where.id);
+          if (!record) return null;
+          return Object.assign(record, data);
+        }),
+      },
+      apiKey: {
+        findUnique: jest.fn(
+          ({ where }) =>
+            db.keys.find(
+              (k) => k.keyHash === where.keyHash || k.id === where.id,
+            ) ?? null,
+        ),
+        create: jest.fn(({ data }) => {
+          const record = {
+            id: `key-${db.keys.length + 1}`,
+            revokedAt: null,
+            ...data,
+          };
+          db.keys.push(record);
+          return record;
+        }),
+      },
+      egress: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        findFirst: jest.fn().mockResolvedValue(null),
+        findMany: jest.fn().mockResolvedValue([]),
+        create: jest.fn(),
+        update: jest.fn(),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+      room: {
+        findUnique: jest.fn(({ where }) => {
+          const record = where.slug
+            ? (db.rooms.find((r) => r.slug === where.slug) ?? null)
+            : (db.rooms.find((r) => r.id === where.id) ?? null);
+          // softDeleteRoom reads the transcript through this query.
+          if (!record) return null;
+          return {
+            ...record,
+            createdAt: record.createdAt ?? new Date(),
+            messages: db.messages.filter((m) => m.roomId === record.id),
+          };
+        }),
+        findFirst: jest.fn(({ where }) => {
+          const room = db.rooms.find((r) => r.id === where.id);
+          if (!room) return null;
+          if (where.projectId && room.projectId !== where.projectId) {
+            return null;
+          }
+          return room;
+        }),
+        findMany: jest.fn(({ where }) =>
+          db.rooms.filter((r) => r.projectId === where.projectId),
+        ),
+        create: jest.fn(({ data }) => {
+          const record = {
+            id: `room-${db.rooms.length + 1}`,
+            status: 'active',
+            maxParticipants: 10,
+            ...data,
+          } as DbRoom;
+          db.rooms.push(record);
+          return record;
+        }),
+        update: jest.fn(({ where, data }) => {
+          const record = db.rooms.find((r) => r.id === where.id);
+          if (!record) return null;
+          return Object.assign(record, data);
+        }),
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+      callRecord: {
+        create: jest.fn(({ data }) => ({
+          id: `record-${db.users.length + 1}`,
+          ...data,
+        })),
+      },
+      user: {
+        findUnique: jest.fn(
+          ({ where }) =>
+            db.users.find(
+              (u) => u.id === where.id || u.email === where.email,
+            ) ?? null,
+        ),
+        create: jest.fn(({ data }) => {
+          const record = { id: `user-${db.users.length + 1}`, ...data };
+          db.users.push(record);
+          return record;
+        }),
+        update: jest.fn(({ where, data }) => {
+          const record = db.users.find((u) => u.id === where.id);
+          if (!record) return null;
+          return Object.assign(record, data);
+        }),
+      },
+    };
+    prismaMock.$transaction = jest.fn((callback: (tx: unknown) => unknown) =>
+      callback(prismaMock),
+    );
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
       .overrideProvider(PrismaService)
-      .useValue({
-        $connect: jest.fn(),
-        $disconnect: jest.fn(),
-        developerAccount: {
-          findUnique: jest.fn(
-            ({ where }) =>
-              db.developers.find((d) => d.username === where.username) ?? null,
-          ),
-          create: jest.fn(({ data }) => {
-            const record = {
-              id: `dev-${db.developers.length + 1}`,
-              ...data,
-            };
-            db.developers.push(record);
-            return record;
-          }),
-        },
-        project: {
-          create: jest.fn(({ data }) => {
-            const record = {
-              id: `project-${db.projects.length + 1}`,
-              webhookUrl: null,
-              webhookSecret: null,
-              ...data,
-            };
-            db.projects.push(record);
-            return record;
-          }),
-          findFirst: jest.fn(
-            ({ where }) =>
-              db.projects.find(
-                (p) =>
-                  p.id === where.id &&
-                  p.developerAccountId === where.developerAccountId,
-              ) ?? null,
-          ),
-          findUnique: jest.fn(
-            ({ where }) => db.projects.find((p) => p.id === where.id) ?? null,
-          ),
-          update: jest.fn(({ where, data }) => {
-            const record = db.projects.find((p) => p.id === where.id);
-            if (!record) return null;
-            return Object.assign(record, data);
-          }),
-        },
-        apiKey: {
-          findUnique: jest.fn(
-            ({ where }) =>
-              db.keys.find(
-                (k) => k.keyHash === where.keyHash || k.id === where.id,
-              ) ?? null,
-          ),
-          create: jest.fn(({ data }) => {
-            const record = {
-              id: `key-${db.keys.length + 1}`,
-              revokedAt: null,
-              ...data,
-            };
-            db.keys.push(record);
-            return record;
-          }),
-        },
-        egress: {
-          findUnique: jest.fn().mockResolvedValue(null),
-          findFirst: jest.fn().mockResolvedValue(null),
-          findMany: jest.fn().mockResolvedValue([]),
-          create: jest.fn(),
-          update: jest.fn(),
-          updateMany: jest.fn().mockResolvedValue({ count: 0 }),
-        },
-        room: {
-          findUnique: jest.fn(({ where }) =>
-            where.slug
-              ? (db.rooms.find((r) => r.slug === where.slug) ?? null)
-              : (db.rooms.find((r) => r.id === where.id) ?? null),
-          ),
-          findFirst: jest.fn(({ where }) => {
-            const room = db.rooms.find((r) => r.id === where.id);
-            if (!room) return null;
-            if (where.projectId && room.projectId !== where.projectId) {
-              return null;
-            }
-            return room;
-          }),
-          findMany: jest.fn(({ where }) =>
-            db.rooms.filter((r) => r.projectId === where.projectId),
-          ),
-          create: jest.fn(({ data }) => {
-            const record = {
-              id: `room-${db.rooms.length + 1}`,
-              status: 'active',
-              maxParticipants: 10,
-              ...data,
-            } as DbRoom;
-            db.rooms.push(record);
-            return record;
-          }),
-          update: jest.fn(({ where, data }) => {
-            const record = db.rooms.find((r) => r.id === where.id);
-            if (!record) return null;
-            return Object.assign(record, data);
-          }),
-          deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
-        },
-        user: {
-          findUnique: jest.fn(
-            ({ where }) =>
-              db.users.find(
-                (u) => u.id === where.id || u.email === where.email,
-              ) ?? null,
-          ),
-          create: jest.fn(({ data }) => {
-            const record = { id: `user-${db.users.length + 1}`, ...data };
-            db.users.push(record);
-            return record;
-          }),
-          update: jest.fn(({ where, data }) => {
-            const record = db.users.find((u) => u.id === where.id);
-            if (!record) return null;
-            return Object.assign(record, data);
-          }),
-        },
-      })
+      .useValue(prismaMock)
       .overrideProvider(WorkerManager)
       .useValue({
         createRouter: jest.fn(),

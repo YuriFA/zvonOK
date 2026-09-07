@@ -32,10 +32,19 @@ fetch(`${API_BASE_URL}/version`)
 
 // Lazy-loaded routes — heavy deps (mediasoup-client, socket.io-client) split into separate chunk
 const LazyRoomPage = lazy(() => import("./routes/room.tsx").then((m) => ({ default: m.RoomPage })));
+const LazyHistoryPage = lazy(() =>
+  import("./routes/history.tsx").then((m) => ({ default: m.HistoryPage })),
+);
 
 const roomPageFallback = (
   <div className="flex h-dscreen items-center justify-center">
     <p className="text-muted-foreground">Loading room...</p>
+  </div>
+);
+
+const historyPageFallback = (
+  <div className="flex h-dscreen items-center justify-center">
+    <p className="text-muted-foreground">Loading history...</p>
   </div>
 );
 
@@ -58,6 +67,14 @@ const router = createBrowserRouter([
     element: (
       <Suspense fallback={roomPageFallback}>
         <LazyRoomPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: "/history",
+    element: (
+      <Suspense fallback={historyPageFallback}>
+        <LazyHistoryPage />
       </Suspense>
     ),
   },

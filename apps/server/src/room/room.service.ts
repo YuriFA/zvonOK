@@ -73,14 +73,84 @@ export class RoomService {
     });
   }
 
+  /**
+   * End a room. For user-owned rooms the snapshot of the call into the
+   * owner's history is committed in the same transaction as the end: the
+   * record must never exist for a room that did not end, and the transcript
+   * must match the room's final state exactly. Project-owned rooms perform
+   * the single status update - there is no second write to couple.
+   */
   async softDeleteRoom(id: string) {
-    return this.prisma.room.update({
+    const room = await this.prisma.room.findUnique({
       where: { id },
-      data: {
-        status: 'ended',
-        endedAt: new Date(),
+      include: {
+        messages: {
+          orderBy: { createdAt: 'asc' },
+          include: { user: { select: { username: true } } },
+        },
       },
     });
+    if (!room) {
+      throw new NotFoundException('Room not found');
+    }
+    const endedAt = new Date();
+    const end = { status: 'ended' as const, endedAt };
+    if (!room.ownerId) {
+      return this.prisma.room.update({ where: { id }, data: end });
+    }
+    const ownerId: string = room.ownerId;
+    return this.prisma.$transaction(async (tx) => {
+      const messages = room.messages.map((message) => ({
+        author: message.user?.username ?? 'Guest',
+        content: message.content,
+        createdAt: message.createdAt.toISOString(),
+      }));
+      const updated = await tx.room.update({ where: { id }, data: end });
+      await tx.callRecord.create({
+        data: {
+          ownerId,
+          roomName: room.name ?? room.slug,
+          roomSlug: room.slug,
+          startedAt: room.createdAt,
+          endedAt,
+          messageCount: messages.length,
+          messages,
+        },
+      });
+      return updated;
+    });
+  }
+
+  /** The owner's past calls, newest first, transcripts excluded. */
+  listCallHistory(ownerId: string) {
+    return this.prisma.callRecord.findMany({
+      where: { ownerId },
+      orderBy: { endedAt: 'desc' },
+      take: 100,
+      select: {
+        id: true,
+        roomName: true,
+        roomSlug: true,
+        startedAt: true,
+        endedAt: true,
+        messageCount: true,
+      },
+    });
+  }
+
+  async getCallRecord(ownerId: string, id: string) {
+    const record = await this.prisma.callRecord.findUnique({
+      where: { id },
+    });
+    if (!record || record.ownerId !== ownerId) {
+      throw new NotFoundException('Call record not found');
+    }
+    return record;
+  }
+
+  async deleteCallRecord(ownerId: string, id: string): Promise<void> {
+    await this.getCallRecord(ownerId, id);
+    await this.prisma.callRecord.delete({ where: { id } });
   }
 
   private generateSlug(): string {
