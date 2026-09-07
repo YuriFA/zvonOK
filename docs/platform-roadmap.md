@@ -11,7 +11,7 @@ the year-paid VPS (5-service Docker stack, shared Traefik gateway, coturn
 already deployed); repository stays open; the app stays a working product at
 every step.
 
-## Stage 1 - platform substrate (weeks 1-6) - in flight
+## Stage 1 - platform substrate (weeks 1-6) - complete except npm publish
 
 | # | Change | Scope | Status |
 |---|--------|-------|--------|
@@ -31,10 +31,13 @@ dogfooded SDK taught us about the API surface.
 ## Stage 2 candidate queue (ordered; each item = one OpenSpec change)
 
 1. **Webhooks** - session/participant events with signatures and retries. Implemented in `add-platform-webhooks` (archived 2026-09-06).
-2. **Recording** - local-first slice shipped (`add-local-recording`, archived 2026-09-06); server-side pipeline remains:
-   storage on VPS disk (S3 later if needed).
+2. **Recording** - shipped across three changes: local-first slice
+   (`add-local-recording`), full-call recording
+   (`record-full-call`), and server-side recording to VPS disk
+   (`add-egress-recording`, all archived 2026-09-07; S3 later if needed).
 3. **Ephemeral TURN credentials** - HMAC auth-secret in coturn, replacing the
-   static shared credentials.
+   static shared credentials. Implemented in `add-ephemeral-turn-credentials`
+   (archived 2026-09-06).
 4. **Docs site** - static `docs.<domain>` site via the existing Traefik
    add-a-site pattern; content grows from the quickstart. Implemented in
    `add-docs-site` (2026-09-06).
