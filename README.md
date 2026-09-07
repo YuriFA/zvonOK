@@ -61,7 +61,7 @@ VITE_SOCKET_URL="http://localhost:3000"
 ### 3. Start database
 
 ```bash
-pnpm -C apps/server bd:dev
+pnpm -C apps/server db:dev
 ```
 
 This starts PostgreSQL (port 5432) and pgAdmin (port 5050) via Docker.
@@ -176,7 +176,7 @@ zvonok/
 | `pnpm -C apps/server test` | Unit tests |
 | `pnpm -C apps/server test:e2e` | E2E tests |
 | `pnpm -C apps/server migrate:dev` | Apply Prisma migrations |
-| `pnpm -C apps/server bd:dev` | Start dev database (Docker) |
+| `pnpm -C apps/server db:dev` | Start dev database (Docker) |
 
 ### Client (`apps/client/`)
 

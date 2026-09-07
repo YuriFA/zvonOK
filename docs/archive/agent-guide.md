@@ -156,7 +156,7 @@ cd apps/client && pnpm dev           # Vite dev server
 cd apps/client && pnpm build         # Production build
 
 # Database
-pnpm -C apps/server bd:dev           # Start PostgreSQL via Docker
+pnpm -C apps/server db:dev           # Start PostgreSQL via Docker
 ```
 
 ### Environment Variables

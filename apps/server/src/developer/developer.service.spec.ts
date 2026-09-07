@@ -23,6 +23,7 @@ describe('DeveloperService', () => {
     project: {
       create: jest.Mock;
       findFirst: jest.Mock;
+      findMany: jest.Mock;
       update: jest.Mock;
     };
     apiKey: {
@@ -31,24 +32,40 @@ describe('DeveloperService', () => {
       findFirst: jest.Mock;
       update: jest.Mock;
     };
+    room: { findMany: jest.Mock };
   };
 
   beforeEach(() => {
     prisma = {
       developerAccount: { findUnique: jest.fn(), create: jest.fn() },
-      project: { create: jest.fn(), findFirst: jest.fn(), update: jest.fn() },
+      project: {
+        create: jest.fn(),
+        findFirst: jest.fn(),
+        findMany: jest.fn(),
+        update: jest.fn(),
+      },
       apiKey: {
         create: jest.fn(),
         findMany: jest.fn(),
         findFirst: jest.fn(),
         update: jest.fn(),
       },
+      room: { findMany: jest.fn() },
     };
 
     service = new DeveloperService(
       prisma as unknown as PrismaService,
       { sign: jest.fn().mockReturnValue('dev-token') } as unknown as JwtService,
       { get: jest.fn().mockReturnValue('dev-secret') } as never,
+      {
+        list: jest.fn().mockResolvedValue([]),
+        download: jest.fn().mockResolvedValue({
+          stream: null,
+          contentType: 'video/mp4',
+          size: 1,
+          range: null,
+        }),
+      } as never,
     );
   });
 
@@ -242,6 +259,10 @@ describe('DeveloperService webhook config', () => {
       prisma as unknown as PrismaService,
       { sign: jest.fn() } as unknown as JwtService,
       { get: jest.fn() } as never,
+      {
+        list: jest.fn().mockResolvedValue([]),
+        download: jest.fn(),
+      } as never,
     );
   });
 
@@ -340,5 +361,153 @@ describe('SetWebhookDto validation', () => {
     ]) {
       await expect(transform({ url })).rejects.toThrow(BadRequestException);
     }
+  });
+});
+
+describe('DeveloperService project reads', () => {
+  const ownedProject = { id: 'project-1', developerAccountId: 'dev-1' };
+  let service: DeveloperService;
+  let prisma: {
+    project: { findFirst: jest.Mock; findMany: jest.Mock };
+    room: { findMany: jest.Mock };
+  };
+  let recordings: { list: jest.Mock; download: jest.Mock };
+
+  beforeEach(() => {
+    prisma = {
+      project: { findFirst: jest.fn(), findMany: jest.fn() },
+      room: { findMany: jest.fn() },
+    };
+    recordings = {
+      list: jest.fn().mockResolvedValue([]),
+      download: jest.fn().mockResolvedValue({
+        stream: 'stream',
+        contentType: 'video/mp4',
+        size: 10,
+        range: null,
+      }),
+    };
+    service = new DeveloperService(
+      prisma as unknown as PrismaService,
+      { sign: jest.fn() } as unknown as JwtService,
+      { get: jest.fn() } as never,
+      recordings as never,
+    );
+  });
+
+  it('lists only the developer projects with room counts', async () => {
+    prisma.project.findMany.mockResolvedValue([
+      { id: 'project-1', name: 'P1', _count: { rooms: 3 } },
+      { id: 'project-2', name: 'P2', _count: { rooms: 0 } },
+    ]);
+
+    const result = await service.listProjects('dev-1');
+
+    expect(prisma.project.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { developerAccountId: 'dev-1' },
+      }),
+    );
+    expect(result).toEqual([
+      { id: 'project-1', name: 'P1', roomCount: 3 },
+      { id: 'project-2', name: 'P2', roomCount: 0 },
+    ]);
+  });
+
+  it('never exposes the webhook signing secret in the listing', async () => {
+    prisma.project.findMany.mockResolvedValue([
+      {
+        id: 'project-1',
+        name: 'P1',
+        webhookUrl: 'https://example.com/hooks',
+        createdAt: new Date(),
+        _count: { rooms: 0 },
+      },
+    ]);
+
+    await service.listProjects('dev-1');
+
+    // With a mocked Prisma the engine-side select stripping is bypassed, so
+    // pin the projection: webhookSecret must not be in the query shape.
+    const query = prisma.project.findMany.mock.calls[0][0];
+    expect(query.select).toEqual({
+      id: true,
+      name: true,
+      webhookUrl: true,
+      createdAt: true,
+      _count: { select: { rooms: true } },
+    });
+  });
+
+  it('lists rooms of an owned project with lifecycle fields only', async () => {
+    prisma.project.findFirst.mockResolvedValue(ownedProject);
+    prisma.room.findMany.mockResolvedValue([
+      {
+        id: 'room-1',
+        name: 'Standup',
+        slug: 'standup',
+        status: 'ended',
+        createdAt: new Date('2026-09-01'),
+        endedAt: new Date('2026-09-01'),
+      },
+    ]);
+
+    const result = await service.listProjectRooms('dev-1', 'project-1');
+
+    expect(prisma.room.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { projectId: 'project-1' } }),
+    );
+    expect(result).toHaveLength(1);
+    expect(result[0]).not.toHaveProperty('messages');
+    expect(result[0]).not.toHaveProperty('ownerId');
+  });
+
+  it('lists recordings through RecordingsService after the ownership check', async () => {
+    prisma.project.findFirst.mockResolvedValue(ownedProject);
+    recordings.list.mockResolvedValue([{ id: 'egress-1' }]);
+
+    const result = await service.listProjectRecordings('dev-1', 'project-1');
+
+    expect(recordings.list).toHaveBeenCalledWith('project-1');
+    expect(result).toEqual([{ id: 'egress-1' }]);
+  });
+
+  it('delegates downloads with part and range options', async () => {
+    prisma.project.findFirst.mockResolvedValue(ownedProject);
+    recordings.download.mockResolvedValue({
+      stream: 'stream',
+      contentType: 'video/mp4',
+      size: 10,
+      range: { start: 0, end: 9 },
+    });
+
+    const result = await service.downloadProjectRecording(
+      'dev-1',
+      'project-1',
+      'egress-1',
+      { part: 2, rangeHeader: 'bytes=0-9' },
+    );
+
+    expect(recordings.download).toHaveBeenCalledWith('project-1', 'egress-1', {
+      part: 2,
+      rangeHeader: 'bytes=0-9',
+    });
+    expect(result).toMatchObject({ size: 10, range: { start: 0, end: 9 } });
+  });
+
+  it('rejects reads of foreign projects with 404', async () => {
+    prisma.project.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.listProjectRooms('dev-1', 'foreign-project'),
+    ).rejects.toThrow(NotFoundException);
+    await expect(
+      service.listProjectRecordings('dev-1', 'foreign-project'),
+    ).rejects.toThrow(NotFoundException);
+    await expect(
+      service.downloadProjectRecording('dev-1', 'foreign-project', 'egress-1'),
+    ).rejects.toThrow(NotFoundException);
+    expect(recordings.list).not.toHaveBeenCalled();
+    expect(recordings.download).not.toHaveBeenCalled();
   });
 });

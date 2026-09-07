@@ -11,6 +11,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { PasswordHelper } from 'src/auth/helpers/password.helper';
 import { ApiKeyHelper } from './api-key.helper';
+import { RecordingsService } from 'src/egress/recordings.service';
 import type {
   CreateProjectDto,
   LoginDeveloperDto,
@@ -25,6 +26,7 @@ export class DeveloperService {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
+    private readonly recordings: RecordingsService,
   ) {}
 
   async register(dto: RegisterDeveloperDto) {
@@ -63,6 +65,46 @@ export class DeveloperService {
   async createProject(developerId: string, dto: CreateProjectDto) {
     return this.prisma.project.create({
       data: { name: dto.name, developerAccountId: developerId },
+    });
+  }
+
+  /**
+   * The developer's own projects, newest first, with owned room counts.
+   * The webhook signing secret is never returned here: it is shown once at
+   * configuration time, like API keys.
+   */
+  async listProjects(developerId: string) {
+    const projects = await this.prisma.project.findMany({
+      where: { developerAccountId: developerId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        name: true,
+        webhookUrl: true,
+        createdAt: true,
+        _count: { select: { rooms: true } },
+      },
+    });
+    return projects.map(({ _count, ...project }) => ({
+      ...project,
+      roomCount: _count.rooms,
+    }));
+  }
+
+  /** The project's rooms, newest first, lifecycle fields only. */
+  async listProjectRooms(developerId: string, projectId: string) {
+    await this.findOwnedProject(developerId, projectId);
+    return this.prisma.room.findMany({
+      where: { projectId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        status: true,
+        createdAt: true,
+        endedAt: true,
+      },
     });
   }
 
@@ -138,6 +180,27 @@ export class DeveloperService {
       where: { id: project.id },
       data: { webhookUrl: null, webhookSecret: null },
     });
+  }
+
+  /** The project's recorded egress sessions, newest first. */
+  async listProjectRecordings(developerId: string, projectId: string) {
+    await this.findOwnedProject(developerId, projectId);
+    return this.recordings.list(projectId);
+  }
+
+  /**
+   * Stream one of the project's recordings under developer auth. Ownership
+   * is resolved here; the file logic (finalized MP4 vs raw parts, Range) is
+   * RecordingsService's.
+   */
+  async downloadProjectRecording(
+    developerId: string,
+    projectId: string,
+    egressId: string,
+    options: { part?: number; rangeHeader?: string } = {},
+  ) {
+    await this.findOwnedProject(developerId, projectId);
+    return this.recordings.download(projectId, egressId, options);
   }
 
   issueToken(id: string, username: string) {
