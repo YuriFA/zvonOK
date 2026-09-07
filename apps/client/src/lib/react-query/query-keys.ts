@@ -32,3 +32,25 @@ export const historyKeys = {
  * Type assertion for query keys
  */
 export type HistoryKeys = typeof historyKeys;
+
+/**
+ * Query keys factory for the developer console
+ */
+export const consoleKeys = {
+  all: ["console"] as const,
+
+  projects: () => [...consoleKeys.all, "projects"] as const,
+
+  project: (id: string) => [...consoleKeys.all, "project", id] as const,
+
+  keys: (id: string) => [...consoleKeys.project(id), "keys"] as const,
+
+  rooms: (id: string) => [...consoleKeys.project(id), "rooms"] as const,
+
+  recordings: (id: string) => [...consoleKeys.project(id), "recordings"] as const,
+} as const;
+
+/**
+ * Type assertion for query keys
+ */
+export type ConsoleKeys = typeof consoleKeys;

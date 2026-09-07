@@ -677,7 +677,7 @@ const stats = await peerConnection.getStats();
 
 **Database:**
 ```bash
-pnpm -C apps/server bd:dev    # PostgreSQL + pgAdmin (docker)
+pnpm -C apps/server db:dev    # PostgreSQL + pgAdmin (docker)
 pnpm -C apps/server migrate:dev  # Prisma migrations
 ```
 

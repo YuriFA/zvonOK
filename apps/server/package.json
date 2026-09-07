@@ -9,7 +9,7 @@
     "dev": "nest start --watch",
     "debug": "nest start --debug --watch",
     "prod": "node dist/main",
-    "bd:dev": "docker compose -f ./docker-compose.yml --env-file ./.env.development up -d",
+    "db:dev": "docker compose -f ./docker-compose.yml --env-file ./.env.development up -d",
     "migrate:dev": "npx dotenv-cli -e .env.development prisma migrate dev",
     "seed:dev": "npx dotenv-cli -e .env.development prisma db seed",
     "build": "nest build",

@@ -10,6 +10,9 @@ export function MainHeader() {
 
   return (
     <Header>
+      <LinkButton to={ROUTES.CONSOLE} variant="ghost">
+        For developers
+      </LinkButton>
       {isLoading ? (
         <p>Loading...</p>
       ) : isAuthenticated ? (

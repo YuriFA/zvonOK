@@ -45,7 +45,7 @@ pnpm -C apps/server test
 pnpm -C apps/server test:watch
 pnpm -C apps/server test:cov
 pnpm -C apps/server test:e2e
-pnpm -C apps/server bd:dev        # postgres + pgAdmin (docker)
+pnpm -C apps/server db:dev        # postgres + pgAdmin (docker)
 pnpm -C apps/server migrate:dev   # prisma migrate
 ```
 

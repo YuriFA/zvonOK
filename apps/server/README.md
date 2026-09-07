@@ -12,7 +12,7 @@ NestJS backend with JWT authentication and PostgreSQL via Prisma ORM.
 
 ```bash
 # Start database (PostgreSQL + pgAdmin)
-pnpm bd:dev
+pnpm db:dev
 
 # Apply migrations
 pnpm migrate:dev
@@ -38,7 +38,7 @@ Swagger: http://localhost:3000/swagger
 | | `pnpm test:e2e` | E2E tests |
 | | `pnpm test:cov` | With coverage |
 | **DB** | `pnpm migrate:dev` | Apply Prisma migrations |
-| | `pnpm bd:dev` | Start PostgreSQL via Docker |
+| | `pnpm db:dev` | Start PostgreSQL via Docker |
 
 ## Architecture
 

@@ -3,11 +3,14 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
   HttpCode,
   HttpStatus,
   Param,
   Post,
   Put,
+  Query,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -23,6 +26,12 @@ import {
   RegisterDeveloperDto,
   SetWebhookDto,
 } from './dto/developer.dto';
+
+/** Minimal shape of the injected express response for streaming. */
+interface StreamResponse {
+  status(code: number): StreamResponse;
+  setHeader(name: string, value: string): void;
+}
 
 @ApiTags('developers')
 @Controller('developers')
@@ -57,6 +66,78 @@ export class DeveloperController {
     @Body() dto: CreateProjectDto,
   ) {
     return this.developerService.createProject(account.id, dto);
+  }
+
+  @Get('projects')
+  @SkipAuthGuard()
+  @UseGuards(DevJwtGuard)
+  @ApiOperation({ summary: 'List own projects with room counts' })
+  listProjects(@DevAccount() account: DevAccountIdentity) {
+    return this.developerService.listProjects(account.id);
+  }
+
+  @Get('projects/:id/rooms')
+  @SkipAuthGuard()
+  @UseGuards(DevJwtGuard)
+  @ApiOperation({ summary: "List a project's rooms" })
+  listProjectRooms(
+    @DevAccount() account: DevAccountIdentity,
+    @Param('id') projectId: string,
+  ) {
+    return this.developerService.listProjectRooms(account.id, projectId);
+  }
+
+  @Get('projects/:id/recordings')
+  @SkipAuthGuard()
+  @UseGuards(DevJwtGuard)
+  @ApiOperation({ summary: "List a project's recordings" })
+  listProjectRecordings(
+    @DevAccount() account: DevAccountIdentity,
+    @Param('id') projectId: string,
+  ) {
+    return this.developerService.listProjectRecordings(account.id, projectId);
+  }
+
+  @Get('projects/:id/recordings/:egressId/file')
+  @SkipAuthGuard()
+  @UseGuards(DevJwtGuard)
+  @ApiOperation({ summary: "Download a project's recording" })
+  async downloadProjectRecording(
+    @DevAccount() account: DevAccountIdentity,
+    @Param('id') projectId: string,
+    @Param('egressId') egressId: string,
+    @Query('part') part: string | undefined,
+    @Headers('range') range: string | undefined,
+    @Res() res: StreamResponse,
+  ): Promise<void> {
+    const download = await this.developerService.downloadProjectRecording(
+      account.id,
+      projectId,
+      egressId,
+      {
+        part: part === undefined || part === '' ? undefined : Number(part),
+        rangeHeader: range,
+      },
+    );
+    if (download.range) {
+      res.status(HttpStatus.PARTIAL_CONTENT);
+      res.setHeader(
+        'Content-Range',
+        `bytes ${download.range.start}-${download.range.end}/${download.size}`,
+      );
+      res.status(HttpStatus.OK);
+    }
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Content-Type', download.contentType);
+    res.setHeader(
+      'Content-Length',
+      String(
+        download.range
+          ? download.range.end - download.range.start + 1
+          : download.size,
+      ),
+    );
+    download.stream.pipe(res as unknown as NodeJS.WritableStream);
   }
 
   @Post('projects/:id/keys')

@@ -8,10 +8,16 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 import { AuthProvider } from "./features/auth/contexts/auth.context.tsx";
+import { ROUTES } from "./lib/config/routes";
 import { queryClient } from "./lib/react-query/query-client";
 import { Home } from "./routes/home.tsx";
 import { LoginPage } from "./routes/login.tsx";
 import { RegisterPage } from "./routes/register.tsx";
+
+const LazyRoomPage = lazy(() => import("./routes/room.tsx").then((m) => ({ default: m.RoomPage })));
+const LazyHistoryPage = lazy(() =>
+  import("./routes/history.tsx").then((m) => ({ default: m.HistoryPage })),
+);
 
 import "./index.css";
 
@@ -31,9 +37,21 @@ fetch(`${API_BASE_URL}/version`)
   .catch(() => {});
 
 // Lazy-loaded routes — heavy deps (mediasoup-client, socket.io-client) split into separate chunk
-const LazyRoomPage = lazy(() => import("./routes/room.tsx").then((m) => ({ default: m.RoomPage })));
-const LazyHistoryPage = lazy(() =>
-  import("./routes/history.tsx").then((m) => ({ default: m.HistoryPage })),
+const LazyConsoleLayout = lazy(() =>
+  import("./routes/console.tsx").then((m) => ({ default: m.ConsoleLayout })),
+);
+const LazyConsoleLoginPage = lazy(() =>
+  import("./routes/console-login.tsx").then((m) => ({ default: m.ConsoleLoginPage })),
+);
+const LazyConsoleProjectsPage = lazy(() =>
+  import("./routes/console-projects.tsx").then((m) => ({
+    default: m.ConsoleProjectsPage,
+  })),
+);
+const LazyConsoleProjectPage = lazy(() =>
+  import("./routes/console-project.tsx").then((m) => ({
+    default: m.ConsoleProjectPage,
+  })),
 );
 
 const roomPageFallback = (
@@ -45,6 +63,12 @@ const roomPageFallback = (
 const historyPageFallback = (
   <div className="flex h-dscreen items-center justify-center">
     <p className="text-muted-foreground">Loading history...</p>
+  </div>
+);
+
+const consolePageFallback = (
+  <div className="flex h-dscreen items-center justify-center">
+    <p className="text-muted-foreground">Loading console...</p>
   </div>
 );
 
@@ -75,6 +99,40 @@ const router = createBrowserRouter([
     element: (
       <Suspense fallback={historyPageFallback}>
         <LazyHistoryPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: ROUTES.CONSOLE,
+    element: (
+      <Suspense fallback={consolePageFallback}>
+        <LazyConsoleLayout />
+      </Suspense>
+    ),
+    children: [
+      {
+        index: true,
+        element: (
+          <Suspense fallback={consolePageFallback}>
+            <LazyConsoleProjectsPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "projects/:id",
+        element: (
+          <Suspense fallback={consolePageFallback}>
+            <LazyConsoleProjectPage />
+          </Suspense>
+        ),
+      },
+    ],
+  },
+  {
+    path: ROUTES.CONSOLE_LOGIN,
+    element: (
+      <Suspense fallback={consolePageFallback}>
+        <LazyConsoleLoginPage />
       </Suspense>
     ),
   },
