@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { isIP } from 'node:net';
 import { lookup } from 'node:dns/promises';
-import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -16,6 +16,7 @@ import { SfuService } from 'src/sfu/sfu.service';
 import { WebhookDispatcher } from 'src/webhooks/webhook-dispatcher.service';
 import { composeEgressArgs, generateSdp } from './ffmpeg/args-composer';
 import { FFmpegProcess } from './ffmpeg/ffmpeg-process';
+import { findOwnedEgressRow } from './egress-ownership';
 import {
   EGRESS_ALLOW_PRIVATE_TARGETS,
   EGRESS_FFMPEG_PATH,
@@ -23,6 +24,7 @@ import {
   EGRESS_MAX_RESTARTS,
   EGRESS_MEDIA_PORT_MAX,
   EGRESS_MEDIA_PORT_MIN,
+  EGRESS_RECORDINGS_DIR,
   EGRESS_RESTART_DEBOUNCE_MS,
   EGRESS_RETRY_WINDOW_MS,
   EGRESS_START_TIMEOUT_MS,
@@ -50,6 +52,10 @@ interface ActiveSession {
   roomSlug: string | undefined;
   outputs: EgressOutputs;
   hlsDir: string;
+  /** Recording sink directory when `outputs.record` is set, else null. */
+  recordingDir: string | null;
+  /** Index of the MPEG-TS part the pipeline currently writes. */
+  recordingPart: number;
   sdpDir: string;
   status: 'starting' | 'live' | 'stopping';
   /** Whether the `live` transition (and its webhook) already happened. */
@@ -118,7 +124,7 @@ export class EgressService implements OnModuleInit {
     roomId: string,
     outputs: EgressOutputs,
   ): Promise<EgressSessionView> {
-    if (outputs.rtmpEndpoints.length === 0 && !outputs.hls) {
+    if (outputs.rtmpEndpoints.length === 0 && !outputs.hls && !outputs.record) {
       throw new BadRequestException('At least one output is required');
     }
     const room = await this.prisma.room.findUnique({ where: { id: roomId } });
@@ -140,7 +146,11 @@ export class EgressService implements OnModuleInit {
       data: {
         roomId,
         projectId,
-        outputs: { rtmpEndpoints: outputs.rtmpEndpoints, hls: outputs.hls },
+        outputs: {
+          rtmpEndpoints: outputs.rtmpEndpoints,
+          hls: outputs.hls,
+          record: outputs.record,
+        },
       },
     });
 
@@ -151,6 +161,8 @@ export class EgressService implements OnModuleInit {
       roomSlug: room.slug,
       outputs,
       hlsDir: join(EGRESS_HLS_DIR, row.id),
+      recordingDir: outputs.record ? join(EGRESS_RECORDINGS_DIR, row.id) : null,
+      recordingPart: 0,
       sdpDir: join(tmpdir(), 'zvonok-egress-sdp', row.id),
       status: 'starting',
       liveEmitted: false,
@@ -169,6 +181,9 @@ export class EgressService implements OnModuleInit {
 
     try {
       await mkdir(session.hlsDir, { recursive: true });
+      if (session.recordingDir) {
+        await mkdir(session.recordingDir, { recursive: true });
+      }
       await mkdir(session.sdpDir, { recursive: true });
       await this.startPipeline(session);
     } catch (error) {
@@ -195,12 +210,12 @@ export class EgressService implements OnModuleInit {
   }
 
   async get(projectId: string, egressId: string): Promise<EgressSessionView> {
-    const row = await this.findOwnedRow(projectId, egressId);
+    const row = await findOwnedEgressRow(this.prisma, projectId, egressId);
     return this.view(row);
   }
 
   async stop(projectId: string, egressId: string): Promise<EgressSessionView> {
-    const row = await this.findOwnedRow(projectId, egressId);
+    const row = await findOwnedEgressRow(this.prisma, projectId, egressId);
     if (row.status === 'ended' || row.status === 'failed') {
       throw new ConflictException('Egress session is not active');
     }
@@ -293,7 +308,10 @@ export class EgressService implements OnModuleInit {
       composeEgressArgs(inputs, {
         rtmpEndpoints: session.outputs.rtmpEndpoints,
         hls: session.outputs.hls,
+        record: session.outputs.record,
         hlsDir: session.hlsDir,
+        recordingDir: session.recordingDir ?? undefined,
+        recordingPart: session.recordingPart,
       }),
     );
     session.process = process;
@@ -364,6 +382,7 @@ export class EgressService implements OnModuleInit {
       await this.failSession(session, reason);
       return;
     }
+    if (session.recordingDir) session.recordingPart += 1;
     try {
       await this.startPipeline(session);
     } catch (error) {
@@ -380,6 +399,7 @@ export class EgressService implements OnModuleInit {
     session.restartTimer = setTimeout(() => {
       session.restartTimer = undefined;
       if (session.status === 'stopping') return;
+      if (session.recordingDir) session.recordingPart += 1;
       void this.startPipeline(session).catch((error) => {
         this.logger.warn(
           `Egress ${session.id} membership restart failed: ${String(error)}`,
@@ -393,10 +413,11 @@ export class EgressService implements OnModuleInit {
     session: ActiveSession,
     reason: EgressEndReason,
   ): Promise<void> {
+    if (session.status === 'stopping') return;
     session.status = 'stopping';
     clearTimeout(session.restartTimer);
     clearTimeout(session.startTimer);
-    this.closeRuntime(session);
+    await this.closeRuntime(session);
     this.sessions.delete(session.id);
 
     await this.prisma.egress.update({
@@ -414,6 +435,9 @@ export class EgressService implements OnModuleInit {
       session.outputs,
       reason,
     );
+    if (session.recordingDir) {
+      await this.finalizeRecording(session);
+    }
     await rm(session.sdpDir, { recursive: true, force: true }).catch(
       () => undefined,
     );
@@ -427,7 +451,8 @@ export class EgressService implements OnModuleInit {
     session.status = 'stopping';
     clearTimeout(session.restartTimer);
     clearTimeout(session.startTimer);
-    this.closeRuntime(session);
+    // Raw recording parts stay on disk so a failed session keeps its material.
+    void this.closeRuntime(session);
     this.sessions.delete(session.id);
 
     await this.prisma.egress.update({
@@ -447,16 +472,22 @@ export class EgressService implements OnModuleInit {
     this.logger.warn(`Egress ${session.id} failed: ${error}`);
   }
 
-  /** Kill the pipeline process and close every tap transport/consumer. */
-  private closeRuntime(session: ActiveSession): void {
+  /**
+   * Kill the pipeline process and close every tap transport/consumer.
+   * Resolves once the pipeline process has fully exited, so its sinks are
+   * safely closed for whoever awaits (finalization); fire-and-forget callers
+   * ignore the promise.
+   */
+  private closeRuntime(session: ActiveSession): Promise<void> {
     session.unsubscribeProducerAdded?.();
     session.unsubscribeProducerAdded = undefined;
     session.unsubscribeRoomClosed?.();
     session.unsubscribeRoomClosed = undefined;
+    let stopped: Promise<void> = Promise.resolve();
     if (session.process) {
       const process = session.process;
       session.process = null;
-      void process.stop(EGRESS_STOP_GRACE_MS);
+      stopped = process.stop(EGRESS_STOP_GRACE_MS);
     }
     for (const tap of session.taps) {
       try {
@@ -472,6 +503,79 @@ export class EgressService implements OnModuleInit {
       this.portsInUse.delete(tap.port);
     }
     session.taps = [];
+    return stopped;
+  }
+
+  /**
+   * Losslessly remux the written MPEG-TS parts into one seekable MP4 and
+   * persist the finalized size. On remux failure the raw parts remain and
+   * are served as-is; no material is ever silently dropped.
+   */
+  private async finalizeRecording(session: ActiveSession): Promise<void> {
+    const dir = session.recordingDir;
+    if (!dir) return;
+    const parts: string[] = [];
+    for (let part = 0; part <= session.recordingPart; part += 1) {
+      const candidate = join(dir, `recording-${part}.ts`);
+      try {
+        await stat(candidate);
+        parts.push(candidate);
+      } catch {
+        // The pipeline died before ever opening this part's sink.
+      }
+    }
+    if (parts.length === 0) {
+      this.logger.warn(`Egress ${session.id} recording produced no material`);
+      return;
+    }
+
+    const listPath = join(dir, 'parts.txt');
+    await writeFile(
+      listPath,
+      parts.map((part) => `file '${part.replace(/'/g, "'\\''")}'`).join('\n') +
+        '\n',
+    );
+    const target = join(dir, 'recording.mp4');
+    const finalizer = FFmpegProcess.spawn(EGRESS_FFMPEG_PATH, [
+      '-nostdin',
+      '-loglevel',
+      'error',
+      '-f',
+      'concat',
+      '-safe',
+      '0',
+      '-i',
+      listPath,
+      '-c',
+      'copy',
+      '-movflags',
+      '+faststart',
+      target,
+    ]);
+    const exitCode = await new Promise<number | null>((resolve) => {
+      finalizer.on('exit', resolve);
+    });
+    if (exitCode !== 0) {
+      this.logger.warn(
+        `Egress ${session.id} recording finalization failed ` +
+          `(code=${exitCode}); keeping raw parts: ${finalizer.stderrTail}`,
+      );
+      return;
+    }
+
+    const { size } = await stat(target);
+    await this.prisma.egress.update({
+      where: { id: session.id },
+      data: {
+        recordingSizeBytes: BigInt(size),
+        recordingFinalizedAt: new Date(),
+      },
+    });
+    await rm(listPath, { force: true });
+    for (const part of parts) {
+      await rm(part, { force: true });
+    }
+    this.logger.log(`Egress ${session.id} recording finalized (${size} bytes)`);
   }
 
   private allocatePort(): number {
@@ -488,17 +592,6 @@ export class EgressService implements OnModuleInit {
     throw new Error('No egress media ports available');
   }
 
-  private findOwnedRow(projectId: string, egressId: string): Promise<Egress> {
-    return this.prisma.egress
-      .findUnique({ where: { id: egressId } })
-      .then((row) => {
-        if (!row || row.projectId !== projectId) {
-          throw new NotFoundException('Egress session not found');
-        }
-        return row;
-      });
-  }
-
   private view(row: Egress): EgressSessionView {
     const outputs = row.outputs as unknown as EgressOutputs;
     return {
@@ -511,6 +604,9 @@ export class EgressService implements OnModuleInit {
       endedReason: this.endReasonDto(row.endedReason),
       error: row.error,
       hlsUrl: outputs.hls ? `/egress/hls/${row.id}/index.m3u8` : null,
+      recordingUrl: outputs.record ? `/v1/recordings/${row.id}/file` : null,
+      recordingSizeBytes:
+        row.recordingSizeBytes === null ? null : Number(row.recordingSizeBytes),
     };
   }
 

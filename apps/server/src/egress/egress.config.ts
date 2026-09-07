@@ -25,6 +25,14 @@ export const EGRESS_MEDIA_PORT_MAX = parseInt(
 /** Root directory for HLS segment trees, one subdirectory per egress id. */
 export const EGRESS_HLS_DIR =
   process.env.EGRESS_HLS_DIR || join(tmpdir(), 'zvonok-egress-hls');
+/**
+ * Root directory for session recordings, one subdirectory per egress id.
+ * Defaults under the server cwd: recordings are durable artifacts, unlike
+ * the transient HLS segment trees.
+ */
+export const EGRESS_RECORDINGS_DIR =
+  process.env.EGRESS_RECORDINGS_DIR ||
+  join(process.cwd(), 'data', 'egress-recordings');
 
 /**
  * Development escape hatch: when true, RTMP endpoints on loopback/private

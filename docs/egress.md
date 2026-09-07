@@ -1,8 +1,9 @@
 # Egress: HLS & RTMP Live Streaming
 
 Broadcast a live room's media out of the platform: push it to RTMP endpoints
-(YouTube, Twitch, a custom mediamtx/nginx-rtmp) and/or serve it as an HLS
-live playlist for large audiences.
+(YouTube, Twitch, a custom mediamtx/nginx-rtmp), serve it as an HLS live
+playlist for large audiences, and/or record it to server disk for later
+download.
 
 Egress runs server-side: one supervised FFmpeg pipeline per session mixes all
 participant audio and composites published video (screen share in the primary
@@ -39,21 +40,20 @@ Response `201`:
 {
   "id": "egress-id",
   "roomId": "room-id",
-  "status": "starting",
-  "outputs": { "rtmpEndpoints": ["rtmps://a.rtmp.youtube.com/live2/$KEY"], "hls": true },
+  "outputs": { "rtmpEndpoints": ["rtmps://a.rtmp.youtube.com/live2/$KEY"], "hls": true, "record": false },
   "hlsUrl": "/egress/hls/egress-id/index.m3u8",
-  "endedReason": null,
-  "error": null,
+  "recordingUrl": null,
+  "recordingSizeBytes": null,
   "startedAt": "...",
   "endedAt": null
 }
 ```
 
-Validation: one to three `rtmp(s)://` endpoints and/or `hls: true`; at least
-one output is required. A second active session for the same room responds
-`409`. Endpoint hosts on private/loopback addresses are rejected unless
-`EGRESS_ALLOW_PRIVATE_TARGETS=true` (development only - use it with a local
-mediamtx target).
+Validation: one to three `rtmp(s)://` endpoints, `hls: true`, and/or
+`record: true`; at least one output is required. A second active session for
+the same room responds `409`. Endpoint hosts on private/loopback addresses
+are rejected unless `EGRESS_ALLOW_PRIVATE_TARGETS=true` (development only -
+use it with a local mediamtx target).
 
 ### Inspect, list, stop
 
@@ -82,6 +82,49 @@ Open it in VLC, Safari, or any HLS-capable player. The playlist keeps a
 sliding window of recent 4-second segments; the final window remains
 available after the session ends.
 
+## Recording to server disk
+
+Start a session with `record: true` (alone or alongside RTMP/HLS) and the
+composited program is written to server disk:
+
+```bash
+curl -X POST https://api.example.com/v1/rooms/$ROOM_ID/egress \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"record": true}'
+```
+
+Files land under `EGRESS_RECORDINGS_DIR/<egress-id>/`. Each supervised
+pipeline restart writes a new numbered part file, so already-written material
+is never truncated; the restart gap (a couple of seconds) is the only loss
+window. When the session ends, the parts are losslessly remuxed (stream copy,
+no re-encode) into a single seekable `recording.mp4` and the raw parts are
+removed. If the server crashes mid-session, the raw MPEG-TS parts remain on
+disk and stay downloadable.
+
+### Recordings API
+
+All endpoints require the platform API key and are scoped to the key's
+project. Recordings grow at roughly the program bitrate (~1.1 GB/hour at the
+default 2.6 Mbps program); delete what you no longer need.
+
+```bash
+# List recordings (newest first, optional ?roomId= filter)
+curl -H "Authorization: Bearer $API_KEY" https://api.example.com/v1/recordings
+
+# Download (HTTP Range supported; 206 Partial Content for byte ranges)
+curl -H "Authorization: Bearer $API_KEY" -o recording.mp4 \
+  https://api.example.com/v1/recordings/$EGRESS_ID/file
+
+# Delete (removes the stored files)
+curl -X DELETE -H "Authorization: Bearer $API_KEY" \
+  https://api.example.com/v1/recordings/$EGRESS_ID
+```
+
+The session view (`GET /v1/egress/$EGRESS_ID`) carries `recordingUrl` and
+`recordingSizeBytes` for record sessions; there is no `recording.ready`
+webhook - poll after `egress.stopped`.
+
 ## Environment variables
 
 | Variable | Default | Purpose |
@@ -89,6 +132,7 @@ available after the session ends.
 | `EGRESS_FFMPEG_PATH` | `ffmpeg` | Binary used for egress pipelines |
 | `EGRESS_MEDIA_PORT_MIN` / `EGRESS_MEDIA_PORT_MAX` | `42000` / `42100` | UDP range FFmpeg binds for RTP ingest |
 | `EGRESS_HLS_DIR` | system temp dir | Root directory for HLS segment trees |
+| `EGRESS_RECORDINGS_DIR` | `<server cwd>/data/egress-recordings` | Root directory for session recordings |
 | `EGRESS_ALLOW_PRIVATE_TARGETS` | `false` | Development escape hatch for local RTMP targets |
 
 ## Local development with an RTMP target

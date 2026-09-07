@@ -1,9 +1,10 @@
-import { existsSync } from 'node:fs';
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -167,7 +168,49 @@ interface IngestedStream {
     return { producerId: producer.id, kind, source };
   }
 
-  it('streams ingested RTP through the pipeline into a live HLS playlist', async () => {
+  /** Egress side: the same taps the service builds, against real mediasoup. */
+  async function buildTapInputs(streams: IngestedStream[]): Promise<{
+    inputs: EgressPipelineInput[];
+    transports: Array<{ close(): void }>;
+  }> {
+    const router = workerManager.getRouter(room);
+    if (!router) throw new Error('router missing');
+    // One plain transport (and one UDP listener) per tapped producer, the
+    // same shape the service builds.
+    const inputs: EgressPipelineInput[] = [];
+    const transports: Array<{ close(): void }> = [];
+    let index = 0;
+    for (const stream of streams) {
+      const transport = await router.createPlainTransport(
+        egressPlainTransportOptions,
+      );
+      transports.push(transport);
+      const consumer = await transport.consume({
+        producerId: stream.producerId,
+        rtpCapabilities: router.rtpCapabilities,
+        paused: false,
+      });
+      const port = await freeUdpPort();
+      await transport.connect({ ip: '127.0.0.1', port });
+      const sdpPath = join(workDir, `egress-${index}.sdp`);
+      const input: EgressPipelineInput = {
+        descriptor: {
+          producerId: stream.producerId,
+          kind: stream.kind,
+          source: stream.source,
+        },
+        rtpParameters: consumer.rtpParameters,
+        sdpPath,
+        port,
+      };
+      writeFileSync(sdpPath, generateSdp(input));
+      inputs.push(input);
+      index += 1;
+    }
+    return { inputs, transports };
+  }
+
+  async function ingestCameraAndAudio(): Promise<IngestedStream[]> {
     const video = await ingest('video', 'camera', [
       '-f',
       'lavfi',
@@ -202,46 +245,17 @@ interface IngestedStream {
       '-ssrc',
       '22222222',
     ]);
+    return [video, audio];
+  }
 
-    // Egress side: the same tap the service builds, against real mediasoup.
-    const router = workerManager.getRouter(room);
-    if (!router) throw new Error('router missing');
-    // One plain transport (and one UDP listener) per tapped producer, the
-    // same shape the service builds.
-    const inputs: EgressPipelineInput[] = [];
-    const transports: Array<{ close(): void }> = [];
-    let index = 0;
-    for (const stream of [video, audio]) {
-      const transport = await router.createPlainTransport(
-        egressPlainTransportOptions,
-      );
-      transports.push(transport);
-      const consumer = await transport.consume({
-        producerId: stream.producerId,
-        rtpCapabilities: router.rtpCapabilities,
-        paused: false,
-      });
-      const port = await freeUdpPort();
-      await transport.connect({ ip: '127.0.0.1', port });
-      const sdpPath = join(workDir, `egress-${index}.sdp`);
-      const input: EgressPipelineInput = {
-        descriptor: {
-          producerId: stream.producerId,
-          kind: stream.kind,
-          source: stream.source,
-        },
-        rtpParameters: consumer.rtpParameters,
-        sdpPath,
-        port,
-      };
-      writeFileSync(sdpPath, generateSdp(input));
-      inputs.push(input);
-      index += 1;
-    }
+  it('streams ingested RTP through the pipeline into a live HLS playlist', async () => {
+    const streams = await ingestCameraAndAudio();
+    const { inputs, transports } = await buildTapInputs(streams);
 
     const args = composeEgressArgs(inputs, {
       rtmpEndpoints: [],
       hls: true,
+      record: false,
       hlsDir,
     });
     const process = FFmpegProcess.spawn(EGRESS_FFMPEG_PATH, args);
@@ -295,6 +309,80 @@ interface IngestedStream {
     expect(exited).toBe(true);
     expect(existsSync(playlist)).toBe(true);
     expect(readFileSync(playlist, 'utf8')).toContain('#EXTM3U');
+
+    for (const transport of transports) transport.close();
+  });
+
+  it('records the composited program to an MPEG-TS part and finalizes it into a playable MP4', async () => {
+    const streams = await ingestCameraAndAudio();
+    const { inputs, transports } = await buildTapInputs(streams);
+
+    const recordDir = join(workDir, 'recordings');
+    mkdirSync(recordDir, { recursive: true });
+    const args = composeEgressArgs(inputs, {
+      rtmpEndpoints: [],
+      hls: false,
+      record: true,
+      recordingDir: recordDir,
+    });
+    const process = FFmpegProcess.spawn(EGRESS_FFMPEG_PATH, args);
+
+    // The recording sink appears and grows with real mixed media.
+    const partPath = join(recordDir, 'recording-0.ts');
+    await waitUntil(() => existsSync(partPath), 60_000, 'recording part');
+    await waitUntil(
+      () => statSync(partPath).size > 2 * 1024 * 1024,
+      40_000,
+      'recording material',
+    );
+
+    // Graceful stop closes the sink; the parts are then finalized exactly
+    // the way EgressService.finalizeRecording does: stream-copy concat.
+    await process.stop(5_000);
+    const listPath = join(recordDir, 'parts.txt');
+    writeFileSync(listPath, `file '${partPath}'\n`);
+    const target = join(recordDir, 'recording.mp4');
+    await execFileAsync(EGRESS_FFMPEG_PATH, [
+      '-nostdin',
+      '-loglevel',
+      'error',
+      '-f',
+      'concat',
+      '-safe',
+      '0',
+      '-i',
+      listPath,
+      '-c',
+      'copy',
+      '-movflags',
+      '+faststart',
+      target,
+    ]);
+    expect(statSync(target).size).toBeGreaterThan(0);
+
+    // The finalized recording carries both the mixed audio and the canvas
+    // video, and decodes to a real duration.
+    const streamsProbe = await execFileAsync('ffprobe', [
+      '-v',
+      'error',
+      '-show_entries',
+      'stream=codec_type,codec_name',
+      '-of',
+      'default=nw=1',
+      target,
+    ]);
+    expect(streamsProbe.stdout).toContain('codec_name=h264');
+    expect(streamsProbe.stdout).toContain('codec_name=aac');
+    const duration = await execFileAsync('ffprobe', [
+      '-v',
+      'error',
+      '-show_entries',
+      'format=duration',
+      '-of',
+      'default=nw=1:nk=1',
+      target,
+    ]);
+    expect(Number(duration.stdout.trim())).toBeGreaterThan(3);
 
     for (const transport of transports) transport.close();
   });

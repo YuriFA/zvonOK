@@ -18,6 +18,7 @@ jest.mock('node:fs/promises', () => ({
   mkdir: jest.fn().mockResolvedValue(undefined),
   writeFile: jest.fn().mockResolvedValue(undefined),
   rm: jest.fn().mockResolvedValue(undefined),
+  stat: jest.fn().mockRejectedValue(new Error('stat not stubbed')),
 }));
 
 import {
@@ -25,7 +26,9 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
+import { stat } from 'node:fs/promises';
 import { EgressService } from './egress.service';
+import { composeEgressArgs } from './ffmpeg/args-composer';
 import { FFmpegProcess } from './ffmpeg/ffmpeg-process';
 import type { EgressTapDescriptor } from './egress.types';
 
@@ -99,10 +102,16 @@ describe('EgressService', () => {
       id: `egress-${rowCounter}`,
       roomId: 'room-1',
       projectId: 'project-1',
-      outputs: { rtmpEndpoints: ['rtmp://example.com/live'], hls: true },
+      outputs: {
+        rtmpEndpoints: ['rtmp://example.com/live'],
+        hls: true,
+        record: false,
+      },
       status: 'starting',
       endedReason: null,
       error: null,
+      recordingSizeBytes: null,
+      recordingFinalizedAt: null,
       startedAt: new Date(),
       endedAt: null,
       ...overrides,
@@ -190,7 +199,11 @@ describe('EgressService', () => {
 
   it('rejects start without outputs', async () => {
     await expect(
-      service.start('project-1', 'room-1', { rtmpEndpoints: [], hls: false }),
+      service.start('project-1', 'room-1', {
+        rtmpEndpoints: [],
+        hls: false,
+        record: false,
+      }),
     ).rejects.toThrow(BadRequestException);
   });
 
@@ -202,7 +215,11 @@ describe('EgressService', () => {
       status: 'active',
     });
     await expect(
-      service.start('project-1', 'room-1', { rtmpEndpoints: [], hls: true }),
+      service.start('project-1', 'room-1', {
+        rtmpEndpoints: [],
+        hls: true,
+        record: false,
+      }),
     ).rejects.toThrow(NotFoundException);
 
     prisma.room.findUnique.mockResolvedValue({
@@ -212,14 +229,22 @@ describe('EgressService', () => {
       status: 'ended',
     });
     await expect(
-      service.start('project-1', 'room-1', { rtmpEndpoints: [], hls: true }),
+      service.start('project-1', 'room-1', {
+        rtmpEndpoints: [],
+        hls: true,
+        record: false,
+      }),
     ).rejects.toThrow(BadRequestException);
   });
 
   it('refuses a second active session for the same room', async () => {
     prisma.egress.findFirst.mockResolvedValue(makeRow({ status: 'live' }));
     await expect(
-      service.start('project-1', 'room-1', { rtmpEndpoints: [], hls: true }),
+      service.start('project-1', 'room-1', {
+        rtmpEndpoints: [],
+        hls: true,
+        record: false,
+      }),
     ).rejects.toThrow(ConflictException);
   });
 
@@ -228,6 +253,7 @@ describe('EgressService', () => {
       service.start('project-1', 'room-1', {
         rtmpEndpoints: ['rtmp://127.0.0.1/live'],
         hls: false,
+        record: false,
       }),
     ).rejects.toThrow(BadRequestException);
   });
@@ -236,6 +262,7 @@ describe('EgressService', () => {
     const view = await service.start('project-1', 'room-1', {
       rtmpEndpoints: ['rtmp://example.com/live'],
       hls: true,
+      record: false,
     });
     expect(view.status).toBe('starting');
     expect(FFmpegProcess.spawn).toHaveBeenCalledTimes(1);
@@ -252,7 +279,7 @@ describe('EgressService', () => {
       'room-1',
       'room-slug',
       expect.any(String),
-      { rtmpEndpoints: ['rtmp://example.com/live'], hls: true },
+      { rtmpEndpoints: ['rtmp://example.com/live'], hls: true, record: false },
     );
   });
 
@@ -260,6 +287,7 @@ describe('EgressService', () => {
     await service.start('project-1', 'room-1', {
       rtmpEndpoints: [],
       hls: true,
+      record: false,
     });
 
     // The first three start timeouts rebuild the pipeline...
@@ -288,6 +316,7 @@ describe('EgressService', () => {
     await service.start('project-1', 'room-1', {
       rtmpEndpoints: [],
       hls: true,
+      record: false,
     });
     spawned[0].emit('progress', 'out_time_ms=1');
     await flush();
@@ -312,6 +341,7 @@ describe('EgressService', () => {
     await service.start('project-1', 'room-1', {
       rtmpEndpoints: [],
       hls: true,
+      record: false,
     });
     const handler = sfu.onRoomProducerAdded.mock.calls[0][1] as (
       descriptor: EgressTapDescriptor,
@@ -329,6 +359,7 @@ describe('EgressService', () => {
     const started = await service.start('project-1', 'room-1', {
       rtmpEndpoints: [],
       hls: true,
+      record: false,
     });
     spawned[0].emit('progress', 'out_time_ms=1');
     await flush();
@@ -347,7 +378,7 @@ describe('EgressService', () => {
       'room-1',
       'room-slug',
       expect.any(String),
-      { rtmpEndpoints: [], hls: true },
+      { rtmpEndpoints: [], hls: true, record: false },
       'stopped',
     );
 
@@ -363,6 +394,7 @@ describe('EgressService', () => {
     await service.start('project-1', 'room-1', {
       rtmpEndpoints: [],
       hls: true,
+      record: false,
     });
     const roomClosed = sfu.onRoomClosed.mock.calls[0][1] as () => void;
     roomClosed();
@@ -379,7 +411,7 @@ describe('EgressService', () => {
       'room-1',
       'room-slug',
       expect.any(String),
-      { rtmpEndpoints: [], hls: true },
+      { rtmpEndpoints: [], hls: true, record: false },
       'room-ended',
     );
   });
@@ -391,5 +423,111 @@ describe('EgressService', () => {
     await expect(service.get('project-1', 'egress-x')).rejects.toThrow(
       NotFoundException,
     );
+  });
+
+  it('writes the next recording part across pipeline restarts', async () => {
+    const started = await service.start('project-1', 'room-1', {
+      rtmpEndpoints: [],
+      hls: false,
+      record: true,
+    });
+    latestProcess().emit('progress', 'out_time_ms=1');
+    await flush();
+    expect(spawned).toHaveLength(1);
+
+    latestProcess().emit('exit', 1, null);
+    await flush();
+    expect(spawned).toHaveLength(2);
+    expect(composeEgressArgs).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({ record: true, recordingPart: 1 }),
+    );
+
+    latestProcess().emit('exit', 1, null);
+    await flush();
+    expect(spawned).toHaveLength(3);
+    expect(composeEgressArgs).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({ recordingPart: 2 }),
+    );
+    expect(started.recordingUrl).toBe(`/v1/recordings/${started.id}/file`);
+  });
+
+  it('finalizes the recording into one MP4 when the session stops', async () => {
+    jest
+      .mocked(stat)
+      .mockResolvedValueOnce({ size: 0 } as unknown as Awaited<
+        ReturnType<typeof stat>
+      >)
+      .mockResolvedValueOnce({ size: 1234 } as unknown as Awaited<
+        ReturnType<typeof stat>
+      >);
+    const started = await service.start('project-1', 'room-1', {
+      rtmpEndpoints: [],
+      hls: false,
+      record: true,
+    });
+    latestProcess().emit('progress', 'out_time_ms=1');
+    await flush();
+
+    prisma.egress.findUnique.mockResolvedValue(
+      makeRow({ id: started.id, status: 'live' }),
+    );
+    prisma.egress.findUniqueOrThrow.mockResolvedValue(
+      makeRow({ id: started.id, status: 'ended', endedReason: 'stopped' }),
+    );
+    const stopping = service.stop('project-1', started.id);
+    await flush();
+    const finalizerArgs = (FFmpegProcess.spawn as jest.Mock).mock
+      .calls[1][1] as string[];
+    expect(finalizerArgs.slice(0, 8)).toEqual([
+      '-nostdin',
+      '-loglevel',
+      'error',
+      '-f',
+      'concat',
+      '-safe',
+      '0',
+      '-i',
+    ]);
+    expect(finalizerArgs).toContain('-c');
+    expect(finalizerArgs).toContain('copy');
+    expect(finalizerArgs.at(-1)).toMatch(/recording\.mp4$/);
+    spawned[1].emit('exit', 0, null);
+    await stopping;
+    expect(prisma.egress.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          recordingSizeBytes: 1234n,
+        }),
+      }),
+    );
+  });
+
+  it('keeps raw parts when finalization fails', async () => {
+    jest.mocked(stat).mockResolvedValueOnce({
+      size: 0,
+    } as unknown as Awaited<ReturnType<typeof stat>>);
+    const started = await service.start('project-1', 'room-1', {
+      rtmpEndpoints: [],
+      hls: false,
+      record: true,
+    });
+    latestProcess().emit('progress', 'out_time_ms=1');
+    await flush();
+    prisma.egress.findUnique.mockResolvedValue(
+      makeRow({ id: started.id, status: 'live' }),
+    );
+    prisma.egress.findUniqueOrThrow.mockResolvedValue(
+      makeRow({ id: started.id, status: 'ended', endedReason: 'stopped' }),
+    );
+    const stopping = service.stop('project-1', started.id);
+    await flush();
+    spawned[1].emit('exit', 1, null);
+    await stopping;
+    const sizeUpdates = prisma.egress.update.mock.calls.filter((call) =>
+      Object.hasOwn(call[0]?.data ?? {}, 'recordingSizeBytes'),
+    );
+    expect(sizeUpdates).toHaveLength(0);
   });
 });

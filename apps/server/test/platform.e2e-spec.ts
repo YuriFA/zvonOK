@@ -8,6 +8,9 @@ import { PrismaService } from '../src/prisma/prisma.service';
 import { configureApp } from '../src/bootstrap';
 import { ApiKeyHelper } from '../src/developer/api-key.helper';
 import { WorkerManager } from '../src/sfu/worker-manager';
+import { EGRESS_RECORDINGS_DIR } from '../src/egress/egress.config';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { Server as NetServer } from 'node:net';
 
 jest.mock('../src/egress/ffmpeg/ffmpeg-process', () => ({
@@ -377,10 +380,13 @@ describe('Developer platform (e2e)', () => {
       .post(`/v1/rooms/${roomId}/egress`)
       .set(bearer)
       .send({ hls: true });
-
+    expect(started.body.outputs).toEqual({
+      rtmpEndpoints: [],
+      hls: true,
+      record: false,
+    });
     expect(started.status).toBe(201);
     expect(started.body.status).toBe('starting');
-    expect(started.body.outputs).toEqual({ rtmpEndpoints: [], hls: true });
     expect(started.body.hlsUrl).toBe(
       `/egress/hls/${started.body.id}/index.m3u8`,
     );
@@ -422,6 +428,122 @@ describe('Developer platform (e2e)', () => {
       .set(bearer)
       .send({ hls: true });
     expect(restarted.status).toBe(201);
+  });
+
+  it('records, lists, downloads (200/206), and deletes a recording', async () => {
+    const room = await request(app.getHttpServer())
+      .post('/v1/rooms')
+      .set(bearer)
+      .send({});
+    const roomId = room.body.id as string;
+
+    const started = await request(app.getHttpServer())
+      .post(`/v1/rooms/${roomId}/egress`)
+      .set(bearer)
+      .send({ record: true });
+    expect(started.status).toBe(201);
+    expect(started.body.outputs).toEqual({
+      rtmpEndpoints: [],
+      hls: false,
+      record: true,
+    });
+    expect(started.body.recordingUrl).toBe(
+      `/v1/recordings/${started.body.id}/file`,
+    );
+    const egressId = started.body.id as string;
+
+    // Graceful stop finalizes (no media in this mocked harness, so no size).
+    const stopped = await request(app.getHttpServer())
+      .post(`/v1/egress/${egressId}/stop`)
+      .set(bearer);
+    expect(stopped.status).toBe(200);
+
+    // Simulate a finalized artifact on disk.
+    const sessionDir = join(EGRESS_RECORDINGS_DIR, egressId);
+    mkdirSync(sessionDir, { recursive: true });
+    const bytes = Buffer.alloc(100, 7);
+    writeFileSync(join(sessionDir, 'recording.mp4'), bytes);
+
+    const list = await request(app.getHttpServer())
+      .get('/v1/recordings')
+      .set(bearer);
+    expect(list.status).toBe(200);
+    expect(list.body.map((r: { id: string }) => r.id)).toContain(egressId);
+
+    const listByRoom = await request(app.getHttpServer())
+      .get(`/v1/recordings?roomId=${roomId}`)
+      .set(bearer);
+    expect(listByRoom.body.map((r: { id: string }) => r.id)).toContain(
+      egressId,
+    );
+
+    const full = await request(app.getHttpServer())
+      .get(`/v1/recordings/${egressId}/file`)
+      .set(bearer);
+    expect(full.status).toBe(200);
+    expect(full.headers['content-type']).toBe('video/mp4');
+    expect(full.headers['content-length']).toBe('100');
+    expect(full.headers['accept-ranges']).toBe('bytes');
+    expect(full.body).toEqual(bytes);
+
+    const partial = await request(app.getHttpServer())
+      .get(`/v1/recordings/${egressId}/file`)
+      .set(bearer)
+      .set('Range', 'bytes=10-');
+    expect(partial.status).toBe(206);
+    expect(partial.headers['content-range']).toBe('bytes 10-99/100');
+    expect(partial.headers['content-length']).toBe('90');
+    expect(partial.body).toEqual(bytes.subarray(10));
+
+    const unsatisfiable = await request(app.getHttpServer())
+      .get(`/v1/recordings/${egressId}/file`)
+      .set(bearer)
+      .set('Range', 'bytes=100000-');
+    expect(unsatisfiable.status).toBe(416);
+
+    const deleted = await request(app.getHttpServer())
+      .delete(`/v1/recordings/${egressId}`)
+      .set(bearer);
+    expect(deleted.status).toBe(204);
+    const gone = await request(app.getHttpServer())
+      .get(`/v1/recordings/${egressId}/file`)
+      .set(bearer);
+    expect(gone.status).toBe(404);
+
+    rmSync(sessionDir, { recursive: true, force: true });
+  });
+
+  it('hides another project recording from list and download', async () => {
+    const foreignDir = join(EGRESS_RECORDINGS_DIR, 'egress-foreign');
+    mkdirSync(foreignDir, { recursive: true });
+    writeFileSync(join(foreignDir, 'recording.mp4'), Buffer.alloc(8, 1));
+    egresses.set('egress-foreign', {
+      id: 'egress-foreign',
+      roomId: 'room-e2e',
+      projectId: 'other-project',
+      outputs: { rtmpEndpoints: [], hls: false, record: true },
+      status: 'ended',
+      endedReason: 'stopped',
+      error: null,
+      startedAt: new Date(),
+      endedAt: new Date(),
+      recordingSizeBytes: null,
+      recordingFinalizedAt: null,
+    });
+
+    const list = await request(app.getHttpServer())
+      .get('/v1/recordings')
+      .set(bearer);
+    expect(list.body.map((r: { id: string }) => r.id)).not.toContain(
+      'egress-foreign',
+    );
+
+    const download = await request(app.getHttpServer())
+      .get('/v1/recordings/egress-foreign/file')
+      .set(bearer);
+    expect(download.status).toBe(404);
+
+    rmSync(foreignDir, { recursive: true, force: true });
   });
 
   it('ends a room via the public API', async () => {

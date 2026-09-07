@@ -74,6 +74,7 @@ export class PlatformService {
     return this.egressService.start(projectId, room.id, {
       rtmpEndpoints: dto.rtmpEndpoints ?? [],
       hls: dto.hls ?? false,
+      record: dto.record ?? false,
     });
   }
 
