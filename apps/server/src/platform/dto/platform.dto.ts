@@ -88,4 +88,14 @@ export class StartEgressDto {
   @IsOptional()
   @IsBoolean()
   hls?: boolean;
+
+  @ApiProperty({
+    required: false,
+    type: 'boolean',
+    default: false,
+    description: 'Record the program to server disk for later download',
+  })
+  @IsOptional()
+  @IsBoolean()
+  record?: boolean;
 }

@@ -12,7 +12,6 @@ import { configureApp } from '../src/bootstrap';
 import { WorkerManager } from '../src/sfu/worker-manager';
 import { RoomTokenHelper } from '../src/platform/room-token.helper';
 
-
 interface TestRoom {
   id: string;
   slug: string;

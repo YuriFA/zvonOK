@@ -26,6 +26,8 @@ export interface EgressTap {
 export interface EgressOutputs {
   rtmpEndpoints: string[];
   hls: boolean;
+  /** Persist the composited program to server disk for later download. */
+  record: boolean;
 }
 
 /** Input file contract handed to the FFmpeg args composer. */
@@ -63,4 +65,8 @@ export interface EgressSessionView {
   error: string | null;
   /** Playback URL when HLS output is enabled, else null. */
   hlsUrl: string | null;
+  /** Download URL once a recording output is finalized or crashed-with-parts, else null. */
+  recordingUrl: string | null;
+  /** Finalized recording size in bytes, when known. */
+  recordingSizeBytes: number | null;
 }

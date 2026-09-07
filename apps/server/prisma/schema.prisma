@@ -93,19 +93,21 @@ model ApiKey {
 }
 
 model Egress {
-  id          String             @id @default(cuid())
-  roomId      String
-  room        Room               @relation(fields: [roomId], references: [id])
-  projectId   String
-  project     Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  outputs     Json
-  status      EgressStatus       @default(starting)
-  endedReason EgressEndedReason?
-  error       String?
-  startedAt   DateTime           @default(now())
-  endedAt     DateTime?
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  id                   String             @id @default(cuid())
+  roomId               String
+  room                 Room               @relation(fields: [roomId], references: [id])
+  projectId            String
+  project              Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  outputs              Json
+  status               EgressStatus       @default(starting)
+  endedReason          EgressEndedReason?
+  error                String?
+  recordingSizeBytes   BigInt?
+  recordingFinalizedAt DateTime?
+  startedAt            DateTime           @default(now())
+  endedAt              DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
 
   @@index([roomId])
   @@index([projectId])

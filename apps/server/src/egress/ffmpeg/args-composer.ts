@@ -74,11 +74,17 @@ export function generateSdp(input: EgressPipelineInput): string {
  * and a single tee muxer fanning out to all requested outputs.
  *
  * `hlsDir` is only required when `outputs.hls` is true; it is the segment
- * directory the HLS playlist and segments are written to.
+ * directory the HLS playlist and segments are written to. `recordingDir` is
+ * only required when `outputs.record` is true; the recording part index
+ * disambiguates files across supervised pipeline restarts.
  */
 export function composeEgressArgs(
   inputs: EgressPipelineInput[],
-  outputs: EgressOutputs & { hlsDir?: string },
+  outputs: EgressOutputs & {
+    hlsDir?: string;
+    recordingDir?: string;
+    recordingPart?: number;
+  },
 ): string[] {
   const ordered = sortedInputs(inputs);
   const audioCount = ordered.filter(
@@ -176,11 +182,20 @@ function composeFilterComplex(audioCount: number, videoCount: number): string {
   return segments.join(';');
 }
 
-/** `[f=flv:onfail=ignore]` per RTMP endpoint, plus the HLS branch when asked. */
-function composeTeeSpec(outputs: EgressOutputs & { hlsDir?: string }): string {
-  if (outputs.rtmpEndpoints.length === 0 && !outputs.hls) {
+/**
+ * `[f=flv:onfail=ignore]` per RTMP endpoint, plus the HLS branch when asked,
+ * plus the Matroska recording branch when asked.
+ */
+function composeTeeSpec(
+  outputs: EgressOutputs & {
+    hlsDir?: string;
+    recordingDir?: string;
+    recordingPart?: number;
+  },
+): string {
+  if (outputs.rtmpEndpoints.length === 0 && !outputs.hls && !outputs.record) {
     throw new Error(
-      'egress pipeline requires at least one output (RTMP endpoint or HLS)',
+      'egress pipeline requires at least one output (RTMP endpoint, HLS, or recording)',
     );
   }
   const targets = outputs.rtmpEndpoints.map(
@@ -196,6 +211,16 @@ function composeTeeSpec(outputs: EgressOutputs & { hlsDir?: string }): string {
         `hls_segment_filename=${outputs.hlsDir}/seg_%03d.ts]` +
         `${outputs.hlsDir}/index.m3u8`,
     );
+  }
+  if (outputs.record) {
+    if (!outputs.recordingDir) {
+      throw new Error('recordingDir is required when outputs.record is true');
+    }
+    const part = outputs.recordingPart ?? 0;
+    // MPEG-TS, not Matroska: the tee muxer exposes a non-seekable AVIO to
+    // its slaves and Matroska's header write needs a seek, while TS is the
+    // crash-tolerant broadcast container. Finalization remuxes to MP4.
+    targets.push(`[f=mpegts]${outputs.recordingDir}/recording-${part}.ts`);
   }
   return targets.join('|');
 }

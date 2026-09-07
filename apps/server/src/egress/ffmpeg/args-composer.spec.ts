@@ -95,6 +95,7 @@ describe('composeEgressArgs', () => {
     const args = composeEgressArgs([cameraVideo, audio, screenVideo], {
       rtmpEndpoints: ['rtmp://one/live', 'rtmp://two/live'],
       hls: true,
+      record: false,
       hlsDir: '/tmp/hls',
     });
 
@@ -170,6 +171,7 @@ describe('composeEgressArgs', () => {
     const args = composeEgressArgs([secondAudio, audio], {
       rtmpEndpoints: ['rtmp://only/live'],
       hls: false,
+      record: false,
     });
 
     expect(inputPaths(args)).toEqual(['/tmp/audio-2.sdp', '/tmp/audio.sdp']);
@@ -180,6 +182,31 @@ describe('composeEgressArgs', () => {
       '-f',
       'tee',
       '[f=flv:onfail=ignore]rtmp://only/live',
+    ]);
+  });
+
+  it('tees the composited program to a numbered Matroska recording part', () => {
+    const args = composeEgressArgs([audio], {
+      rtmpEndpoints: [],
+      hls: false,
+      record: true,
+      recordingDir: '/tmp/recordings/egress-1',
+      recordingPart: 2,
+    });
+    expect(args.slice(-3)).toEqual([
+      '-f',
+      'tee',
+      '[f=mpegts]/tmp/recordings/egress-1/recording-2.ts',
+    ]);
+
+    const restarted = composeEgressArgs([audio], {
+      rtmpEndpoints: [],
+      hls: false,
+      record: true,
+      recordingDir: '/tmp/recordings/egress-1',
+    });
+    expect(restarted.slice(-1)).toEqual([
+      '[f=mpegts]/tmp/recordings/egress-1/recording-0.ts',
     ]);
   });
 
@@ -197,23 +224,37 @@ describe('composeEgressArgs', () => {
       composeEgressArgs([cameraVideo], {
         rtmpEndpoints: ['rtmp://one/live'],
         hls: false,
+        record: false,
       }),
     ).toThrow('at least one audio input');
     expect(() =>
       composeEgressArgs([audio, ...fiveVideos], {
         rtmpEndpoints: ['rtmp://one/live'],
         hls: false,
+        record: false,
       }),
     ).toThrow('at most 4 video inputs');
     expect(() =>
-      composeEgressArgs([audio], { rtmpEndpoints: [], hls: false }),
+      composeEgressArgs([audio], {
+        rtmpEndpoints: [],
+        hls: false,
+        record: false,
+      }),
     ).toThrow('at least one output');
     expect(() =>
       composeEgressArgs([audio], {
         rtmpEndpoints: ['rtmp://one/live'],
         hls: true,
+        record: false,
       }),
     ).toThrow('hlsDir is required');
+    expect(() =>
+      composeEgressArgs([audio], {
+        rtmpEndpoints: [],
+        hls: false,
+        record: true,
+      }),
+    ).toThrow('recordingDir is required');
   });
 });
 

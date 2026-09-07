@@ -406,19 +406,20 @@ describe('WebhookDispatcher', () => {
     dispatcher.egressStarted('room-1', 'room-slug', 'egress-1', {
       rtmpEndpoints: ['rtmp://example.com/live'],
       hls: true,
+      record: false,
     });
     dispatcher.egressStopped(
       'room-1',
       'room-slug',
       'egress-1',
-      { rtmpEndpoints: ['rtmp://example.com/live'], hls: true },
+      { rtmpEndpoints: ['rtmp://example.com/live'], hls: true, record: false },
       'stopped',
     );
     dispatcher.egressFailed(
       'room-1',
       'room-slug',
       'egress-1',
-      { rtmpEndpoints: [], hls: true },
+      { rtmpEndpoints: [], hls: true, record: false },
       'pipeline exited unexpectedly',
     );
     await waitForRequests(stub, 3);
@@ -429,7 +430,11 @@ describe('WebhookDispatcher', () => {
       'egress.stopped',
       'egress.failed',
     ]);
-    const outputs = { rtmpEndpoints: ['rtmp://example.com/live'], hls: true };
+    const outputs = {
+      rtmpEndpoints: ['rtmp://example.com/live'],
+      hls: true,
+      record: false,
+    };
     expect(stub.requests[0].parsed.data).toMatchObject({
       roomId: 'room-1',
       roomSlug: 'room-slug',
@@ -456,6 +461,7 @@ describe('WebhookDispatcher', () => {
     dispatcher.egressStarted('room-1', 'user-room-slug', 'egress-1', {
       rtmpEndpoints: ['rtmp://example.com/live'],
       hls: false,
+      record: false,
     });
     await expectNoRequests(stub, 0);
     await stub.close();
@@ -469,6 +475,7 @@ describe('WebhookDispatcher', () => {
       dispatcher.egressStarted('room-1', undefined, 'egress-1', {
         rtmpEndpoints: [],
         hls: false,
+        record: false,
       }),
     ).not.toThrow();
   });

@@ -5,14 +5,16 @@ import { EGRESS_HLS_DIR } from './egress.config';
 import { EGRESS_HLS_ROOT } from './egress-playback.controller';
 import { EgressPlaybackController } from './egress-playback.controller';
 import { EgressService } from './egress.service';
+import { RecordingsService } from './recordings.service';
 
 @Module({
   imports: [SfuModule, WebhooksModule],
   controllers: [EgressPlaybackController],
   providers: [
     EgressService,
+    RecordingsService,
     { provide: EGRESS_HLS_ROOT, useValue: EGRESS_HLS_DIR },
   ],
-  exports: [EgressService],
+  exports: [EgressService, RecordingsService],
 })
 export class EgressModule {}
