@@ -33,6 +33,8 @@ deployment was retested by the owner (ephemeral TURN credentials, the produce
 race fix, and call recording all verified working). The success bar remains
 externally unverified while npm publish is deferred, so the checkpoint
 decision is pending that verification or an explicit decision to skip it.
+See `docs/checkpoint-2026-09-07.md` for the one-page review feeding this
+decision.
 
 ## Stage 2 candidate queue (ordered; each item = one OpenSpec change)
 
