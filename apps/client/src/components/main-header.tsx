@@ -13,7 +13,12 @@ export function MainHeader() {
       {isLoading ? (
         <p>Loading...</p>
       ) : isAuthenticated ? (
-        <ProfileDropdown />
+        <div className="flex items-center gap-2">
+          <LinkButton to={ROUTES.HISTORY} variant="ghost">
+            History
+          </LinkButton>
+          <ProfileDropdown />
+        </div>
       ) : (
         <div className="flex gap-2">
           <LinkButton to={ROUTES.LOGIN} variant="ghost">

@@ -123,7 +123,12 @@ describe('SFU host controls (e2e)', () => {
           updateMany: jest.fn().mockResolvedValue({ count: 0 }),
         },
         room: {
-          findUnique: jest.fn().mockResolvedValue(null),
+          findUnique: jest.fn(({ where }: { where: { id: string } }) => {
+            const room = rooms.get(where.id);
+            if (!room) return null;
+            // softDeleteRoom reads the transcript through this query.
+            return { ...room, messages: [] };
+          }),
           findFirst: jest.fn(
             ({ where }: { where: { id: string; projectId?: string } }) => {
               const room = rooms.get(where.id);

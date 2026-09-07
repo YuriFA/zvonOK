@@ -48,6 +48,27 @@ export class RoomController {
     return this.roomService.createRoom(user.id, dto);
   }
 
+  @Get('history')
+  @ApiOperation({ summary: "List the signed-in user's call history" })
+  listCallHistory(@User() user: JwtPayloadDto) {
+    return this.roomService.listCallHistory(user.id);
+  }
+
+  @Get('history/:id')
+  @ApiOperation({
+    summary: 'Fetch one call history record with its transcript',
+  })
+  getCallRecord(@User() user: JwtPayloadDto, @Param('id') id: string) {
+    return this.roomService.getCallRecord(user.id, id);
+  }
+
+  @Delete('history/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete a call history record' })
+  async deleteCallRecord(@User() user: JwtPayloadDto, @Param('id') id: string) {
+    await this.roomService.deleteCallRecord(user.id, id);
+  }
+
   @Get(':slug')
   @SkipAuthGuard()
   @ApiOperation({ summary: 'Get room by slug' })

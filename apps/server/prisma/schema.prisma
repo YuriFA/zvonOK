@@ -15,19 +15,36 @@ datasource db {
 }
 
 model User {
-  id                  String    @id @default(cuid())
-  email               String    @unique
-  username            String    @unique
+  id                  String       @id @default(cuid())
+  email               String       @unique
+  username            String       @unique
   passwordHash        String
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
   refreshTokenHash    String?
-  failedLoginAttempts Int       @default(0)
+  failedLoginAttempts Int          @default(0)
   lockedUntil         DateTime?
-  tokenVersion        Int       @default(0)
-  role                Role      @default(USER)
-  rooms               Room[]    @relation("RoomHost")
+  tokenVersion        Int          @default(0)
+  role                Role         @default(USER)
+  rooms               Room[]       @relation("RoomHost")
   messages            Message[]
+  callRecords         CallRecord[] @relation("CallRecords")
+}
+
+model CallRecord {
+  id           String   @id @default(cuid())
+  ownerId      String
+  owner        User     @relation("CallRecords", fields: [ownerId], references: [id], onDelete: Cascade)
+  roomName     String
+  roomSlug     String
+  startedAt    DateTime
+  endedAt      DateTime
+  messageCount Int
+  messages     Json
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([ownerId])
 }
 
 model Room {
