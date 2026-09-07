@@ -1,13 +1,18 @@
 # ZvonOK - WebRTC Video Conferencing Platform
 
-A modern WebRTC video chat application built as a pnpm monorepo with NestJS backend and React frontend. Supports group video calls via mediasoup SFU.
+A modern WebRTC video chat platform built as a pnpm monorepo with NestJS backend and React frontend. Group video calls via mediasoup SFU, plus a developer platform on top: REST API, TypeScript SDKs, live streaming egress, and recordings.
 
 ## Features
 
-- **Group Video Calls** — mediasoup SFU for multi-participant rooms
+- **Group Video Calls** — mediasoup SFU for multi-participant rooms, ephemeral TURN credentials via coturn
+- **Developer Platform** — `/v1` REST API (rooms, tokens, egress, recordings) with API-key auth and per-key rate limits
+- **TypeScript SDKs** — `@zvonok/client`, `@zvonok/react`, `@zvonok/video-layout` in `packages/` (npm publish deferred)
+- **Live Streaming Egress** — push the composited room program to RTMP endpoints or serve it as HLS; server-side recording with Range-supported downloads
+- **Webhooks** — signed `room.*` and `egress.*` events with delivery retries
+- **Whiteboard** — shared collaborative canvas in rooms
+- **Prebuilt Widget** — drop-in room UI component on top of the React SDK
+- **Docs Site** — static documentation site served on the VPS
 - **Secure Authentication** — JWT with refresh token rotation and reuse detection
-- **Modern Stack** — React 19, NestJS, TypeScript, Tailwind CSS
-- **Database** — PostgreSQL with Prisma ORM
 - **Production-Ready** — Docker Compose + Caddy, shared Traefik gateway on the VPS (multi-site, automatic HTTPS)
 
 ## Tech Stack
@@ -15,8 +20,9 @@ A modern WebRTC video chat application built as a pnpm monorepo with NestJS back
 | Layer | Tech |
 |-------|------|
 | Backend | NestJS v11, PostgreSQL 16, Prisma ORM, Passport.js (JWT), mediasoup |
-| Frontend | React 19, Vite 7, Tailwind CSS v4, React Router v7, Radix UI, mediasoup-client |
+| Frontend | React 19, Vite 7, Tailwind CSS v4, React Router v7, Base UI, mediasoup-client |
 | Signalling | Socket.io |
+| Media | mediasoup SFU, FFmpeg (egress pipelines), coturn (TURN) |
 | Deployment | Docker Compose, Caddy + shared Traefik gateway in production (multi-site VPS) |
 
 ## Prerequisites
@@ -98,23 +104,32 @@ Run `make help` to see all available targets.
 ## Project Structure
 
 ```
-webrtc-chat/
+zvonok/
 ├── apps/
 │   ├── server/             # NestJS backend (port 3000)
 │   │   ├── prisma/         # Database schema and migrations
-│   │   ├── src/
-│   │   │   ├── auth/       # Authentication (JWT, Passport)
-│   │   │   ├── user/       # User CRUD
-│   │   │   ├── room/       # Room management
-│   │   │   └── sfu/        # mediasoup SFU (WebSocket gateway)
-│   │   └── docker-compose.yml  # Dev database (PostgreSQL + pgAdmin)
+│   │   └── src/
+│   │       ├── auth/       # Authentication (JWT, Passport)
+│   │       ├── user/       # User CRUD
+│   │       ├── room/       # Room management
+│   │       ├── chat/       # Room chat
+│   │       ├── sfu/        # mediasoup SFU (WebSocket gateway)
+│   │       ├── egress/     # RTMP/HLS streaming + server-side recordings
+│   │       ├── platform/   # Developer platform: /v1 API, API keys, DTOs
+│   │       ├── developer/  # Developer accounts, projects, API keys
+│   │       ├── webhooks/   # Signed webhook delivery with retries
+│   │       └── whiteboard/ # Shared collaborative canvas
 │   └── client/             # React frontend (port 5173)
 │       └── src/
 │           ├── features/   # Feature modules (auth, room, media, sfu)
 │           ├── components/ # Shared UI components
 │           ├── hooks/      # Shared hooks
 │           └── lib/        # API client, SFU manager, utilities
-├── docs/                   # Documentation (SDD, deployment, tasks)
+├── packages/
+│   ├── client/             # @zvonok/client — headless SFU/room SDK
+│   ├── react/              # @zvonok/react — React bindings + host controls
+│   └── video-layout/       # @zvonok/video-layout — composited layout engine
+├── docs/                   # Architecture, quickstart, domain docs, ADRs
 ├── docker-compose.yml      # Production full-stack deployment
 ├── Makefile                # Production Docker orchestration (make help)
 ├── Caddyfile               # Caddy config (dev/standalone; imports Caddyfile.routes)
@@ -173,12 +188,27 @@ webrtc-chat/
 | `pnpm -C apps/client test:run` | Unit tests (CI mode) |
 | `pnpm -C apps/client test:e2e` | Playwright E2E tests |
 
+### SDK Packages (`packages/`)
+
+| Command | Description |
+|---------|-------------|
+| `pnpm -C packages/client build` | Build `@zvonok/client` |
+| `pnpm -C packages/react build` | Build `@zvonok/react` |
+| `pnpm -C packages/video-layout build` | Build `@zvonok/video-layout` |
+| `pnpm -C packages/<pkg> test:run` | Run package unit tests |
+| `pnpm -C packages/<pkg> lint:ts` | Type-check a package |
+
 ## Documentation
 
+- **[Quickstart](docs/quickstart.md)** — integrate the SDK into an external app
+- **[Platform Roadmap](docs/platform-roadmap.md)** — platform direction, stages, checkpoint
+- **[Egress](docs/egress.md)** — HLS/RTMP streaming and server-side recordings
+- **[Whiteboard](docs/whiteboard.md)** — shared collaborative canvas
 - **[Deployment Guide](docs/deployment.md)** — Production Docker setup
-- **[System Design Document](docs/SDD.md)** — Architecture, API, data models
-- **[Agent Guide](docs/agent-guide.md)** — Rules for AI agents
-- **[Roadmap](docs/roadmap.md)** — Development phases and status
+- **[Architecture](docs/architecture/)** — C4 diagrams, domain model
+- **[ADRs](docs/adr/)** — architecture decision records
+- **[OpenSpec Specs](openspec/specs/)** — source of truth: current behavior per domain
+- **[Archive](docs/archive/)** — pre-OpenSpec history (SDD, agent guide, roadmap)
 
 ## License
 

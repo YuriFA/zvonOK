@@ -28,6 +28,12 @@ Decide: continue to stage 2 as queued / reprioritize / stop at platform
 substrate. Criteria: success bar met, how much stage 1 actually cost, what the
 dogfooded SDK taught us about the API surface.
 
+Status as of 2026-09-07: the stage 2 queue is fully implemented and the live
+deployment was retested by the owner (ephemeral TURN credentials, the produce
+race fix, and call recording all verified working). The success bar remains
+externally unverified while npm publish is deferred, so the checkpoint
+decision is pending that verification or an explicit decision to skip it.
+
 ## Stage 2 candidate queue (ordered; each item = one OpenSpec change)
 
 1. **Webhooks** - session/participant events with signatures and retries. Implemented in `add-platform-webhooks` (archived 2026-09-06).
@@ -53,8 +59,10 @@ dogfooded SDK taught us about the API surface.
 
 ## Explicitly parked (not queued)
 
-AI voice agents, developer dashboard UI, email verification/reset, OAuth/SSO,
-DMs, message editing/attachments, E2E encryption, meeting history/analytics.
+Recording canvas/layout polish (owner feedback from the 2026-09-07 live
+retest), AI voice agents, developer dashboard UI, email verification/reset,
+OAuth/SSO, DMs, message editing/attachments, E2E encryption,
+meeting history/analytics.
 
 ## Change workflow
 
