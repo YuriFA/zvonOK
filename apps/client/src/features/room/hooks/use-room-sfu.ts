@@ -63,6 +63,7 @@ export function useRoomSfu({
     produceTrack,
     pauseProducer,
     resumeProducer,
+    replaceTrack,
     hasProducer,
     isRoomLocked,
     mutedByHost,
@@ -126,6 +127,15 @@ export function useRoomSfu({
         return;
       }
 
+      // The producer still references the track that "off" ended. Swap it in
+      // first: resuming first would stream silence until the swap lands.
+      const replaced = await replaceTrack("video", track);
+      if (!replaced) {
+        toast.error("Failed to restart the camera");
+        videoControl.stop();
+        mediaControls.setVideoEnabled(false);
+        return;
+      }
       resumeProducer("video");
     } else {
       if (hasProducer("video")) {
@@ -137,6 +147,7 @@ export function useRoomSfu({
     videoControl,
     videoTrackProvider,
     produceTrack,
+    replaceTrack,
     mediaControls,
     hasProducer,
     pauseProducer,
@@ -171,6 +182,15 @@ export function useRoomSfu({
         return;
       }
 
+      // The producer still references the track that "off" ended. Swap it in
+      // first: resuming first would stream silence until the swap lands.
+      const replaced = await replaceTrack("audio", track);
+      if (!replaced) {
+        toast.error("Failed to restart the microphone");
+        audioControl.stop();
+        mediaControls.setAudioEnabled(false);
+        return;
+      }
       resumeProducer("audio");
     } else {
       if (hasProducer("audio")) {
@@ -182,6 +202,7 @@ export function useRoomSfu({
     audioControl,
     audioTrackProvider,
     produceTrack,
+    replaceTrack,
     mediaControls,
     hasProducer,
     pauseProducer,

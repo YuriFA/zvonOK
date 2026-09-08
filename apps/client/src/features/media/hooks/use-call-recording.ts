@@ -15,6 +15,8 @@ export interface UseCallRecordingOptions {
   remotePeers: RemotePeerMedia[];
   /** Active screen share (local priority), already derived by the room view. */
   activeScreenShare: { userId: string; label: string; stream: MediaStream } | null;
+  /** The participant the room currently detects as speaking, if any. */
+  activeSpeakerId: string | null;
 }
 
 export interface UseCallRecordingResult {
@@ -53,6 +55,7 @@ export function useCallRecording({
   localAudioStream,
   remotePeers,
   activeScreenShare,
+  activeSpeakerId,
 }: UseCallRecordingOptions): UseCallRecordingResult {
   const compositorRef = useRef<CallRecordingCompositor | null>(null);
   const mixerRef = useRef<CallAudioMixer | null>(null);
@@ -67,6 +70,7 @@ export function useCallRecording({
         stream: localVideoStream,
         isLocal: true,
         isScreen: false,
+        isSpeaking: activeSpeakerId !== null && activeSpeakerId === (localUserId ?? "me"),
       },
     ];
     for (const peer of remotePeers) {
@@ -76,6 +80,7 @@ export function useCallRecording({
         stream: peer.cameraStream,
         isLocal: false,
         isScreen: false,
+        isSpeaking: activeSpeakerId === peer.userId,
       });
     }
     if (activeScreenShare) {
@@ -88,7 +93,14 @@ export function useCallRecording({
       });
     }
     return list;
-  }, [localUserId, localDisplayName, localVideoStream, remotePeers, activeScreenShare]);
+  }, [
+    localUserId,
+    localDisplayName,
+    localVideoStream,
+    remotePeers,
+    activeScreenShare,
+    activeSpeakerId,
+  ]);
 
   const audioStreams = useMemo(() => {
     const list: Array<{ id: string; stream: MediaStream }> = [];

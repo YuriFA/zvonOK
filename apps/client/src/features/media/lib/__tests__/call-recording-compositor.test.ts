@@ -12,7 +12,14 @@ interface DrawCall {
 class FakeRenderingContext2D {
   readonly drawCalls: DrawCall[] = [];
   readonly fillRects: Array<{ x: number; y: number; w: number; h: number }> = [];
-  readonly strokeRects: Array<{ x: number; y: number; w: number; h: number }> = [];
+  readonly strokeRects: Array<{
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    style: string;
+    lineWidth: number;
+  }> = [];
   readonly texts: string[] = [];
   readonly scaledTransforms: Array<[number, number]> = [];
   font = "";
@@ -37,7 +44,7 @@ class FakeRenderingContext2D {
   }
 
   strokeRect(x: number, y: number, w: number, h: number) {
-    this.strokeRects.push({ x, y, w, h });
+    this.strokeRects.push({ x, y, w, h, style: this.strokeStyle, lineWidth: this.lineWidth });
   }
 
   fillText(text: string) {
@@ -301,5 +308,20 @@ describe("CallRecordingCompositor", () => {
       expect(rect.w).toBeGreaterThan(0);
       expect(rect.h).toBeGreaterThan(0);
     }
+  });
+
+  it("draws the speaker ring only around the active speaker's tile", () => {
+    const compositor = new CallRecordingCompositor();
+    compositor.setSources([
+      makeSource({ id: "a", label: "Alice", isSpeaking: true }),
+      makeSource({ id: "b", label: "Bob", isSpeaking: false }),
+    ]);
+    compositor.renderFrame();
+
+    expect(context.strokeRects).toHaveLength(2);
+    const rings = context.strokeRects.filter((rect) => rect.style === "#22c55e");
+    expect(rings).toHaveLength(1);
+    expect(rings[0].lineWidth).toBe(4);
+    expect(context.strokeRects.filter((rect) => rect.style !== "#22c55e")).toHaveLength(1);
   });
 });

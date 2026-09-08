@@ -78,6 +78,10 @@ export class SfuManager implements ISfuManager {
   private peers = new Map<string, SfuPeerInfo>();
   private pendingNewProducers: SfuNewProducerPayload[] = [];
   private producingInProgress = new Map<string, Promise<Producer | null>>();
+  private replaceChains: Record<"audio" | "video", Promise<boolean>> = {
+    audio: Promise.resolve(true),
+    video: Promise.resolve(true),
+  };
   private pendingProduceRequests = new Map<
     string,
     { resolve: (id: string) => void; reject: (error: Error) => void; source: SfuMediaSource }
@@ -416,14 +420,21 @@ export class SfuManager implements ISfuManager {
   async replaceTrack(kind: "audio" | "video", newTrack: MediaStreamTrack | null): Promise<boolean> {
     const producer = this.getProducerByKind(kind);
     if (!producer) return true;
-
-    try {
-      await producer.replaceTrack({ track: newTrack });
-      return true;
-    } catch (error) {
-      console.error(`[SFU] Failed to replace ${kind} track:`, error);
-      return false;
-    }
+    // Two callers can request the same swap (the track-sync hook reacts to the
+    // capture state change while the toggle handler awaits its own swap).
+    // Serialize and skip redundant work: concurrent replaceTrack calls reject.
+    const swap = this.replaceChains[kind].then(async () => {
+      if (producer.track === newTrack) return true;
+      try {
+        await producer.replaceTrack({ track: newTrack });
+        return true;
+      } catch (error) {
+        console.error(`[SFU] Failed to replace ${kind} track:`, error);
+        return false;
+      }
+    });
+    this.replaceChains[kind] = swap.catch(() => false);
+    return swap;
   }
 
   getProducerByKind(kind: "audio" | "video"): Producer | undefined {

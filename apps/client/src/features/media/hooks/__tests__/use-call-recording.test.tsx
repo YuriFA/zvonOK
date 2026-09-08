@@ -120,6 +120,7 @@ function renderCallRecording(remotePeers: RemotePeerMedia[]) {
         localAudioStream,
         remotePeers: props.remotePeers,
         activeScreenShare: null,
+        activeSpeakerId: null,
       }),
     { initialProps: { remotePeers } },
   );

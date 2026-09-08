@@ -19,6 +19,8 @@ import { useWhiteboard } from "@/features/whiteboard/hooks/use-whiteboard";
 import type { ScreenShareError } from "@/hooks/use-screen-share";
 import { useScreenShare } from "@/hooks/use-screen-share";
 
+import { useRoomAudioContext } from "../contexts/room-audio.context";
+import { useActiveSpeakerId } from "../contexts/room-audio.store";
 import { useGuestRequests } from "../contexts/guest-requests.context";
 import type { Room } from "../types/room.types";
 import { AsidePanel, AsidePanelContainer, AsidePanelHeader } from "./aside-panel";
@@ -97,6 +99,8 @@ export function ActiveRoomView({
   }, [isSharing, screenStream, localUserId, currentUsername, remotePeers]);
 
   const isSpotlightMode = activeScreenShare !== null;
+  const { store: audioStore } = useRoomAudioContext();
+  const activeSpeakerId = useActiveSpeakerId(audioStore);
 
   const recorder = useCallRecording({
     roomSlug: room.slug,
@@ -113,6 +117,7 @@ export function ActiveRoomView({
             label: activeScreenShare.sharerName,
             stream: activeScreenShare.stream,
           },
+    activeSpeakerId,
   });
 
   // Recording is possible as long as anyone in the room publishes media.
