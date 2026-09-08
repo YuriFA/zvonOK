@@ -19,6 +19,7 @@ export default defineConfig({
     nav: [
       { text: "Home", link: "/" },
       { text: "Quickstart", link: "/quickstart" },
+      { text: "API Reference", link: "/api-reference" },
       { text: "Deployment", link: "/deployment" },
       { text: "Roadmap", link: "/platform-roadmap" },
     ],
@@ -27,6 +28,7 @@ export default defineConfig({
         text: "Guide",
         items: [
           { text: "Quickstart", link: "/quickstart" },
+          { text: "API Reference", link: "/api-reference" },
           { text: "Deployment", link: "/deployment" },
           { text: "Egress", link: "/egress" },
           { text: "Whiteboard", link: "/whiteboard" },

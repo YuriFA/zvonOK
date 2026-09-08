@@ -24,15 +24,14 @@ features:
       path. Screen share, chat, host controls and an interactive whiteboard
       in the room UI.
     link: /quickstart
-    linkText: Join a room in five minutes
   - icon: 🔑
     title: Platform API
     details: >-
       Register a developer account, create a project, issue an API key, and
       drive rooms, participant tokens, egress sessions and webhooks through
       the /v1 REST surface.
-    link: /quickstart
-    linkText: Walk the API
+    link: /api-reference
+    linkText: API reference
   - icon: ⚛️
     title: React SDK
     details: >-

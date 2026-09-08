@@ -1,0 +1,162 @@
+# Platform API Reference
+
+Every platform capability is reachable over HTTPS with a JSON API. Two
+surfaces share one server:
+
+| Surface | Auth | For |
+| --- | --- | --- |
+| `/v1` | API key (`Authorization: Bearer zk_live_...`) | Your backend drives rooms, tokens, egress, recordings |
+| `/developers` | Dev bearer token (30 min) | Your console/tooling manages projects, keys, webhooks |
+
+The base URL is your deployment (`https://your-zvonok-server.example` in the
+examples). All requests and responses are JSON except recording downloads.
+
+- Errors follow the NestJS envelope: `{ "message": "...", "error": "...", "statusCode": 404 }`
+- Resources owned by another project respond `404` - the API is intentionally
+  indistinguishable between "missing" and "not yours"
+- Mutating `/v1` routes are rate-limited to 60 requests per minute per key
+
+## Authentication
+
+Register a developer account, create a project, issue an API key. The full
+key is shown exactly once:
+
+```bash
+curl -s -X POST $ZVONOK_URL/developers/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username": "my-handle", "password": "Password1"}'
+# -> { "token": "<dev token>" }
+
+curl -s -X POST $ZVONOK_URL/developers/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "my-handle", "password": "Password1"}'
+
+curl -s -X POST $ZVONOK_URL/developers/projects \
+  -H "Authorization: Bearer $DEV_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "my app"}'
+
+curl -s -X POST $ZVONOK_URL/developers/projects/<projectId>/keys \
+  -H "Authorization: Bearer $DEV_TOKEN"
+# -> { "id": "...", "key": "zk_live_...", "prefix": "zk_live_...", ... }
+```
+
+Signed-in site users skip the manual form entirely: the console at `/console`
+offers one-click sign-in via `POST /developers/auth/sso` (app cookie session).
+
+## Rooms
+
+### Create a room
+
+`POST /v1/rooms` (60 req/min)
+
+```json
+{ "name": "Standup", "maxParticipants": 10 }
+```
+
+Both fields optional. Returns the room row: `id`, generated `slug`, `name`,
+`projectId`, `maxParticipants`, `status: "active"`, timestamps.
+
+### List project rooms
+
+`GET /v1/rooms` - newest first, full room rows.
+
+### End a room
+
+`DELETE /v1/rooms/:id` - `204`. Ends the session for everyone and releases
+the slug. Idempotent per project: an already-ended room still answers `204`.
+
+### Mint a participant token
+
+`POST /v1/rooms/:id/tokens` (60 req/min)
+
+```json
+{ "name": "Alice", "publish": true, "admin": false }
+```
+
+All fields optional; `publish` defaults `true`, `admin` defaults `false`.
+Returns `{ "token": "<jwt>", "expiresAt": "..." }` - the room token is valid
+for `ROOM_TOKEN_TTL_MINUTES` (default 60). Pass it to `@zvonok/react` to join,
+see the [quickstart](/quickstart).
+
+## Egress
+
+### Start an egress session
+
+`POST /v1/rooms/:id/egress` (60 req/min)
+
+```json
+{ "rtmpEndpoints": ["rtmp://a.rtmp.youtube.com/live2"], "hls": true, "record": true }
+```
+
+All outputs optional and combinable: up to three `rtmp(s)://` push endpoints,
+HLS playback, and server-side recording. One active session per room.
+
+### Inspect and stop
+
+- `GET /v1/rooms/:id/egress` - the room's sessions
+- `GET /v1/egress/:id` - one session (carries `recordingUrl` when finalized)
+- `POST /v1/egress/:id/stop` - graceful stop
+
+Sessions move through `starting`, `live`, `stopping` and a terminal
+`ended`/`failed`. A pipeline restart writes numbered part files, so recorded
+material is never truncated; the restart gap (a couple of seconds) is the
+only loss. Details in [egress](/egress).
+
+## Recordings
+
+- `GET /v1/recordings?roomId=<id>` - recorded sessions of the project,
+  newest first, with `recordingUrl`, `recordingSizeBytes`,
+  `recordingFinalizedAt`
+- `GET /v1/recordings/:egressId/file` - stream the material: the finalized
+  MP4 (`video/mp4`) with `Range`/`206` support, or raw MPEG-TS parts
+  (`video/mp2t`) for sessions that never finalized; `?part=N` picks a part
+- `DELETE /v1/recordings/:egressId` - `204`; deletes the files and clears the
+  metadata
+
+## Developer API
+
+Authenticated with the dev bearer token (`Authorization: Bearer <token>`),
+valid for 30 minutes - re-login or SSO when it expires.
+
+### Projects
+
+- `POST /developers/projects` - `{ "name": "my app" }`
+- `GET /developers/projects` - own projects, newest first, each with
+  `roomCount`. The webhook signing secret is never included
+
+### API keys
+
+- `POST /developers/projects/:id/keys` - returns the full key exactly once
+- `GET /developers/projects/:id/keys` - metadata only (`id`, `prefix`,
+  `createdAt`, `revokedAt`)
+- `DELETE /developers/keys/:id` - revoke; already-revoked keys answer `204`
+  again
+
+### Webhooks
+
+- `PUT /developers/projects/:id/webhooks` - `{ "url": "https://..." }`
+  (https only); returns `{ "url", "secret" }` - the secret is shown once
+- `DELETE /developers/projects/:id/webhooks`
+
+Deliveries are POSTs signed with
+`X-Zvonok-Signature: sha256=HMAC-SHA256(secret, "{timestamp}.{rawBody}")`
+(timestamp in unix seconds; always verify against the raw body). Failed
+deliveries retry with backoff. Events: `room.started`, `participant.joined`,
+`participant.left`, `room.ended`, `egress.started`, `egress.stopped`,
+`egress.failed`.
+
+### Project media views
+
+- `GET /developers/projects/:id/rooms` - lifecycle fields only
+- `GET /developers/projects/:id/recordings` - recorded sessions, newest first
+- `GET /developers/projects/:id/recordings/:egressId/file` - download with
+  the same Range behavior as the `/v1` surface
+
+Foreign projects answer `404` on every route, like `/v1`.
+
+## Next steps
+
+Join a room from a browser with [`@zvonok/react`](/quickstart), wire live
+outputs in [egress](/egress), or deploy your own server following
+[deployment](/deployment).
