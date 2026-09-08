@@ -16,6 +16,8 @@ import {
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { SkipAuthGuard } from 'src/auth/skip-auth.guard';
+import { JwtPayloadDto } from 'src/auth/dto/jwt-payload.dto';
+import { User } from 'src/user/decorators/user.decorator';
 import { DeveloperService } from './developer.service';
 import { DevJwtGuard } from './guards/dev-jwt.guard';
 import { DevAccount } from './decorators/dev-account.decorator';
@@ -54,6 +56,21 @@ export class DeveloperController {
   @ApiOperation({ summary: 'Login as a developer' })
   login(@Body() dto: LoginDeveloperDto) {
     return this.developerService.login(dto);
+  }
+
+  /**
+   * App-session sign-in: the ONE developer route guarded by the app cookie
+   * session (no @SkipAuthGuard), bridging the site identity to a linked
+   * developer account.
+   */
+  @Post('auth/sso')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ short: { limit: 10, ttl: 60000 } })
+  @ApiOperation({
+    summary: 'Sign in to the console with the app cookie session',
+  })
+  ssoFromAppSession(@User() user: JwtPayloadDto) {
+    return this.developerService.ssoFromAppUser(user.id);
   }
 
   @Post('projects')

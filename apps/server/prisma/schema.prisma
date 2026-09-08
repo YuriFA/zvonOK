@@ -29,6 +29,7 @@ model User {
   rooms               Room[]       @relation("RoomHost")
   messages            Message[]
   callRecords         CallRecord[] @relation("CallRecords")
+  developerAccount    DeveloperAccount? @relation("DeveloperUser")
 }
 
 model CallRecord {
@@ -74,6 +75,8 @@ model DeveloperAccount {
   id           String    @id @default(cuid())
   username     String    @unique
   passwordHash String
+  user         User?     @relation("DeveloperUser", fields: [userId], references: [id], onDelete: Cascade)
+  userId       String?   @unique
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   projects     Project[]

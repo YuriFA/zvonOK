@@ -69,6 +69,64 @@ export class DeveloperService {
   }
 
   /**
+   * Sign an app user into the developer console. The link is explicit:
+   * a `DeveloperAccount` row with this user's id, created on first use with
+   * the user's username (suffix when an unlinked account took it) and the
+   * user's password hash, so the same credentials work at the manual login.
+   */
+  async ssoFromAppUser(userId: string) {
+    const linked = await this.prisma.developerAccount.findUnique({
+      where: { userId },
+    });
+    if (linked) {
+      return {
+        token: this.issueToken(linked.id, linked.username),
+        username: linked.username,
+        created: false,
+      };
+    }
+
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const account = await this.prisma.developerAccount.create({
+      data: {
+        username: await this.resolveFreeUsername(user.username),
+        passwordHash: user.passwordHash,
+        userId: user.id,
+      },
+    });
+    return {
+      token: this.issueToken(account.id, account.username),
+      username: account.username,
+      created: true,
+    };
+  }
+
+  /** Append -2, -3, ... while an unlinked account holds the username. */
+  private async resolveFreeUsername(base: string): Promise<string> {
+    const taken = new Set<string>();
+    const rows = await this.prisma.developerAccount.findMany({
+      where: { username: { startsWith: base } },
+      select: { username: true },
+    });
+    for (const row of rows) {
+      taken.add(row.username);
+    }
+    if (!taken.has(base)) {
+      return base;
+    }
+    for (let n = 2; n <= 100; n += 1) {
+      const candidate = `${base}-${n}`;
+      if (!taken.has(candidate)) {
+        return candidate;
+      }
+    }
+    throw new ConflictException('Could not derive a free developer username');
+  }
+  /**
    * The developer's own projects, newest first, with owned room counts.
    * The webhook signing secret is never returned here: it is shown once at
    * configuration time, like API keys.

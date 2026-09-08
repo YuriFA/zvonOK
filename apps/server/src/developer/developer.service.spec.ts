@@ -511,3 +511,111 @@ describe('DeveloperService project reads', () => {
     expect(recordings.download).not.toHaveBeenCalled();
   });
 });
+
+describe('DeveloperService app-session sign-in', () => {
+  const appUser = {
+    id: 'user-1',
+    username: 'alice',
+    passwordHash: 'site-hash',
+  };
+  let service: DeveloperService;
+  let prisma: {
+    developerAccount: {
+      findUnique: jest.Mock;
+      findMany: jest.Mock;
+      create: jest.Mock;
+    };
+    user: { findUnique: jest.Mock };
+  };
+  let jwt: { sign: jest.Mock };
+
+  beforeEach(() => {
+    prisma = {
+      developerAccount: {
+        findUnique: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
+        create: jest.fn(),
+      },
+      user: { findUnique: jest.fn() },
+    };
+    jwt = { sign: jest.fn().mockReturnValue('dev-token') };
+    service = new DeveloperService(
+      prisma as unknown as PrismaService,
+      jwt as unknown as JwtService,
+      { get: jest.fn() } as never,
+      { list: jest.fn(), download: jest.fn() } as never,
+    );
+  });
+
+  it('creates and links a developer account on first sign-in', async () => {
+    prisma.developerAccount.findUnique.mockResolvedValue(null);
+    prisma.user.findUnique.mockResolvedValue(appUser);
+    prisma.developerAccount.create.mockResolvedValue({
+      id: 'dev-1',
+      username: 'alice',
+    });
+
+    const result = await service.ssoFromAppUser('user-1');
+
+    expect(prisma.developerAccount.create).toHaveBeenCalledWith({
+      data: {
+        username: 'alice',
+        passwordHash: 'site-hash',
+        userId: 'user-1',
+      },
+    });
+    expect(result).toMatchObject({
+      token: 'dev-token',
+      username: 'alice',
+      created: true,
+    });
+    expect(jwt.sign).toHaveBeenCalledWith(
+      { username: 'alice' },
+      expect.objectContaining({ subject: 'dev-1' }),
+    );
+  });
+
+  it('suffixes the username when an unlinked account holds it', async () => {
+    prisma.developerAccount.findUnique.mockResolvedValue(null);
+    prisma.user.findUnique.mockResolvedValue(appUser);
+    prisma.developerAccount.findMany.mockResolvedValue([
+      { username: 'alice' },
+      { username: 'alice-2' },
+    ]);
+    prisma.developerAccount.create.mockResolvedValue({
+      id: 'dev-2',
+      username: 'alice-3',
+    });
+
+    const result = await service.ssoFromAppUser('user-1');
+
+    expect(prisma.developerAccount.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ username: 'alice-3' }),
+    });
+    expect(result.username).toBe('alice-3');
+  });
+
+  it('returns the linked account on repeat sign-in without creating', async () => {
+    prisma.developerAccount.findUnique.mockResolvedValue({
+      id: 'dev-1',
+      username: 'alice',
+      userId: 'user-1',
+    });
+
+    const result = await service.ssoFromAppUser('user-1');
+
+    expect(result).toMatchObject({ username: 'alice', created: false });
+    expect(prisma.developerAccount.create).not.toHaveBeenCalled();
+    expect(prisma.user.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('rejects SSO for an unknown user with 404', async () => {
+    prisma.developerAccount.findUnique.mockResolvedValue(null);
+    prisma.user.findUnique.mockResolvedValue(null);
+
+    await expect(service.ssoFromAppUser('ghost')).rejects.toThrow(
+      NotFoundException,
+    );
+    expect(prisma.developerAccount.create).not.toHaveBeenCalled();
+  });
+});
