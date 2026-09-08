@@ -12,10 +12,13 @@ interface DrawCall {
 class FakeRenderingContext2D {
   readonly drawCalls: DrawCall[] = [];
   readonly fillRects: Array<{ x: number; y: number; w: number; h: number }> = [];
+  readonly strokeRects: Array<{ x: number; y: number; w: number; h: number }> = [];
   readonly texts: string[] = [];
   readonly scaledTransforms: Array<[number, number]> = [];
   font = "";
   fillStyle = "";
+  strokeStyle = "";
+  lineWidth = 1;
   textAlign = "";
   textBaseline = "";
 
@@ -23,13 +26,27 @@ class FakeRenderingContext2D {
     this.drawCalls.push({ args });
   }
 
+  readonly roundRects: Array<{ x: number; y: number; w: number; h: number }> = [];
+
   fillRect(x: number, y: number, w: number, h: number) {
     this.fillRects.push({ x, y, w, h });
+  }
+
+  roundRect(x: number, y: number, w: number, h: number) {
+    this.roundRects.push({ x, y, w, h });
+  }
+
+  strokeRect(x: number, y: number, w: number, h: number) {
+    this.strokeRects.push({ x, y, w, h });
   }
 
   fillText(text: string) {
     this.texts.push(text);
   }
+
+  beginPath() {}
+
+  fill() {}
 
   translate() {}
 
@@ -226,5 +243,63 @@ describe("CallRecordingCompositor", () => {
 
     expect(tracks[0].stop).toHaveBeenCalledOnce();
     expect(captureStreams).toHaveLength(1);
+  });
+
+  it("letterboxes the screen share to keep all shared content visible", () => {
+    const compositor = new CallRecordingCompositor();
+    compositor.setSources([
+      makeSource({ id: "a", label: "Alice" }),
+      makeSource({ id: "screen:a", label: "Alice", isScreen: true }),
+    ]);
+    compositor.renderFrame();
+
+    // The contain draw passes (image, x, y, w, h); camera draws pass 9 args.
+    const spotlightArgs = context.drawCalls
+      .map((call) => call.args as number[])
+      .find((args) => args.length === 5);
+    expect(spotlightArgs).toBeDefined();
+    const [dx, dy, dw, dh] = spotlightArgs!.slice(1);
+    // Spotlight area is 1112x720; a 1280x720 share scales to 1112x625.5, centered.
+    expect(dw).toBeCloseTo(1112);
+    expect(dh).toBeCloseTo(625.5);
+    expect(dx).toBeCloseTo(0);
+    expect(dy).toBeCloseTo(47.25);
+  });
+
+  it("ellipsizes labels wider than their tile", () => {
+    const compositor = new CallRecordingCompositor();
+    compositor.setSources([
+      makeSource({ id: "screen:me", label: "Share", isScreen: true }),
+      makeSource({ id: "bob", label: "Bob von Longdisplayname-Constantinople" }),
+      makeSource({ id: "alice", label: "Alice" }),
+    ]);
+    compositor.renderFrame();
+
+    const ellipsized = context.texts.filter((text) => text.endsWith("…"));
+    expect(ellipsized).toHaveLength(1);
+    // Strip tile 160px: max text 128px = 18 chars at the fake's 7px/char
+    // measure, so 17 chars + ellipsis.
+    expect(ellipsized[0].length).toBe(18);
+    expect(context.texts).toContain("Alice");
+    // Pill measures the ellipsized text (17 chars + … = 18*7) plus padding,
+    // and stays within the 160px tile minus insets.
+    const pill = context.roundRects.find(({ w }) => w === 18 * 7 + 16);
+    expect(pill).toBeDefined();
+    expect(pill!.w).toBeLessThanOrEqual(160 - 16);
+  });
+
+  it("outlines every rendered tile with a border", () => {
+    const compositor = new CallRecordingCompositor();
+    compositor.setSources([
+      makeSource({ id: "a", label: "Alice" }),
+      makeSource({ id: "b", label: "Bob", stream: makeStream(false) }),
+    ]);
+    compositor.renderFrame();
+
+    expect(context.strokeRects).toHaveLength(2);
+    for (const rect of context.strokeRects) {
+      expect(rect.w).toBeGreaterThan(0);
+      expect(rect.h).toBeGreaterThan(0);
+    }
   });
 });
