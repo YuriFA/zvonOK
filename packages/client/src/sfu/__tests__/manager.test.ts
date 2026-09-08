@@ -11,6 +11,7 @@ const testContext = vi.hoisted(() => {
   const mockProducer = {
     id: "producer-1",
     kind: "video" as const,
+    track: undefined as unknown as MediaStreamTrack,
     on: vi.fn(),
     close: vi.fn(),
     pause: vi.fn(),
@@ -104,6 +105,7 @@ const testContext = vi.hoisted(() => {
     mockProducer.pause.mockClear();
     mockProducer.resume.mockClear();
     mockProducer.replaceTrack.mockClear();
+    mockProducer.track = undefined as unknown as MediaStreamTrack;
     mockConsumer.on.mockClear();
     mockConsumer.close.mockClear();
     mockSendTransport.on.mockClear();
@@ -294,6 +296,40 @@ describe("SfuManager", () => {
     expect(testContext.mockProducer.replaceTrack).toHaveBeenCalledWith({ track: nextTrack });
   });
 
+  it("serializes concurrent replaceTrack calls per kind", async () => {
+    manager.connect();
+    testContext.mockSocket.connected = true;
+    await testContext.emitSocketEvent("connect");
+    await testContext.emitSocketEvent("sfu:joined", { routerRtpCapabilities: { codecs: [] } });
+    await testContext.emitSocketEvent("sfu:transport-created", {
+      ...transportPayload,
+      direction: "send",
+      transportId: "send-transport",
+    });
+    await manager.produce({ kind: "video" } as MediaStreamTrack);
+
+    const { promise: firstSwap, resolve: releaseFirst } = Promise.withResolvers<void>();
+    testContext.mockProducer.replaceTrack.mockImplementationOnce(() => firstSwap);
+
+    const firstTrack = { kind: "video" } as MediaStreamTrack;
+    const secondTrack = { kind: "video" } as MediaStreamTrack;
+    const first = manager.replaceTrack("video", firstTrack);
+    const second = manager.replaceTrack("video", secondTrack);
+
+    // One microtask: the first swap starts, the second is still queued
+    // behind the pending firstSwap promise.
+    await Promise.resolve();
+    expect(testContext.mockProducer.replaceTrack).toHaveBeenCalledTimes(1);
+
+    releaseFirst();
+    await Promise.all([first, second]);
+    expect(testContext.mockProducer.replaceTrack).toHaveBeenCalledTimes(2);
+    expect(testContext.mockProducer.replaceTrack).toHaveBeenNthCalledWith(1, { track: firstTrack });
+    expect(testContext.mockProducer.replaceTrack).toHaveBeenNthCalledWith(2, {
+      track: secondTrack,
+    });
+  });
+
   it("buffers a produce call that arrives before the send transport and flushes it once created", async () => {
     manager.connect();
 
@@ -331,7 +367,10 @@ describe("SfuManager", () => {
       routerRtpCapabilities: { codecs: [] },
     });
 
-    const producePromise = manager.produce({ kind: "audio", readyState: "live" } as MediaStreamTrack);
+    const producePromise = manager.produce({
+      kind: "audio",
+      readyState: "live",
+    } as MediaStreamTrack);
     manager.disconnect();
 
     await expect(producePromise).rejects.toThrow("Transport closed");
@@ -343,7 +382,10 @@ describe("SfuManager", () => {
     testContext.mockSocket.connected = true;
     await testContext.emitSocketEvent("connect");
 
-    const token = `header.${btoa(JSON.stringify({ sub: "room-id-123" })).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")}.sig`;
+    const token = `header.${btoa(JSON.stringify({ sub: "room-id-123" }))
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "")}.sig`;
     await manager.joinRoom({
       roomId: "i-was-slug",
       roomSlug: "i-was-slug",

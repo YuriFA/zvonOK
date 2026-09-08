@@ -16,6 +16,8 @@ export interface RecordingSource {
   isLocal: boolean;
   /** Screen share: drawn into the spotlight area instead of a grid tile. */
   isScreen: boolean;
+  /** The participant the room currently detects as speaking; drawn highlighted. */
+  isSpeaking?: boolean;
 }
 
 export interface CallRecordingCompositorOptions {
@@ -26,6 +28,7 @@ export interface CallRecordingCompositorOptions {
 const TILE_BACKGROUND = "#1c1f26";
 const PLACEHOLDER_BACKGROUND = "#232833";
 const TILE_BORDER = "rgba(255, 255, 255, 0.08)";
+const SPEAKER_RING = "#22c55e";
 const LABEL_BACKGROUND = "rgba(0, 0, 0, 0.5)";
 const LABEL_COLOR = "#ffffff";
 
@@ -182,8 +185,19 @@ export class CallRecordingCompositor {
     } else {
       this.drawPlaceholder(source, x, y, width, height);
     }
-    this.drawTileBorder(x, y, width, height);
+    if (source.isSpeaking) {
+      this.drawSpeakerRing(x, y, width, height);
+    } else {
+      this.drawTileBorder(x, y, width, height);
+    }
     this.drawLabel(source.label, x, y, width, height);
+  }
+
+  /** Draws the active-speaker ring, mirroring the room's VideoTile ring. */
+  private drawSpeakerRing(x: number, y: number, width: number, height: number): void {
+    this.context.strokeStyle = SPEAKER_RING;
+    this.context.lineWidth = 4;
+    this.context.strokeRect(x + 2, y + 2, width - 4, height - 4);
   }
 
   /** Draws the video letterboxed (object-contain) so shared content stays fully visible. */

@@ -61,10 +61,11 @@ decision.
 
 ## Explicitly parked (not queued)
 
-Recording canvas/layout polish (owner feedback from the 2026-09-07 live
-retest), AI voice agents, developer dashboard UI, email verification/reset,
+AI voice agents, developer dashboard UI, email verification/reset,
 OAuth/SSO, DMs, message editing/attachments, E2E encryption,
-meeting history/analytics.
+meeting history/analytics. (Recording canvas/layout polish from the
+2026-09-07 live retest shipped 2026-09-08: composited-layout fixes,
+the active-speaker ring, and the mic-toggle audio-race fix.)
 
 ## Change workflow
 
