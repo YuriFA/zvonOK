@@ -209,7 +209,10 @@ SHALL show its API keys (create with the full key shown exactly once, revoke
 with confirmation), webhook endpoint configuration, room list, and recordings
 with in-browser playback and download. Console fetches SHALL attach the dev
 token as a bearer header and surface failures through the typed API errors;
-unauthenticated visitors SHALL be redirected to the console login.
+unauthenticated visitors SHALL be redirected to the console login. A visitor
+already signed in on the main site SHALL additionally be offered a one-click
+continue action that signs them into the console through the app-session
+sign-in endpoint without typing credentials.
 
 #### Scenario: Developer signs in
 - **WHEN** a developer logs in on the console with valid credentials
@@ -230,3 +233,7 @@ unauthenticated visitors SHALL be redirected to the console login.
 #### Scenario: Session expiry
 - **WHEN** a console request fails with an authentication error
 - **THEN** the stored token is cleared and the console login renders
+
+#### Scenario: Continue from the site session
+- **WHEN** a visitor signed in on the main site opens the console login
+- **THEN** a continue action with their site username is offered and completing it lands them in the console without typing credentials
