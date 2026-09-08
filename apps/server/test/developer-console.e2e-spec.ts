@@ -11,6 +11,7 @@ describe('Developer console surface (e2e)', () => {
   let app: INestApplication<App>;
 
   const accounts: Array<Record<string, unknown>> = [];
+  const users: Array<Record<string, unknown>> = [];
   const projects = new Map<string, Record<string, unknown>>();
   const rooms = new Map<string, Record<string, unknown>>();
   const egresses = new Map<string, Record<string, unknown>>();
@@ -30,9 +31,17 @@ describe('Developer console surface (e2e)', () => {
         $connect: jest.fn(),
         $disconnect: jest.fn(),
         developerAccount: {
-          findUnique: jest.fn(
-            ({ where }) =>
-              accounts.find((a) => a.username === where.username) ?? null,
+          findUnique: jest.fn(({ where }) =>
+            where.userId !== undefined
+              ? (accounts.find((a) => a.userId === where.userId) ?? null)
+              : (accounts.find((a) => a.username === where.username) ?? null),
+          ),
+          findMany: jest.fn(({ where }) =>
+            accounts.filter((a) =>
+              (a.username as string).startsWith(
+                where.username?.startsWith ?? '\u0000',
+              ),
+            ),
           ),
           create: jest.fn(({ data }) => {
             const account = {
@@ -42,6 +51,34 @@ describe('Developer console surface (e2e)', () => {
             };
             accounts.push(account);
             return account;
+          }),
+        },
+        user: {
+          findUnique: jest.fn(
+            ({ where }) =>
+              users.find(
+                (u) =>
+                  u.id === where.id ||
+                  u.email === where.email ||
+                  u.username === where.username,
+              ) ?? null,
+          ),
+          create: jest.fn(({ data }) => {
+            const user = {
+              id: `user-${users.length + 1}`,
+              role: 'USER',
+              tokenVersion: 0,
+              failedLoginAttempts: 0,
+              lockedUntil: null,
+              createdAt: new Date(),
+              ...data,
+            };
+            users.push(user);
+            return user;
+          }),
+          update: jest.fn(({ where, data }) => {
+            const user = users.find((u) => u.id === where.id);
+            return Object.assign(user ?? {}, data);
           }),
         },
         project: {
@@ -305,6 +342,67 @@ describe('Developer console surface (e2e)', () => {
   it('rejects unauthenticated developer reads with 401', async () => {
     const unauthorized = await request(app.getHttpServer()).get(
       '/developers/projects',
+    );
+    expect(unauthorized.status).toBe(401);
+  });
+
+  it('signs an app user into the console through the site session', async () => {
+    // App account through the regular site flow.
+    const registered = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({
+        username: 'sitedev',
+        email: 'sitedev@example.com',
+        password: 'Password1',
+      });
+    expect(registered.status).toBe(201);
+    users.push({
+      id: 'user-site-1',
+      username: 'sitedev',
+      passwordHash: 'site-hash',
+    });
+
+    const login = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: 'sitedev@example.com', password: 'Password1' });
+    expect(login.status).toBe(200);
+    const cookies = login.headers['set-cookie'];
+    expect(cookies).toBeTruthy();
+
+    const sso = await request(app.getHttpServer())
+      .post('/developers/auth/sso')
+      .set('Cookie', cookies);
+    expect(sso.status).toBe(200);
+    expect(sso.body).toMatchObject({
+      username: 'sitedev',
+      created: true,
+    });
+    expect(sso.body.token).toBeTruthy();
+
+    // The dev token works on the read surface.
+    const list = await request(app.getHttpServer())
+      .get('/developers/projects')
+      .set('Authorization', `Bearer ${sso.body.token}`);
+    expect(list.status).toBe(200);
+
+    // The copied credentials work at the manual login.
+    const manual = await request(app.getHttpServer())
+      .post('/developers/auth/login')
+      .send({ username: 'sitedev', password: 'Password1' });
+    expect(manual.status).toBe(200);
+    expect(manual.body.token).toBeTruthy();
+
+    // Repeat sign-in reuses the linked account.
+    const again = await request(app.getHttpServer())
+      .post('/developers/auth/sso')
+      .set('Cookie', cookies);
+    expect(again.status).toBe(200);
+    expect(again.body).toMatchObject({ username: 'sitedev', created: false });
+  });
+
+  it('rejects SSO without an app session with 401', async () => {
+    const unauthorized = await request(app.getHttpServer()).post(
+      '/developers/auth/sso',
     );
     expect(unauthorized.status).toBe(401);
   });

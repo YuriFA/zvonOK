@@ -35,6 +35,9 @@ class DevApi {
 
     const config: RequestInit = {
       ...options,
+      // The SSO endpoint authenticates through the app's cookie session;
+      // every other endpoint ignores it.
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -107,6 +110,21 @@ class DevApi {
       body: JSON.stringify({ username, password }),
     });
     this.setToken(token);
+  }
+
+  /**
+   * One-click console entry for a signed-in site user: the app cookie
+   * session authenticates the SSO endpoint, which returns a dev token for
+   * the user's linked developer account.
+   */
+  async ssoLogin(): Promise<{ username: string; created: boolean }> {
+    const { token, username, created } = await this.request<{
+      token: string;
+      username: string;
+      created: boolean;
+    }>("/developers/auth/sso", { method: "POST" });
+    this.setToken(token);
+    return { username, created };
   }
 
   // --- Projects ---

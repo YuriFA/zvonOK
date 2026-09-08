@@ -16,6 +16,7 @@ const mockDevApi = vi.hoisted(() => ({
   clearToken: vi.fn(),
   login: vi.fn(),
   register: vi.fn(),
+  ssoLogin: vi.fn(),
   listProjects: vi.fn(),
   createProject: vi.fn(),
   listApiKeys: vi.fn(),
@@ -26,6 +27,24 @@ const mockDevApi = vi.hoisted(() => ({
   listRooms: vi.fn(),
   listRecordings: vi.fn(),
   fetchRecordingFile: vi.fn(),
+}));
+
+const mockUseAuth = vi.hoisted(() =>
+  vi.fn<
+    () => {
+      isAuthenticated: boolean;
+      user: { id: string; username: string } | null;
+      isLoading: boolean;
+    }
+  >(() => ({
+    isAuthenticated: false,
+    user: null,
+    isLoading: false,
+  })),
+);
+
+vi.mock("@/features/auth/contexts/auth.context", () => ({
+  useAuth: mockUseAuth,
 }));
 
 vi.mock("@/features/console/services/dev-api", () => ({
@@ -249,5 +268,67 @@ describe("ConsoleLoginPage", () => {
     expect(screen.getByText("Developer console")).toBeInTheDocument();
     expect(screen.getByLabelText("Username")).toBeInTheDocument();
     expect(screen.getByLabelText("Password")).toBeInTheDocument();
+  });
+
+  it("offers continue-as for signed-in site users and lands in the console", async () => {
+    mockDevApi.getToken.mockReturnValue(null);
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      user: { id: "user-1", username: "siteuser" },
+      isLoading: false,
+    });
+    mockDevApi.ssoLogin.mockResolvedValue({
+      username: "siteuser",
+      created: true,
+    });
+
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({
+            defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+          })
+        }
+      >
+        <MemoryRouter initialEntries={["/console/login"]}>
+          <Routes>
+            <Route path="/console/login" element={<ConsoleLoginPage />} />
+            <Route path="/console" element={<p data-testid="console-home" />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Continue as siteuser" }));
+
+    await waitFor(() => expect(screen.getByTestId("console-home")).toBeInTheDocument());
+    expect(mockDevApi.ssoLogin).toHaveBeenCalledOnce();
+  });
+
+  it("hides the continue action for unauthenticated visitors", () => {
+    mockDevApi.getToken.mockReturnValue(null);
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: false,
+      user: null,
+      isLoading: false,
+    });
+
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({
+            defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+          })
+        }
+      >
+        <MemoryRouter initialEntries={["/console/login"]}>
+          <Routes>
+            <Route path="/console/login" element={<ConsoleLoginPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(screen.queryByTestId("sso-continue")).not.toBeInTheDocument();
   });
 });
