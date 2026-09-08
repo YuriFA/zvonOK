@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 
 import { MainHeader } from "@/components/main-header";
@@ -7,11 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useDevAuth } from "@/features/console/contexts/dev-auth.context";
+import { DevAuthProvider, useDevAuth } from "@/features/console/contexts/dev-auth.context";
 import { ROUTES } from "@/lib/config/routes";
 
-export const ConsoleLoginPage = () => {
+function ConsoleLoginPageInner() {
   const { login, register } = useDevAuth();
+  const navigate = useNavigate();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -26,6 +27,7 @@ export const ConsoleLoginPage = () => {
       } else {
         await register(username, password);
       }
+      navigate(ROUTES.CONSOLE, { replace: true });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Authentication failed");
     } finally {
@@ -113,4 +115,14 @@ export const ConsoleLoginPage = () => {
       </main>
     </div>
   );
-};
+}
+
+// Self-contained: the route is rendered outside ConsoleLayout, so the page
+// brings its own DevAuthProvider.
+export function ConsoleLoginPage() {
+  return (
+    <DevAuthProvider>
+      <ConsoleLoginPageInner />
+    </DevAuthProvider>
+  );
+}

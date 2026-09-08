@@ -72,6 +72,9 @@ class DevApi {
       case 400:
         throw new ValidationError(message, details);
       case 401:
+        // The short-lived dev token expired: tell the console layout to
+        // clear it and bounce to the login.
+        window.dispatchEvent(new Event("zvonok:dev-auth-expired"));
         throw new AuthError(message, 401, details);
       default:
         throw new ApiError(message, response.status, details);
