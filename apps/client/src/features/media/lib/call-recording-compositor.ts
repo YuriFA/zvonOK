@@ -24,6 +24,8 @@ export interface CallRecordingCompositorOptions {
 }
 
 const TILE_BACKGROUND = "#1c1f26";
+const PLACEHOLDER_BACKGROUND = "#232833";
+const TILE_BORDER = "rgba(255, 255, 255, 0.08)";
 const LABEL_BACKGROUND = "rgba(0, 0, 0, 0.5)";
 const LABEL_COLOR = "#ffffff";
 
@@ -119,7 +121,7 @@ export class CallRecordingCompositor {
     if (hasScreen && screenSource) {
       const area = layout.spotlightArea;
       if (area) {
-        this.drawSource(screenSource, area.x, area.y, area.width, area.height, false);
+        this.drawSource(screenSource, area.x, area.y, area.width, area.height, false, "contain");
       }
     }
 
@@ -128,7 +130,7 @@ export class CallRecordingCompositor {
       if (!tile) {
         return;
       }
-      this.drawSource(source, tile.x, tile.y, tile.width, tile.height, source.isLocal);
+      this.drawSource(source, tile.x, tile.y, tile.width, tile.height, source.isLocal, "cover");
     });
   }
 
@@ -164,18 +166,50 @@ export class CallRecordingCompositor {
     width: number,
     height: number,
     mirror: boolean,
+    fit: "cover" | "contain",
   ): void {
     if (this.hasLiveVideo(source)) {
       const video = this.videos.get(source.id);
       if (video && video.videoWidth > 0 && video.videoHeight > 0) {
-        this.drawVideoCovered(video, x, y, width, height, mirror);
+        if (fit === "contain") {
+          this.drawVideoContained(video, x, y, width, height);
+        } else {
+          this.drawVideoCovered(video, x, y, width, height, mirror);
+        }
       } else {
         this.drawPlaceholder(source, x, y, width, height);
       }
     } else {
       this.drawPlaceholder(source, x, y, width, height);
     }
-    this.drawLabel(source.label, x, y, height);
+    this.drawTileBorder(x, y, width, height);
+    this.drawLabel(source.label, x, y, width, height);
+  }
+
+  /** Draws the video letterboxed (object-contain) so shared content stays fully visible. */
+  private drawVideoContained(
+    video: HTMLVideoElement,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ): void {
+    const scale = Math.min(width / video.videoWidth, height / video.videoHeight);
+    const drawWidth = video.videoWidth * scale;
+    const drawHeight = video.videoHeight * scale;
+    this.context.drawImage(
+      video,
+      x + (width - drawWidth) / 2,
+      y + (height - drawHeight) / 2,
+      drawWidth,
+      drawHeight,
+    );
+  }
+
+  private drawTileBorder(x: number, y: number, width: number, height: number): void {
+    this.context.strokeStyle = TILE_BORDER;
+    this.context.lineWidth = 1;
+    this.context.strokeRect(x + 0.5, y + 0.5, width - 1, height - 1);
   }
 
   /** Draws the video crop-to-fill (object-cover) into the given rectangle. */
@@ -218,10 +252,10 @@ export class CallRecordingCompositor {
     height: number,
   ): void {
     const context = this.context;
-    context.fillStyle = TILE_BACKGROUND;
+    context.fillStyle = PLACEHOLDER_BACKGROUND;
     context.fillRect(x, y, width, height);
     context.fillStyle = LABEL_COLOR;
-    context.font = `${Math.round(Math.min(width, height) / 6)}px sans-serif`;
+    context.font = `${Math.max(12, Math.round(Math.min(width, height) / 6))}px sans-serif`;
     context.textAlign = "center";
     context.textBaseline = "middle";
     context.fillText(initialsOf(source.label), x + width / 2, y + height / 2);
@@ -229,20 +263,34 @@ export class CallRecordingCompositor {
     context.textBaseline = "alphabetic";
   }
 
-  private drawLabel(label: string, x: number, y: number, height: number): void {
+  private drawLabel(label: string, x: number, y: number, width: number, height: number): void {
     const context = this.context;
     if (!label) {
       return;
     }
-    context.font = "14px sans-serif";
-    const textWidth = context.measureText(label).width;
-    const labelWidth = textWidth + 16;
-    const labelHeight = 24;
+    const fontSize = Math.max(11, Math.min(18, Math.round(height / 14)));
+    const pillHeight = fontSize + 10;
+    const inset = 8;
+    const maxTextWidth = width - inset * 2 - 16;
+    context.font = `${fontSize}px sans-serif`;
+    let text = label;
+    if (context.measureText(text).width > maxTextWidth) {
+      while (text.length > 0 && context.measureText(`${text}…`).width > maxTextWidth) {
+        text = text.slice(0, -1);
+      }
+      text = text === "" ? "" : `${text}…`;
+    }
+    if (text === "") {
+      return;
+    }
+    const pillWidth = context.measureText(text).width + 16;
     context.fillStyle = LABEL_BACKGROUND;
-    context.fillRect(x, y + height - labelHeight - 8, labelWidth, labelHeight);
+    context.beginPath();
+    context.roundRect(x + inset, y + height - pillHeight - inset, pillWidth, pillHeight, 4);
+    context.fill();
     context.fillStyle = LABEL_COLOR;
     context.textBaseline = "middle";
-    context.fillText(label, x + 8, y + height - labelHeight / 2 - 8);
+    context.fillText(text, x + inset + 8, y + height - pillHeight / 2 - inset);
     context.textBaseline = "alphabetic";
   }
 }

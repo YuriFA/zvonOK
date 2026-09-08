@@ -1,4 +1,4 @@
-import type { GridLayout, LayoutOptions, SpotlightArea, VideoTile } from './types';
+import type { GridLayout, LayoutOptions, SpotlightArea, VideoTile } from "./types";
 
 function computeGridDimensions(
   count: number,
@@ -126,7 +126,7 @@ function computeSpotlightLayout(options: LayoutOptions): GridLayout {
   const STRIP_HEIGHT = 96;
 
   const isWide = containerWidth / containerHeight > 1.5;
-  const stripPosition = isWide ? 'right' : 'bottom';
+  const stripPosition = isWide ? "right" : "bottom";
 
   let spotlightArea: SpotlightArea;
   let stripX: number;
@@ -134,7 +134,7 @@ function computeSpotlightLayout(options: LayoutOptions): GridLayout {
   let stripAvailableWidth: number;
   let stripAvailableHeight: number;
 
-  if (stripPosition === 'right') {
+  if (stripPosition === "right") {
     const spotW = containerWidth - STRIP_WIDTH - gap;
     spotlightArea = { x: 0, y: 0, width: spotW, height: containerHeight };
     stripX = spotW + gap;
@@ -169,25 +169,33 @@ function computeSpotlightLayout(options: LayoutOptions): GridLayout {
   let rows: number;
   let cols: number;
 
-  if (stripPosition === 'right') {
+  if (stripPosition === "right") {
     // All tiles stack vertically in the column
     tileWidth = stripAvailableWidth;
     const totalGaps = (participantCount - 1) * gap;
-    tileHeight = Math.max(
-      1,
-      (stripAvailableHeight - totalGaps) / participantCount,
-    );
+    tileHeight = Math.max(1, (stripAvailableHeight - totalGaps) / participantCount);
     // Honour aspect ratio: shrink height if tile would be taller than wide
     const maxHeightByAspect = tileWidth / aspectRatio;
     if (tileHeight > maxHeightByAspect) {
       tileHeight = maxHeightByAspect;
     }
+    const totalStack = participantCount * tileHeight + (participantCount - 1) * gap;
+    stripY += Math.max(0, (stripAvailableHeight - totalStack) / 2);
     rows = participantCount;
     cols = 1;
   } else {
     // All tiles sit in a horizontal row
     tileHeight = stripAvailableHeight;
     tileWidth = tileHeight * aspectRatio;
+    const totalRow = participantCount * tileWidth + (participantCount - 1) * gap;
+    if (totalRow > stripAvailableWidth) {
+      tileWidth = (stripAvailableWidth - (participantCount - 1) * gap) / participantCount;
+      tileHeight = tileWidth / aspectRatio;
+    }
+    stripX += Math.max(
+      0,
+      (stripAvailableWidth - (participantCount * tileWidth + (participantCount - 1) * gap)) / 2,
+    );
     rows = 1;
     cols = participantCount;
   }
@@ -198,7 +206,7 @@ function computeSpotlightLayout(options: LayoutOptions): GridLayout {
     let x: number;
     let y: number;
 
-    if (stripPosition === 'right') {
+    if (stripPosition === "right") {
       x = stripX;
       y = stripY + i * (tileHeight + gap);
     } else {
