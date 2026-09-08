@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DevAuthProvider } from "@/features/console/contexts/dev-auth.context";
 
 import { ConsoleLayout } from "../console";
+import { ConsoleLoginPage } from "../console-login";
 import { ConsoleProjectPage } from "../console-project";
 import { ConsoleProjectsPage } from "../console-projects";
 
@@ -216,5 +217,37 @@ describe("ConsoleLayout", () => {
 
     expect(screen.getByTestId("console-login")).toBeInTheDocument();
     expect(screen.queryByText("projects body")).not.toBeInTheDocument();
+  });
+});
+
+describe("ConsoleLoginPage", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  // Regression: the route renders outside ConsoleLayout, so the page must
+  // provide its own DevAuthProvider instead of crashing on useDevAuth.
+  it("renders without an external DevAuthProvider", () => {
+    mockDevApi.getToken.mockReturnValue(null);
+
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({
+            defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+          })
+        }
+      >
+        <MemoryRouter initialEntries={["/console/login"]}>
+          <Routes>
+            <Route path="/console/login" element={<ConsoleLoginPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByText("Developer console")).toBeInTheDocument();
+    expect(screen.getByLabelText("Username")).toBeInTheDocument();
+    expect(screen.getByLabelText("Password")).toBeInTheDocument();
   });
 });
