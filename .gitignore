@@ -36,3 +36,6 @@ playwright/.cache/
 
 # Exported CA certificates for LAN demo
 certs/
+
+# Packed SDK tarballs
+*.tgz
