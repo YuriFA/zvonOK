@@ -59,6 +59,9 @@ identity is carried in an HTTP-only cookie token scoped to the room.
 - A guest token grants access only to the room it was issued for.
 - After approval the guest receives a persistent message identity
   (`guestId` + display name) usable across reconnects.
+- The guest JWT issued at approval SHALL also authorize the guest's SFU join
+  for that room: the SFU derives the guest's participant identity from the
+  verified token.
 
 #### Scenario: Guest requests entry to a locked room
 - **WHEN** a guest submits a display name for a room requiring approval
@@ -68,6 +71,12 @@ identity is carried in an HTTP-only cookie token scoped to the room.
 #### Scenario: Guest token used on another room
 - **WHEN** a guest presents a token for room A against room B
 - **THEN** the request is rejected as forbidden
+
+#### Scenario: Approved guest enters the call
+- **WHEN** an approved guest presents their guest JWT when joining the SFU
+  for the room it was issued for
+- **THEN** the guest joins the call under the token's guest identity without
+  any client-supplied identity being trusted
 
 ### Requirement: Room ownership
 A room SHALL have exactly one of two ownership kinds: a zvonok user host
