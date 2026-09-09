@@ -65,6 +65,46 @@ jobs:
       - name: Run server tests
         run: pnpm test:server
 
+  test-server-e2e:
+    name: Server E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      # The e2e suite boots the real app with a mocked Prisma layer, so the
+      # database is never contacted; the variables only satisfy boot config
+      # validation. Values are throwaway test secrets, not credentials.
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      JWT_ACCESS_SECRET: ci-access-secret
+      JWT_REFRESH_SECRET: ci-refresh-secret
+      JWT_DEV_SECRET: ci-dev-secret
+      JWT_ROOM_SECRET: ci-room-secret
+      JWT_GUEST_SECRET: ci-guest-secret
+      JWT_ACCESS_EXPIRES_IN_MINUTES: 15
+      JWT_REFRESH_EXPIRES_IN_DAYS: 7
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm -C apps/server exec prisma generate
+
+      - name: Run server e2e suite
+        run: pnpm -C apps/server test:e2e
+
   test-client:
     name: Client Tests
     runs-on: ubuntu-latest

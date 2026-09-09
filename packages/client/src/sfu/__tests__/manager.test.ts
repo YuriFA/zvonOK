@@ -389,8 +389,6 @@ describe("SfuManager", () => {
     await manager.joinRoom({
       roomId: "i-was-slug",
       roomSlug: "i-was-slug",
-      userId: "user-1",
-      username: "Alice",
       token,
     });
 
@@ -408,8 +406,6 @@ describe("SfuManager", () => {
 
     await manager.joinRoom({
       roomId: "room-from-caller",
-      userId: "user-1",
-      username: "Alice",
       token: "not-a-jwt",
     });
 

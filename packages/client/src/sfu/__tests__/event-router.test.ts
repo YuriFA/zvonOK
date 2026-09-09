@@ -27,6 +27,7 @@ describe("SfuEventRouter", () => {
       onProducerStateChanged: vi.fn(),
       onPeerLeft: vi.fn(),
       onKicked: vi.fn(),
+      onJoinError: vi.fn(),
       onRoomEnded: vi.fn(),
       onReconnectFailed: vi.fn(),
       onScreenShareStarted: vi.fn(),

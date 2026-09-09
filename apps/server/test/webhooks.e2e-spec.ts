@@ -12,6 +12,7 @@ import { PrismaService } from '../src/prisma/prisma.service';
 import { configureApp } from '../src/bootstrap';
 import { PasswordHelper } from '../src/auth/helpers/password.helper';
 import { WorkerManager } from '../src/sfu/worker-manager';
+import { ConfigService } from '@nestjs/config';
 
 // Throwaway keypair for localhost only; see NODE_TLS_REJECT_UNAUTHORIZED above.
 const TEST_TLS_KEY = `-----BEGIN EC PRIVATE KEY-----
@@ -100,11 +101,17 @@ describe('Project webhooks (e2e)', () => {
     users: [] as Array<Record<string, unknown>>,
   };
 
-  function connectSocket(): Socket {
+  function connectSocket(
+    opts: { origin?: string; cookie?: string } = {},
+  ): Socket {
     const socket = io(`${httpUrl}/sfu`, {
       path: '/socket.io',
       transports: ['websocket'],
       reconnection: false,
+      extraHeaders: {
+        ...(opts.origin ? { Origin: opts.origin } : {}),
+        ...(opts.cookie ? { Cookie: opts.cookie } : {}),
+      },
     });
     sockets.push(socket);
     return socket;
@@ -513,17 +520,21 @@ describe('Project webhooks (e2e)', () => {
       .set(hostAuth)
       .send({ name: 'user room' });
     expect(created.status).toBe(201);
-    userRoomId = created.body.id;
-    userRoomSlug = created.body.slug;
+    userRoomId = created.body.id as string;
+    userRoomSlug = created.body.slug as string;
     const baseline = hookRequests.length;
-
-    const socket = connectSocket();
+    // Cookie identity is only accepted from the app origin; identity fields
+    // in the payload are never trusted.
+    const appOrigin =
+      app.get(ConfigService).get<string>('CLIENT_URL') ||
+      'http://localhost:5173';
+    const socket = connectSocket({
+      origin: appOrigin,
+      cookie: `access_token=${login.body.tokens.accessToken}`,
+    });
     const joined = waitForSocketEvent(socket, 'sfu:joined');
     socket.emit('sfu:join', {
       roomId: userRoomId,
-      userId: 'user-host',
-      username: 'host',
-      roomOwnerId: 'user-host',
       roomSlug: userRoomSlug,
     });
     await joined;
