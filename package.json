@@ -12,7 +12,7 @@
     "lint:ts": "pnpm -r run lint:ts",
     "test": "pnpm test:client && pnpm test:package && pnpm test:server && pnpm -C apps/server test:e2e",
     "test:client": "pnpm -C apps/client test:run",
-    "test:package": "pnpm -C packages/client test:run",
+    "test:package": "pnpm -r --filter \"./packages/*\" test:run",
     "test:server": "pnpm -C apps/server test",
     "release": "release-it",
     "release:ci": "release-it --ci",

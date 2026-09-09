@@ -140,6 +140,15 @@ export class ApiClient {
     return true;
   }
 
+  /**
+   * Refresh the access-token cookie (long-lived refresh cookie stays valid).
+   * Public for flows that need a fresh credential outside HTTP requests,
+   * e.g. re-authenticating a Socket.io handshake.
+   */
+  async refreshSession(): Promise<boolean> {
+    return this.refreshAccessToken();
+  }
+
   async get<T>(endpoint: string, options?: RequestInit): Promise<T> {
     return this.request<T>(endpoint, { ...options, method: "GET" });
   }

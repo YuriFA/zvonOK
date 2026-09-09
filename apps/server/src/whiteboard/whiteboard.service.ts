@@ -1,24 +1,26 @@
 import { Injectable, Logger } from '@nestjs/common';
+import * as Y from 'yjs';
 import { SfuService } from 'src/sfu/sfu.service';
+
 import {
-  WHITEBOARD_SNAPSHOT_MAX_BYTES,
+  WHITEBOARD_UPDATE_MAX_BYTES,
   WhiteboardDrawMode,
 } from './whiteboard.types';
 
+export type ApplyUpdateResult = 'applied' | 'too-large' | 'invalid';
+
 interface BoardState {
-  snapshot: string;
+  doc: Y.Doc;
   mode: WhiteboardDrawMode;
   unsubscribeRoomClosed: () => void;
 }
 
-const EMPTY_SNAPSHOT = '{}';
-
 /**
- * In-memory whiteboard state per room. The server is a dumb holder of the
- * latest serialized client store: clients publish their full store after
- * local changes, the server stores and relays it, and receiving clients
- * union-merge records by id. Boards are intentionally not persisted; a
- * server restart blanks them.
+ * In-memory whiteboard state per room: the authoritative Yjs document plus
+ * the host draw-lock mode. Clients send incremental Yjs updates, the server
+ * merges them and relays them to the room, and late joiners receive the full
+ * encoded state. Boards are intentionally not persisted; a server restart
+ * blanks them.
  */
 @Injectable()
 export class WhiteboardService {
@@ -27,25 +29,27 @@ export class WhiteboardService {
 
   constructor(private readonly sfu: SfuService) {}
 
-  getBoard(roomId: string): { snapshot: string; mode: WhiteboardDrawMode } {
+  /** The room document and mode; a board that never drew starts blank. */
+  getBoard(roomId: string): { doc: Y.Doc; mode: WhiteboardDrawMode } {
     const state = this.boards.get(roomId);
-    if (state) return { snapshot: state.snapshot, mode: state.mode };
-    return { snapshot: EMPTY_SNAPSHOT, mode: 'owner' };
+    if (state) return { doc: state.doc, mode: state.mode };
+    return { doc: new Y.Doc(), mode: 'owner' };
   }
 
   /**
-   * Store a participant's published store snapshot and return it for
-   * relaying. Returns null when the payload is malformed or oversized;
-   * an oversized board is refused, not truncated.
+   * Merge a participant's update into the room document. Returns null-worthy
+   * results without touching the document: oversized updates are refused,
+   * not truncated, and undecodable payloads leave the board untouched.
    */
-  putSnapshot(roomId: string, snapshot: string): string | null {
-    if (typeof snapshot !== 'string' || snapshot.length === 0) return null;
-    if (Buffer.byteLength(snapshot) > WHITEBOARD_SNAPSHOT_MAX_BYTES) {
-      return null;
-    }
+  applyUpdate(roomId: string, update: Uint8Array): ApplyUpdateResult {
+    if (update.byteLength > WHITEBOARD_UPDATE_MAX_BYTES) return 'too-large';
     const state = this.boards.get(roomId) ?? this.createBoard(roomId);
-    state.snapshot = snapshot;
-    return snapshot;
+    try {
+      Y.applyUpdate(state.doc, update);
+      return 'applied';
+    } catch {
+      return 'invalid';
+    }
   }
 
   setMode(roomId: string, mode: WhiteboardDrawMode): WhiteboardDrawMode {
@@ -58,6 +62,7 @@ export class WhiteboardService {
     const state = this.boards.get(roomId);
     if (!state) return;
     state.unsubscribeRoomClosed();
+    state.doc.destroy();
     this.boards.delete(roomId);
     this.logger.log(`Whiteboard dropped for room ${roomId}`);
   }
@@ -68,7 +73,7 @@ export class WhiteboardService {
 
   private createBoard(roomId: string): BoardState {
     const state: BoardState = {
-      snapshot: EMPTY_SNAPSHOT,
+      doc: new Y.Doc(),
       mode: 'owner',
       unsubscribeRoomClosed: this.sfu.onRoomClosed(roomId, () => {
         this.dropBoard(roomId);

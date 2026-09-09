@@ -8,8 +8,10 @@ import {
   WebSocketServer,
 } from '@nestjs/websockets';
 import { JwtService } from '@nestjs/jwt';
-import { Server, Socket } from 'socket.io';
 import { SkipThrottle } from '@nestjs/throttler';
+import { Server, Socket } from 'socket.io';
+import * as Y from 'yjs';
+
 import {
   resolveRoomSocketIdentity,
   RoomSocketIdentity,
@@ -21,7 +23,7 @@ import { WhiteboardService } from './whiteboard.service';
 import type {
   WhiteboardJoinPayload,
   WhiteboardModePayload,
-  WhiteboardOpPayload,
+  WhiteboardUpdatePayload,
 } from './whiteboard.types';
 
 interface WhiteboardAdmission {
@@ -111,16 +113,23 @@ export class WhiteboardGateway implements OnGatewayConnection {
     };
     (client.data as Record<string, unknown>).admission = admission;
     await client.join(admission.roomId);
-    client.emit(
-      'whiteboard:snapshot',
-      this.whiteboardService.getBoard(admission.roomId),
-    );
+    // The server holds the authoritative document: late joiners receive the
+    // full state immediately, then live updates as they are merged.
+    const board = this.whiteboardService.getBoard(admission.roomId);
+    client.emit('whiteboard:state', {
+      roomSlug: admission.roomSlug,
+      update: Y.encodeStateAsUpdate(board.doc),
+    });
+    client.emit('whiteboard:mode', {
+      roomSlug: admission.roomSlug,
+      mode: board.mode,
+    });
   }
 
-  @SubscribeMessage('whiteboard:op')
-  async handleOp(
+  @SubscribeMessage('whiteboard:update')
+  async handleUpdate(
     @ConnectedSocket() client: Socket,
-    @MessageBody() payload: WhiteboardOpPayload,
+    @MessageBody() payload: WhiteboardUpdatePayload,
   ): Promise<void> {
     const admission = this.admissionOf(client);
     if (!admission || payload?.roomSlug !== admission.roomSlug) return;
@@ -129,22 +138,25 @@ export class WhiteboardGateway implements OnGatewayConnection {
     const { mode } = this.whiteboardService.getBoard(admission.roomId);
     if (mode !== 'open' && !admission.isOwner) return;
 
-    const snapshot = this.whiteboardService.putSnapshot(
-      admission.roomId,
-      payload?.snapshot,
-    );
-    if (snapshot === null) {
+    const update = payload?.update;
+    if (!(update instanceof Uint8Array) || update.byteLength === 0) return;
+
+    const result = this.whiteboardService.applyUpdate(admission.roomId, update);
+    if (result !== 'applied') {
       client.emit('whiteboard:error', {
-        event: 'whiteboard:op',
-        message: 'Board update rejected',
+        event: 'whiteboard:update',
+        message:
+          result === 'too-large'
+            ? 'Board update too large'
+            : 'Board update rejected',
       });
       return;
     }
 
-    // Relay to everyone else in the room.
-    client.to(admission.roomId).emit('whiteboard:op', {
+    // Relay to everyone else in the room; the sender already applied it.
+    client.to(admission.roomId).emit('whiteboard:update', {
       roomSlug: admission.roomSlug,
-      snapshot,
+      update,
     });
   }
 

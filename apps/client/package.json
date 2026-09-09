@@ -26,6 +26,7 @@
     "@zvonok/client": "workspace:*",
     "@zvonok/react": "workspace:*",
     "@zvonok/video-layout": "workspace:*",
+    "@zvonok/whiteboard-react": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.544.0",
@@ -39,7 +40,6 @@
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.1",
     "tailwindcss": "^4.1.13",
-    "tldraw": "^5.4.0",
     "zod": "^4.1.11"
   },
   "devDependencies": {

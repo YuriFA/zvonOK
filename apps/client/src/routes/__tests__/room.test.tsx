@@ -372,14 +372,20 @@ describe("RoomPage", () => {
       await waitFor(() => {
         expect(mockGuestCheck).toHaveBeenCalledWith("alpha");
       });
+      // Let the pre-approval promise resolve and commit before clicking,
+      // otherwise the click races the check and takes the request path.
+      await act(async () => {});
 
       await act(async () => {
         fireEvent.click(screen.getByRole("button", { name: "Join Room" }));
       });
 
-      await waitFor(() => {
-        expect(screen.getByTestId("room-view")).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByTestId("room-view")).toBeInTheDocument();
+        },
+        { timeout: 3000 },
+      );
 
       expect(mockGuestRequest).not.toHaveBeenCalled();
     });
@@ -423,9 +429,12 @@ describe("RoomPage", () => {
         fireEvent.click(screen.getByRole("button", { name: "Join Room" }));
       });
 
-      await waitFor(() => {
-        expect(screen.getByTestId("room-view")).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByTestId("room-view")).toBeInTheDocument();
+        },
+        { timeout: 3000 },
+      );
 
       vi.restoreAllMocks();
     });

@@ -2,7 +2,9 @@ jest.mock('src/prisma/prisma.service', () => ({
   PrismaService: class {},
 }));
 
+import * as Y from 'yjs';
 import { Server } from 'socket.io';
+
 import { WhiteboardGateway } from './whiteboard.gateway';
 import { WhiteboardService } from './whiteboard.service';
 import { RoomService } from 'src/room/room.service';
@@ -81,7 +83,7 @@ describe('WhiteboardGateway', () => {
   let jwtService: { verify: jest.Mock };
   let whiteboard: {
     getBoard: jest.Mock;
-    putSnapshot: jest.Mock;
+    applyUpdate: jest.Mock;
     setMode: jest.Mock;
   };
   let roomService: { findBySlug: jest.Mock };
@@ -97,8 +99,8 @@ describe('WhiteboardGateway', () => {
 
   beforeEach(() => {
     whiteboard = {
-      getBoard: jest.fn().mockReturnValue({ snapshot: '{}', mode: 'owner' }),
-      putSnapshot: jest.fn().mockImplementation((_r: string, s: string) => s),
+      getBoard: jest.fn().mockReturnValue({ doc: new Y.Doc(), mode: 'owner' }),
+      applyUpdate: jest.fn().mockReturnValue('applied'),
       setMode: jest.fn().mockReturnValue('open'),
     };
     roomService = { findBySlug: jest.fn().mockResolvedValue(activeRoom) };
@@ -137,14 +139,21 @@ describe('WhiteboardGateway', () => {
   });
 
   describe('whiteboard:join', () => {
-    it('admits a room peer, joins by room id, and sends the snapshot', async () => {
+    it('admits a room peer, joins by room id, and sends the document state', async () => {
       client.data.identity = makeIdentity('user');
       await gateway.handleJoin(client as never, { roomSlug: 'room-slug' });
 
       expect(client.joinedRooms).toEqual(['room-1']);
-      expect(client.emitted[0]).toEqual({
-        event: 'whiteboard:snapshot',
-        payload: { snapshot: '{}', mode: 'owner' },
+      const joinState = client.emitted[0].payload as {
+        roomSlug: string;
+        update: Uint8Array;
+      };
+      expect(client.emitted[0].event).toBe('whiteboard:state');
+      expect(joinState).toMatchObject({ roomSlug: 'room-slug' });
+      expect(joinState.update).toBeInstanceOf(Uint8Array);
+      expect(client.emitted[1]).toEqual({
+        event: 'whiteboard:mode',
+        payload: { roomSlug: 'room-slug', mode: 'owner' },
       });
       expect(client.data.admission).toEqual({
         roomId: 'room-1',
@@ -196,7 +205,7 @@ describe('WhiteboardGateway', () => {
     });
   });
 
-  describe('whiteboard:op', () => {
+  describe('whiteboard:update', () => {
     function admit(isOwner: boolean): void {
       client.data.identity = makeIdentity('user');
       client.data.admission = {
@@ -206,72 +215,109 @@ describe('WhiteboardGateway', () => {
       };
     }
 
-    it('relays an owner snapshot while drawing is owner-only, excluding the sender', async () => {
+    function makeUpdate(): Uint8Array {
+      const doc = new Y.Doc();
+      doc.getMap('elements').set('el:1', { id: 'el:1' });
+      return Y.encodeStateAsUpdate(doc);
+    }
+
+    it('merges and relays an owner update while drawing is owner-only, excluding the sender', async () => {
       admit(true);
-      await gateway.handleOp(client as never, {
+      const update = makeUpdate();
+      await gateway.handleUpdate(client as never, {
         roomSlug: 'room-slug',
-        snapshot: '{"a":1}',
+        update,
       });
 
-      expect(whiteboard.putSnapshot).toHaveBeenCalledWith('room-1', '{"a":1}');
+      expect(whiteboard.applyUpdate).toHaveBeenCalledWith('room-1', update);
       expect(client.to).toHaveBeenCalledWith('room-1');
-      expect(client.to('room-1').emit).toHaveBeenCalledWith('whiteboard:op', {
-        roomSlug: 'room-slug',
-        snapshot: '{"a":1}',
-      });
+      expect(client.to('room-1').emit).toHaveBeenCalledWith(
+        'whiteboard:update',
+        {
+          roomSlug: 'room-slug',
+          update,
+        },
+      );
     });
 
-    it('silently drops a locked non-owner op without storing', async () => {
+    it('silently drops a locked non-owner update without merging', async () => {
       admit(false);
-      await gateway.handleOp(client as never, {
+      await gateway.handleUpdate(client as never, {
         roomSlug: 'room-slug',
-        snapshot: '{"a":1}',
+        update: makeUpdate(),
       });
 
-      expect(whiteboard.putSnapshot).not.toHaveBeenCalled();
+      expect(whiteboard.applyUpdate).not.toHaveBeenCalled();
       expect(client.to).not.toHaveBeenCalled();
     });
 
-    it('relays a non-owner op when drawing is open', async () => {
+    it('relays a non-owner update when drawing is open', async () => {
       admit(false);
-      whiteboard.getBoard.mockReturnValue({ snapshot: '{}', mode: 'open' });
-      await gateway.handleOp(client as never, {
+      whiteboard.getBoard.mockReturnValue({ doc: new Y.Doc(), mode: 'open' });
+      await gateway.handleUpdate(client as never, {
         roomSlug: 'room-slug',
-        snapshot: '{"a":1}',
+        update: makeUpdate(),
       });
 
-      expect(whiteboard.putSnapshot).toHaveBeenCalled();
+      expect(whiteboard.applyUpdate).toHaveBeenCalled();
       expect(client.to('room-1').emit).toHaveBeenCalled();
     });
 
-    it('emits an error when the server refuses the snapshot (oversized)', async () => {
+    it('emits an error when the update is oversized', async () => {
       admit(true);
-      whiteboard.putSnapshot.mockReturnValue(null);
-      await gateway.handleOp(client as never, {
+      whiteboard.applyUpdate.mockReturnValue('too-large');
+      await gateway.handleUpdate(client as never, {
         roomSlug: 'room-slug',
-        snapshot: 'x'.repeat(4 * 1024 * 1024 + 1),
+        update: makeUpdate(),
       });
 
       expect(client.emitted[0]).toEqual({
         event: 'whiteboard:error',
-        payload: { event: 'whiteboard:op', message: 'Board update rejected' },
+        payload: {
+          event: 'whiteboard:update',
+          message: 'Board update too large',
+        },
       });
       expect(client.to).not.toHaveBeenCalled();
     });
 
-    it('drops ops without admission or with a foreign room slug', async () => {
-      await gateway.handleOp(client as never, {
+    it('emits an error when the update does not decode', async () => {
+      admit(true);
+      whiteboard.applyUpdate.mockReturnValue('invalid');
+      await gateway.handleUpdate(client as never, {
         roomSlug: 'room-slug',
-        snapshot: '{}',
+        update: makeUpdate(),
       });
-      expect(whiteboard.putSnapshot).not.toHaveBeenCalled();
+
+      expect(client.emitted[0]).toEqual({
+        event: 'whiteboard:error',
+        payload: {
+          event: 'whiteboard:update',
+          message: 'Board update rejected',
+        },
+      });
+      expect(client.to).not.toHaveBeenCalled();
+    });
+
+    it('drops updates without admission, with a foreign room slug, or non-binary payloads', async () => {
+      await gateway.handleUpdate(client as never, {
+        roomSlug: 'room-slug',
+        update: makeUpdate(),
+      });
+      expect(whiteboard.applyUpdate).not.toHaveBeenCalled();
 
       admit(true);
-      await gateway.handleOp(client as never, {
+      await gateway.handleUpdate(client as never, {
         roomSlug: 'other-slug',
-        snapshot: '{}',
+        update: makeUpdate(),
       });
-      expect(whiteboard.putSnapshot).not.toHaveBeenCalled();
+      expect(whiteboard.applyUpdate).not.toHaveBeenCalled();
+
+      await gateway.handleUpdate(client as never, {
+        roomSlug: 'room-slug',
+        update: 'not-binary' as unknown as Uint8Array,
+      });
+      expect(whiteboard.applyUpdate).not.toHaveBeenCalled();
     });
   });
 

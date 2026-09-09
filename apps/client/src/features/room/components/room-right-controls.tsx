@@ -1,8 +1,9 @@
-import { MessageSquare, Presentation, Users } from "lucide-react";
+import { MessageSquare, Users } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import type { RoomPanelDescriptor } from "@/features/room/room-panels";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -13,8 +14,10 @@ interface Props {
   onToggleParticipants: () => void;
   isChatOpen: boolean;
   onToggleChat: () => void;
-  isBoardOpen: boolean;
-  onToggleBoard: () => void;
+  /** Registered overlay panels, rendered as toggle buttons in order. */
+  panels: RoomPanelDescriptor[];
+  openPanelId: string | null;
+  onTogglePanel: (id: string) => void;
   pendingRequestsCount?: number;
   unreadCount?: number;
 }
@@ -27,8 +30,9 @@ export const RoomRightControls = ({
   onToggleParticipants,
   isChatOpen,
   onToggleChat,
-  isBoardOpen,
-  onToggleBoard,
+  panels,
+  openPanelId,
+  onTogglePanel,
   pendingRequestsCount = 0,
   unreadCount = 0,
 }: Props) => {
@@ -88,22 +92,27 @@ export const RoomRightControls = ({
         <TooltipContent>Chat</TooltipContent>
       </Tooltip>
 
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <Button
-              type="button"
-              variant={isBoardOpen ? buttonInactiveVariant : buttonVariant}
-              size="icon"
-              onClick={onToggleBoard}
-              aria-label="Toggle whiteboard"
-            />
-          }
-        >
-          <Presentation className="size-4" />
-        </TooltipTrigger>
-        <TooltipContent>Whiteboard</TooltipContent>
-      </Tooltip>
+      {panels.map((panel) => {
+        const PanelIcon = panel.icon;
+        return (
+          <Tooltip key={panel.id}>
+            <TooltipTrigger
+              render={
+                <Button
+                  type="button"
+                  variant={openPanelId === panel.id ? buttonInactiveVariant : buttonVariant}
+                  size="icon"
+                  onClick={() => onTogglePanel(panel.id)}
+                  aria-label={`Toggle ${panel.title}`}
+                />
+              }
+            >
+              <PanelIcon className="size-4" />
+            </TooltipTrigger>
+            <TooltipContent>{panel.title}</TooltipContent>
+          </Tooltip>
+        );
+      })}
     </div>
   );
 };

@@ -3,6 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { io, Socket } from 'socket.io-client';
+import * as Y from 'yjs';
 import { App } from 'supertest/types';
 import type { Server as NetServer } from 'node:net';
 
@@ -30,6 +31,13 @@ const ROOM: TestRoom = {
   maxParticipants: 10,
 };
 
+function drawElement(doc: Y.Doc, id: string): void {
+  doc.transact(() => {
+    doc.getMap('elements').set(id, { id, version: 1, versionNonce: 1 });
+    doc.getArray<string>('order').push([id]);
+  });
+}
+
 describe('Whiteboard (e2e)', () => {
   let app: INestApplication<App>;
   let httpUrl: string;
@@ -37,6 +45,7 @@ describe('Whiteboard (e2e)', () => {
   let guestSecret: string;
   const sockets: Socket[] = [];
   let ownerSocket: Socket;
+
   function connectWhiteboard(options: {
     auth?: { token: string };
     cookie?: string;
@@ -161,6 +170,7 @@ describe('Whiteboard (e2e)', () => {
     for (const socket of sockets) socket.disconnect();
     await app.close();
   });
+
   it('syncs the board between an owner and a guest, catches up a late joiner, and enforces the host draw-lock', async () => {
     // Owner must be an active SFU peer before the board admits them.
     const roomToken = app.get(RoomTokenHelper).mint({
@@ -175,17 +185,20 @@ describe('Whiteboard (e2e)', () => {
     const sfuSocket = connectSfu(roomToken);
     await waitFor(sfuSocket, 'sfu:joined');
 
-    // Owner joins the board and receives the initial blank snapshot.
+    // Owner joins the board and receives the initial blank document state.
     const owner = connectWhiteboard({
       auth: { token: jwtService.sign({ id: 'owner-1' }) },
     });
-    const ownerSnapshot = waitFor<{ snapshot: string; mode: string }>(
+    const ownerState = waitFor<{ update: Uint8Array }>(
       owner,
-      'whiteboard:snapshot',
+      'whiteboard:state',
     );
+    const ownerMode = waitFor<{ mode: string }>(owner, 'whiteboard:mode');
     owner.emit('whiteboard:join', { roomSlug: ROOM.slug });
-    const initial = await ownerSnapshot;
-    expect(initial.snapshot).toBe('{}');
+    const ownerDoc = new Y.Doc();
+    Y.applyUpdate(ownerDoc, (await ownerState).update);
+    expect(ownerDoc.getMap('elements').size).toBe(0);
+    expect((await ownerMode).mode).toBe('owner');
     ownerSocket = owner;
 
     // Guest joins with a cookie bound to this room and sees the same board.
@@ -201,12 +214,9 @@ describe('Whiteboard (e2e)', () => {
     const guest = connectWhiteboard({
       cookie: `zvonok_guest_${ROOM.slug}=${guestToken}`,
     });
-    const guestSnapshot = waitFor<{ snapshot: string; mode: string }>(
-      guest,
-      'whiteboard:snapshot',
-    );
+    const guestState = waitFor<{ mode: string }>(guest, 'whiteboard:mode');
     guest.emit('whiteboard:join', { roomSlug: ROOM.slug });
-    await expect(guestSnapshot).resolves.toMatchObject({ mode: 'owner' });
+    await expect(guestState).resolves.toMatchObject({ mode: 'owner' });
 
     // A guest cookie bound to another room is rejected.
     const strangerToken = jwtService.sign(
@@ -226,28 +236,29 @@ describe('Whiteboard (e2e)', () => {
     await strangerJoin;
     stranger.disconnect();
 
-    // Owner draws (mode owner-only): the guest receives the relayed snapshot.
-    const shapeOne = {
-      store: { 'shape:1': { id: 'shape:1', typeName: 'shape', x: 1 } },
-    };
-    const guestOp = waitFor<{ snapshot: string }>(guest, 'whiteboard:op');
-    owner.emit('whiteboard:op', {
+    // Owner draws (mode owner-only): the guest receives the merged update.
+    drawElement(ownerDoc, 'shape:1');
+    const guestUpdate = waitFor<{ update: Uint8Array }>(
+      guest,
+      'whiteboard:update',
+    );
+    owner.emit('whiteboard:update', {
       roomSlug: ROOM.slug,
-      snapshot: JSON.stringify(shapeOne),
+      update: Y.encodeStateAsUpdate(ownerDoc),
     });
-    const relayed = await guestOp;
-    expect(JSON.parse(relayed.snapshot)).toMatchObject(shapeOne);
+    const guestDoc = new Y.Doc();
+    Y.applyUpdate(guestDoc, (await guestUpdate).update);
+    expect(guestDoc.getMap('elements').has('shape:1')).toBe(true);
 
     // Guest is locked out while drawing is owner-only: nothing is relayed.
-    guest.emit('whiteboard:op', {
+    drawElement(guestDoc, 'shape:2');
+    guest.emit('whiteboard:update', {
       roomSlug: ROOM.slug,
-      snapshot: JSON.stringify({
-        store: { 'shape:2': { id: 'shape:2', typeName: 'shape', x: 2 } },
-      }),
+      update: Y.encodeStateAsUpdate(guestDoc),
     });
-    await expectSilence(owner, 'whiteboard:op', 300);
+    await expectSilence(owner, 'whiteboard:update', 300);
 
-    // ...and nothing was stored: the next snapshot catch-up stays at shape:1.
+    // ...and nothing was stored: a late joiner's catch-up stays at shape:1.
     const lateObserver = connectWhiteboard({
       auth: { token: jwtService.sign({ id: 'late-1' }) },
     });
@@ -263,31 +274,27 @@ describe('Whiteboard (e2e)', () => {
     await expect(guestMode).resolves.toMatchObject({ mode: 'open' });
 
     // Now the guest's edit relays to the owner and merges both shapes.
-    const ownerOp = waitFor<{ snapshot: string }>(owner, 'whiteboard:op');
-    guest.emit('whiteboard:op', {
+    const ownerUpdate = waitFor<{ update: Uint8Array }>(
+      owner,
+      'whiteboard:update',
+    );
+    guest.emit('whiteboard:update', {
       roomSlug: ROOM.slug,
-      snapshot: JSON.stringify({
-        store: {
-          'shape:1': { id: 'shape:1', typeName: 'shape', x: 1 },
-          'shape:2': { id: 'shape:2', typeName: 'shape', x: 2 },
-        },
-      }),
+      update: Y.encodeStateAsUpdate(guestDoc),
     });
-    const merged = await ownerOp;
-    const parsed = JSON.parse(merged.snapshot);
-    expect(Object.keys(parsed.store).sort()).toEqual(['shape:1', 'shape:2']);
+    Y.applyUpdate(ownerDoc, (await ownerUpdate).update);
+    expect(ownerDoc.getMap('elements').has('shape:2')).toBe(true);
 
     // Owner locks drawing again: further guest edits stop relaying.
     const guestLocked = waitFor<{ mode: string }>(guest, 'whiteboard:mode');
     owner.emit('whiteboard:mode', { roomSlug: ROOM.slug, mode: 'owner' });
     await expect(guestLocked).resolves.toMatchObject({ mode: 'owner' });
-    guest.emit('whiteboard:op', {
+    drawElement(guestDoc, 'shape:3');
+    guest.emit('whiteboard:update', {
       roomSlug: ROOM.slug,
-      snapshot: JSON.stringify({
-        store: { 'shape:3': { id: 'shape:3', typeName: 'shape', x: 3 } },
-      }),
+      update: Y.encodeStateAsUpdate(guestDoc),
     });
-    await expectSilence(owner, 'whiteboard:op', 300);
+    await expectSilence(owner, 'whiteboard:update', 300);
   });
 
   it('serves the current board to a guest who re-joins mid-session', async () => {
@@ -305,13 +312,15 @@ describe('Whiteboard (e2e)', () => {
     const rejoining = connectWhiteboard({
       cookie: `zvonok_guest_${ROOM.slug}=${guestToken}`,
     });
-    const snapshot = waitFor<{ snapshot: string }>(
+    const state = waitFor<{ update: Uint8Array }>(
       rejoining,
-      'whiteboard:snapshot',
+      'whiteboard:state',
     );
     rejoining.emit('whiteboard:join', { roomSlug: ROOM.slug });
-    const caught = await snapshot;
+    const caught = new Y.Doc();
+    Y.applyUpdate(caught, (await state).update);
     // Board state persists in memory for the room lifetime: re-open sees it.
-    expect(JSON.parse(caught.snapshot).store).toHaveProperty('shape:1');
+    expect(caught.getMap('elements').has('shape:1')).toBe(true);
+    expect(caught.getMap('elements').has('shape:2')).toBe(true);
   });
 });

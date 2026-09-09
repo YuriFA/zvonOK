@@ -49,7 +49,7 @@ export default defineConfig(async () => {
             // Room-specific heavy deps — only loaded with room chunk
             "vendor-sfu": ["mediasoup-client", "socket.io-client"],
             // Whiteboard canvas — 1 MB+, lazy-loaded with the board panel
-            "vendor-tldraw": ["tldraw"],
+            "vendor-excalidraw": ["@excalidraw/excalidraw", "yjs"],
           },
         },
       },
