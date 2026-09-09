@@ -54,6 +54,11 @@
 		reverse_proxy server:3000
 	}
 
+	# Egress HLS playback (playlists + segments served by NestJS)
+	handle /egress/* {
+		reverse_proxy server:3000
+	}
+
 	# Socket.io transport (SFU WebSocket + polling fallback)
 	handle /socket.io/* {
 		reverse_proxy server:3000
