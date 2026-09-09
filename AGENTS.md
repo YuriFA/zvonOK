@@ -1,6 +1,6 @@
 # Agent Operating Guide
 
-pnpm monorepo for WebRTC video chat (mediasoup SFU for all calls; no P2P path).
+pnpm monorepo for a WebRTC video platform with a developer platform on top: `/v1` REST API, TypeScript SDKs (`@zvonok/client`, `@zvonok/react`), egress/recording, webhooks, whiteboard. Mediasoup SFU for all calls; no P2P path.
 
 ## Tech Stack
 
@@ -21,61 +21,7 @@ pnpm monorepo for WebRTC video chat (mediasoup SFU for all calls; no P2P path).
 
 ## Commands
 
-All from repo root. Prefer `pnpm -C <dir> <script>` over `cd`.
-
-### Root
-
-```bash
-pnpm install
-pnpm dev              # client + server (recursive)
-pnpm test             # all workspaces
-pnpm test:client      # client unit tests (CI)
-pnpm test:server      # server unit tests
-pnpm clean            # clean caches
-```
-
-### Server (`apps/server/`)
-
-```bash
-pnpm -C apps/server dev
-pnpm -C apps/server build
-pnpm -C apps/server lint
-pnpm -C apps/server format
-pnpm -C apps/server test
-pnpm -C apps/server test:watch
-pnpm -C apps/server test:cov
-pnpm -C apps/server test:e2e
-pnpm -C apps/server db:dev        # postgres + pgAdmin (docker)
-pnpm -C apps/server migrate:dev   # prisma migrate
-```
-
-Run single test:
-```bash
-pnpm -C apps/server test auth.service.spec.ts
-pnpm -C apps/server test -- -t "register"
-```
-
-Auth check (server + DB running):
-```bash
-./apps/server/scripts/auth-check.sh
-```
-
-### Client (`apps/client/`)
-
-```bash
-pnpm -C apps/client dev
-pnpm -C apps/client build
-pnpm -C apps/client lint
-pnpm -C apps/client test          # vitest watch
-pnpm -C apps/client test:run      # vitest run
-pnpm -C apps/client test:e2e      # playwright
-```
-
-Run single test:
-```bash
-pnpm -C apps/client test:run src/lib/api/__tests__/api-client.test.ts
-pnpm -C apps/client test:run -- -t "handles 401"
-```
+All commands live in README "[Available Commands](README.md#available-commands)" — production make targets plus root, server, client, and packages tables, including single-test invocation examples. Prefer `pnpm -C <dir> <script>` over `cd`.
 
 ## Code Style
 
@@ -145,18 +91,27 @@ apps/
 │   ├── prisma/schema.prisma      # DB schema
 │   ├── src/
 │   │   ├── auth/                 # AuthModule (helpers, strategies)
+│   │   ├── user/                 # UserModule
 │   │   ├── room/                 # RoomModule (cleanup, guests)
 │   │   ├── chat/                 # ChatModule (messages, guest auth)
-│   │   ├── user/                 # UserModule
 │   │   ├── sfu/                  # mediasoup SFU
+│   │   ├── egress/               # RTMP/HLS streaming, recordings
+│   │   ├── platform/             # Developer platform: /v1 API
+│   │   ├── developer/            # Developer accounts, projects, API keys
+│   │   ├── webhooks/             # Signed webhook delivery
+│   │   ├── whiteboard/           # Shared collaborative canvas
 │   │   └── main.ts
-│   └── scripts/auth-check.sh
 └── client/src/
     ├── routes/                   # Pages
     ├── components/ui/            # UI primitives
     ├── features/                 # Feature modules
+    ├── hooks/                    # Shared hooks
     ├── lib/                      # Framework-agnostic core
     └── main.tsx
+packages/
+├── client/                       # @zvonok/client — headless SFU/room SDK
+├── react/                        # @zvonok/react — React bindings + host controls
+└── video-layout/                 # @zvonok/video-layout — composited layout engine
 ```
 
 ## API Conventions
@@ -168,15 +123,15 @@ apps/
 
 ## Environment Variables
 
-**Server** (`.env.development`):
-- `PORT`, `DATABASE_URL`
-- `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`
-- `JWT_ACCESS_EXPIRES_IN_MINUTES`, `JWT_REFRESH_EXPIRES_IN_DAYS`
+- Server env: `apps/server/.env.example` → `.env.development`
+- Client env: `apps/client/.env.example` → `.env.local`
+- Production: root `.env` from `.env.production.example` (see `docs/deployment.md`)
 
-**Client** (`.env.local`):
-- `VITE_SOCKET_URL`, `VITE_API_BASE_URL`
+The environment is the source of truth for the full variable list. Gotchas:
+- Production: `MEDIASOUP_ANNOUNCED_IP` must be the server's public IP, or media does not flow.
+- Dev: mediasoup listens on `127.0.0.1`, so video/audio works only same-machine.
 
-**Source of truth:** `openspec/specs/` describes current implemented behavior per domain (auth, user, room, chat, sfu, client). `openspec/changes/` holds in-flight deltas.
+**Source of truth:** `openspec/specs/` describes current implemented behavior per domain. `openspec/changes/` holds in-flight deltas.
 
 
 Commands (also available as `.omp/skills/openspec-*` skills):

@@ -39,13 +39,13 @@ Both files define the same five app services (the `docs` site service exists onl
 |------------|---------------------|---------------------------|--------|
 | Images | Builds from local Dockerfiles | Pulls pre-built images from GHCR | Prod uses CI-built images; dev builds locally |
 | Server `TURN_*` env vars | Not set | `TURN_URL`, `TURNS_URL`, `TURN_AUTH_SECRET` | In local dev coturn runs without auth; prod mints ephemeral TURN credentials and passes them to clients via `sfu:transport-created` |
-| Server `EGRESS_*` env vars | Defaults | `EGRESS_FFMPEG_PATH`, `EGRESS_MEDIA_PORT_MIN/MAX`, `EGRESS_HLS_DIR`, `EGRESS_ALLOW_PRIVATE_TARGETS` | Egress (HLS/RTMP) needs an ffmpeg binary on the server host and a UDP range disjoint from the mediasoup RTC range |
+| Server `EGRESS_*` env vars | Defaults | `EGRESS_MEDIA_PORT_MIN/MAX`, `EGRESS_HLS_DIR`, `EGRESS_RECORDINGS_DIR` on the `egress_data` volume | HLS trees and recordings persist on a named volume instead of the container filesystem; the RTP ingest range stays disjoint from the mediasoup RTC range |
 | Caddy `certs` volume | `./certs:/srv/certs:ro` | Not mounted | Dev uses self-signed certs from `./certs`; prod terminates TLS at Traefik |
 | Caddy entrypoint | Host ports 80/443, `Caddyfile` | `expose: 80` behind Traefik, `Caddyfile.traefik` | Prod shares ports 80/443 with other sites via the gateway |
 
 ## Traefik Gateway (Multi-Site Production)
 
-The VPS hosts several independent sites, each in its own repository, each on its own subdomain. A single Traefik container (`~/gateway`) owns host ports 80/443, obtains Let's Encrypt certificates for every domain, and routes by `Host` header to containers on the shared external Docker network `web`. Full details: `docs/traefik-migration-plan.md` in the repository. The first-time gateway setup is walked through by `scripts/setup-traefik-gateway.sh`.
+The VPS hosts several independent sites, each in its own repository, each on its own subdomain. A single Traefik container (`~/gateway`) owns host ports 80/443, obtains Let's Encrypt certificates for every domain, and routes by `Host` header to containers on the shared external Docker network `web`. The first-time gateway setup is walked through by `scripts/setup-traefik-gateway.sh`.
 
 Why prod uses `Caddyfile.traefik` instead of the dev `Caddyfile`: with a real domain, the dev config enables automatic HTTPS and redirects every plain-HTTP request to HTTPS. Traefik forwards plain HTTP, so that redirect would loop forever. `Caddyfile.traefik` serves plain HTTP only — no TLS, no redirects; routing rules are shared via `Caddyfile.routes`.
 
@@ -115,7 +115,6 @@ The following ports must be open on the server firewall:
 | 5349 | UDP + TCP | coturn | TURNS (TLS) |
 | 40000–40099 | UDP + TCP | mediasoup | WebRTC media transport |
 | 49152–49252 | UDP | coturn | TURN relay range |
-| 42000–42100 | UDP | server (egress) | FFmpeg RTP ingest range |
 
 > For local testing without a domain, `SITE_ADDRESS=localhost` uses Caddy's self-signed certificate.
 
@@ -163,9 +162,6 @@ sudo ufw allow 40000:40099/udp
 # coturn relay range
 sudo ufw allow 49152:49252/udp
 
-# Egress RTP ingest (HLS/RTMP live streaming)
-sudo ufw allow 42000:42100/udp
-
 sudo ufw enable
 ```
 
@@ -173,7 +169,7 @@ sudo ufw enable
 
 ```bash
 # Clone the repo
-git clone <repo-url> && cd webrtc-chat
+git clone <repo-url> && cd zvonok
 
 # Create env file from template
 make setup     # equivalent to: cp .env.production.example .env
@@ -313,6 +309,11 @@ POSTGRES_DB=zvonok
 JWT_ACCESS_SECRET=a1b2c3d4...
 JWT_REFRESH_SECRET=e5f6g7h8...
 
+# Developer platform (generate with: openssl rand -hex 64; must differ from the other secrets)
+JWT_DEV_SECRET=h9i0j1k2...
+JWT_ROOM_SECRET=l3m4n5o6...
+ROOM_TOKEN_TTL_MINUTES=60
+
 # Client (leave empty for same-origin behind Caddy)
 VITE_API_BASE_URL=
 VITE_SOCKET_URL=
@@ -345,6 +346,7 @@ The routes:
 - `/auth/*`, `/users/*`, `/rooms`, `/rooms/*`, `/version` → reverse proxy to `server:3000`
 - `/swagger*` → not proxied in production (dev only, via SSH port-forward)
 - `/v1/*`, `/developers/*` → reverse proxy to `server:3000` (public platform API; `/developers/*` is safe to expose - dev-JWT authenticated, `/v1` is API-key authenticated)
+- `/egress/*` → reverse proxy to `server:3000` (HLS playback: playlist and segments)
 - `/socket.io/*` → reverse proxy to `server:3000` (WebSocket + polling)
 - Everything else → `try_files` for static SPA with `index.html` fallback
 
@@ -480,18 +482,6 @@ make rebuild-client
 
 See [Step 2: Server Firewall](#step-2-server-firewall) for the full `ufw` commands.
 
-Summary of required open ports:
-
-| Port(s) | Protocol | Service | Purpose |
-|---------|----------|---------|---------|
-| 80 | TCP | Traefik (prod) / Caddy (dev) | HTTP redirect + ACME challenge |
-| 443 | TCP + UDP | Traefik (prod) / Caddy (dev) | HTTPS + HTTP/3 |
-| 3478 | UDP + TCP | coturn | STUN/TURN |
-| 5349 | UDP + TCP | coturn | TURNS (TLS) |
-| 40000–40099 | UDP + TCP | mediasoup | WebRTC media transport |
-| 49152–49252 | UDP | coturn | TURN relay range |
-| 42000–42100 | UDP | server (egress) | FFmpeg RTP ingest range |
-
 ## Troubleshooting
 
 ### Video/audio not working for remote participants
@@ -517,7 +507,7 @@ Summary of required open ports:
 ### 405 Method Not Allowed on POST /rooms
 
 - Ensure the `Caddyfile` has both `handle /rooms` (exact) and `handle /rooms/*` (wildcard) blocks
-- Reload Caddy: `docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile`
+- Reload Caddy (see [Reloading Caddy Config](#reloading-caddy-config))
 
 ### Client shows blank page
 

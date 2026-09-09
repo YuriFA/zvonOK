@@ -14,7 +14,7 @@ examples). All requests and responses are JSON except recording downloads.
 - Errors follow the NestJS envelope: `{ "message": "...", "error": "...", "statusCode": 404 }`
 - Resources owned by another project respond `404` - the API is intentionally
   indistinguishable between "missing" and "not yours"
-- Mutating `/v1` routes are rate-limited to 60 requests per minute per key
+- All `/v1` routes are rate-limited per API key: mutating routes (create room, mint token, start egress) are limited to 60 requests per minute; other routes use the platform's default per-key budget
 
 ## Authentication
 
