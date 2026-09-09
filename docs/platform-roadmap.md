@@ -11,12 +11,12 @@ the year-paid VPS (5-service Docker stack, shared Traefik gateway, coturn
 already deployed); repository stays open; the app stays a working product at
 every step.
 
-## Stage 1 - platform substrate (weeks 1-6) - complete except npm publish
+## Stage 1 - platform substrate (weeks 1-6) - complete
 
 | # | Change | Scope | Status |
 |---|--------|-------|--------|
 | 1 | `add-developer-platform` | Extract `@zvonok/client` into `packages/`; tenancy (`DeveloperAccount`/`Project`/`ApiKey`, nullable room ownership); public `/v1` API (rooms, end, token minting) with per-key rate limits; room-token identity path in `/sfu` | Archived 2026-09-05 |
-| 2 | `add-react-sdk-host-controls` | `@zvonok/react` thin layer; host-controls through the SDK (mute-remote, mute-all, lock); npm publish `@zvonok/client` + `@zvonok/react`; quickstart doc | Archived 2026-09-05 - npm publish deferred |
+| 2 | `add-react-sdk-host-controls` | `@zvonok/react` thin layer; host-controls through the SDK (mute-remote, mute-all, lock); npm publish `@zvonok/client` + `@zvonok/react`; quickstart doc | Archived 2026-09-05; published to npm 2026-09-09 |
 
 **Stage 1 success bar:** from a clean project outside the monorepo, following
 only the quickstart - `npm i @zvonok/client`, mint a room token via curl with
@@ -34,13 +34,11 @@ race fix, and call recording all verified working); the developer dashboard
 UI, meeting history/analytics, and the recording canvas/layout polish shipped
 after the checkpoint review.
 
-Checkpoint decision (2026-09-08): **Option A - close the loop.** Publish
-`@zvonok/*`, re-run the success bar from a clean external project, and the
-checkpoint passes as written. See `docs/checkpoint-2026-09-07.md` for the
-one-page review feeding this decision. After the re-run succeeds: retire the
-checkpoint file, drop the quickstart's local-install caveat, and update this
-line. Until then the app-identity hardening change waits behind the publish
-in the sequential one-change queue.
+Checkpoint closed 2026-09-09: passed by owner decision. `@zvonok/client`
+0.1.2 and `@zvonok/react` 0.1.1 are live on npm and verified installable from
+a clean external project; the live-room walkthrough of the quickstart was
+explicitly waived for now and can be run any time against the deployment.
+The app-identity hardening change is next in the sequential one-change queue.
 
 ## Stage 2 candidate queue (ordered; each item = one OpenSpec change)
 
