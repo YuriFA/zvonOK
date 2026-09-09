@@ -562,8 +562,13 @@ pnpm -C packages/client build
 pnpm -C packages/client pack
 tar -tzf zvonok-client-*.tgz   # must contain dist/ only, plus README/LICENSE
 
-# 3. Publish (pnpm applies publishConfig: dist-based exports, public access)
-pnpm -C packages/client publish --access public --no-git-checks
+# 3. Publish from inside the package directory; answer y at the
+#    publish-branch prompt. Do NOT use `pnpm -C <pkg> publish`: on pnpm 10
+#    the -C path leaks into the npm delegation as an extra positional
+#    argument and npm aborts with EUSAGE. Pack artifacts (*.tgz) are
+#    gitignored, so the git-clean check passes without --no-git-checks
+#    (that flag also reaches npm and is rejected there).
+cd packages/client && pnpm publish --access public
 ```
 
 Repeat for `packages/react`. Note that plain `npm publish` will NOT apply
