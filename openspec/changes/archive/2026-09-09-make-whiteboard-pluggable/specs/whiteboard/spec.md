@@ -1,13 +1,5 @@
-# Whiteboard Specification
+## MODIFIED Requirements
 
-## Purpose
-
-A shared canvas for every room: participants see the same board, drawing
-follows a host-controlled permission switch, and the board lives in memory for
-the lifetime of the room. Sync rides the room identity the join flow already
-establishes, including approved guests.
-
-## Requirements
 ### Requirement: Shared canvas per room
 Every active room SHALL have exactly one shared whiteboard canvas. Each room
 participant (registered or approved guest) SHALL be able to open the canvas
@@ -41,45 +33,6 @@ blank board.
 - **WHEN** a participant opens the canvas after others have drawn shapes
 - **THEN** the canvas displays all previously drawn content immediately, without waiting for another participant to publish changes
 
-### Requirement: Host draw-lock switch
-The room owner SHALL be able to toggle drawing between owner-only and open to
-all participants. The switch SHALL default to owner-only on room creation.
-The current mode SHALL be visible to every participant with the canvas open,
-and changes SHALL apply live without reopening the canvas.
-
-#### Scenario: Owner opens drawing to all
-- **WHEN** the owner toggles drawing open
-- **THEN** every participant's canvas becomes editable and their edits relay to the room
-
-#### Scenario: Owner locks drawing again
-- **WHEN** the owner toggles drawing back to owner-only while a guest is drawing
-- **THEN** the guest's canvas turns read-only and subsequent guest edits are not relayed
-
-### Requirement: Room-scoped authorization
-Whiteboard sync SHALL only serve participants of the room: connections SHALL
-carry the same room-scoped identity the join flow establishes (registered
-session or approved guest), and requests from anyone else SHALL be rejected.
-One participant's traffic SHALL never reach a different room's board.
-
-#### Scenario: Unauthenticated connection rejected
-- **WHEN** a socket connection without a valid room-scoped identity subscribes to a board
-- **THEN** the server rejects the subscription and relays nothing
-
-#### Scenario: Room isolation
-- **WHEN** two different rooms have canvases open
-- **THEN** updates in one room never appear in the other
-
-### Requirement: Board lifetime bound to the room
-The board state SHALL be held in memory only for the lifetime of its room and
-SHALL NOT be persisted. When the room ends, or its last participant leaves
-and room teardown runs, the board SHALL be dropped; a recreated room starts
-with a blank board. Board state loss on server restart is acceptable v1
-behavior.
-
-#### Scenario: Room end clears the board
-- **WHEN** the owner ends the room while the canvas has content
-- **THEN** the board is discarded and no whiteboard record remains
-
 ### Requirement: Client canvas surface
 The room UI SHALL offer the whiteboard as a room panel that opens beside or
 over the participant grid, showing the shared canvas with drawing tools for
@@ -102,6 +55,8 @@ change panel, permission, or draw-lock behavior.
 #### Scenario: Engine swap leaves the room untouched
 - **WHEN** the whiteboard engine implementation is replaced with another engine conforming to the adapter
 - **THEN** the panel, sync, permissions, and draw-lock behavior remain unchanged
+
+## ADDED Requirements
 
 ### Requirement: Incremental CRDT synchronization
 The whiteboard SHALL synchronize through a conflict-free replicated
