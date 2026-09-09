@@ -8,8 +8,6 @@ export default defineConfig({
   title: "ZvonOK Docs",
   description: "Self-hosted video rooms with a developer platform API",
   srcExclude: [
-    "admin-observability-plan.md",
-    "traefik-migration-plan.md",
     "adr/**",
     "research/**",
     "archive/**",

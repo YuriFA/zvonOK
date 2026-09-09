@@ -6,7 +6,7 @@ REST API, mint a participant token, and join it with the `@zvonok/react` SDK.
 Prerequisites:
 
 - A Zvonok server you can reach (self-hosted - see `docs/deployment.md`)
-- An API key from a developer account (register via `POST /developers/register`,
+- An API key from a developer account (register via `POST /developers/auth/register`,
   create a project, then an API key - the full key is shown exactly once)
 
 This walkthrough uses `https://your-zvonok-server.example` as the server base
@@ -19,6 +19,11 @@ mkdir my-video-app && cd my-video-app
 npm init -y
 npm i @zvonok/react react react-dom vite @vitejs/plugin-react
 ```
+
+> `@zvonok/react` is not on the public npm registry yet (publish deferred).
+> Until then, install from a checkout of the zvonok repo: `npm link` the
+> workspace package, or `pnpm --filter @zvonok/react pack` and
+> `npm i ./zvonok-react-*.tgz` from the tarball.
 
 ## 2. Create a room and mint a token
 
@@ -188,9 +193,9 @@ curl -X PUT "$ZVONOK_URL/developers/projects/<projectId>/webhooks" \
   -d '{"url": "https://your-backend.example/zvonok/webhooks"}'
 ```
 
-The response contains your signing secret. Your project's rooms then deliver
-`room.started`, `participant.joined`, `participant.left` (with a reason), and
-`room.ended` as `POST` requests. Verify every delivery before trusting it:
+The response contains your signing secret. The full event list, delivery
+headers, and retry policy live in the [API reference](/api-reference). Verify
+every delivery before trusting it:
 
 ```js
 import { createHmac, timingSafeEqual } from "node:crypto";
@@ -210,5 +215,5 @@ function verify(req, rawBody, secret) {
 }
 ```
 
-Deliveries retry up to 5 times with growing delays and then drop - respond
-`2xx` as soon as you have persisted the event.
+Respond `2xx` as soon as you have persisted the event - retry and drop
+behavior are covered in the [API reference](/api-reference).

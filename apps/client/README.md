@@ -1,69 +1,41 @@
-# WebRTC Chat Client
+# ZvonOK Client
 
-React 19 + Vite frontend with WebRTC video chat and Socket.io signalling.
+React 19 + Vite SPA: video rooms over a mediasoup SFU, chat, whiteboard, and a developer console.
 
-## Quick Start
+## Setup
 
-```bash
-# Configure env
-cp .env.example .env.local
-# Edit .env.local: add VITE_SOCKET_URL
+Setup and the full command table live in the root [README](../../README.md). Client-specific facts:
 
-# Run dev server
-pnpm dev
-```
-
-Client: http://localhost:5173
-
-## Commands
-
-| Command        | Description                         |
-| -------------- | ----------------------------------- |
-| `pnpm dev`     | Vite dev server with HMR            |
-| `pnpm build`   | TypeScript check + production build |
-| `pnpm lint`    | ESLint check                        |
-| `pnpm preview` | Preview production build            |
+- `pnpm dev` serves the app at http://localhost:5173 (Vite + HMR)
 
 ## Architecture
 
-- **Routing:** React Router v7 (file-based in `src/routes/`)
-- **UI:** Radix UI primitives (Shadcn) in `src/components/ui/`
-- **Styling:** Tailwind CSS v4 with CSS variables
-- **Forms:** React Hook Form + Zod validation
-- **WebRTC:** Socket.io for signalling + native WebRTC for P2P
-
-### WebRTC Flow
-
-1. Connect to Socket.io server
-2. Join room -> create `RTCPeerConnection` on participant joined
-3. Exchange Offer/Answer/ICE candidates via Socket.io
-4. Use MediaStream API for video/audio
+- **Media:** SFU path via `mediasoup-client` over Socket.io signalling — no P2P. Sequence: [docs/architecture/sequence-sfu.md](../../docs/architecture/sequence-sfu.md).
+- **Routing:** React Router v7, file-based in `src/routes/` (home, auth, room, history, console).
+- **UI:** Base UI primitives (`@base-ui/react`) in `src/components/ui/`, styled with Tailwind CSS v4.
+- **State/data:** TanStack React Query; forms via React Hook Form + Zod.
 
 ## Project Structure
 
 ```
 src/
-├── main.tsx          # Entry point, React Router setup
-├── routes/           # File-based routing (home.tsx, room.tsx)
-├── components/ui/    # Radix UI components (button.tsx, input.tsx)
+├── routes/           # File-based routes (home, login, register, room, history, console*)
+├── features/         # auth, room, media, sfu, chat, whiteboard, console, history
+├── hooks/            # Shared React hooks
+├── components/       # Shared UI (room/, ui/ primitives)
 └── lib/
-    ├── config.ts     # WebRTC config (STUN servers, constraints)
-    └── utils.ts      # Utilities (cn helper)
+    ├── config/       # routes.ts, themes.ts, app.ts
+    ├── react-query/  # Query client + query keys
+    ├── api/          # API client + error handling
+    ├── constants/
+    └── utils/
 ```
 
-## Environment Variables
+## Environment
+
+Copy [`.env.example`](.env.example) to `.env.local`. Both variables are required in dev; in a production build each defaults to same-origin (empty string):
 
 ```bash
+VITE_API_BASE_URL=http://localhost:3000
 VITE_SOCKET_URL=http://localhost:3000
 ```
-
-## Tech Stack
-
-| Tech             | Version | Purpose                 |
-| ---------------- | ------- | ----------------------- |
-| React            | 19.1.1  | UI framework            |
-| Vite             | 7.1.6   | Build tool + dev server |
-| TypeScript       | 5.8.3   | Typing                  |
-| React Router     | 7.9.1   | Routing                 |
-| Tailwind CSS     | 4.1.13  | Styling                 |
-| Socket.io Client | -       | WebRTC signalling       |
