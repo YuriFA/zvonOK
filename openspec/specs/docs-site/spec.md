@@ -10,8 +10,9 @@ The public documentation surface: repo markdown published as a static site under
 The project SHALL publish a static documentation site at `docs.<domain>`
 (the site domain) over HTTPS, served by a dedicated static-file container
 registered with the shared Traefik gateway via the add-a-site pattern. The
-site SHALL present the curated documentation set (quickstart, deployment,
-platform roadmap) rendered from the repository markdown, and SHALL NOT
+site SHALL present the curated documentation set (home, quickstart, API
+reference, deployment, egress, whiteboard, platform roadmap) rendered from
+the repository markdown, and SHALL NOT
 publish internal material (archives, research notes, planning documents).
 
 #### Scenario: Visitor reads the quickstart

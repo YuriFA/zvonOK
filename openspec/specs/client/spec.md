@@ -3,13 +3,16 @@
 ## Purpose
 
 React 19 SPA: routing, auth state, typed API access, SFU/media management,
-pre-join and guest flows, chat UI, and design-system conventions.
+pre-join and guest flows, chat UI, the per-user call-history page, and
+design-system conventions.
 
 ## Requirements
 
 ### Requirement: Routes
-The app SHALL expose `/` (home), `/login`, `/register` (eager), and
-`/room/:slug` (lazy-loaded with Suspense).
+The app SHALL expose `/` (home), `/login`, and `/register` (eager), and
+`/room/:slug`, `/history` (per-user call history), and the `/console`
+section - `/console` (project list), `/console/projects/:id` (project
+detail), `/console/login` - lazy-loaded with Suspense.
 
 #### Scenario: Opening an invite link
 - **WHEN** a visitor navigates to `/room/abc123`

@@ -23,6 +23,9 @@ revoked keys are rejected with 401 before any business logic runs.
 The server SHALL rate-limit `/v1` requests per API key independently of the
 global user-facing throttles. Exceeding the limit returns 429 with a Retry-After
 hint.
+Room creation, token minting, and egress start carry a tighter
+60-requests-per-minute per-key budget; the remaining `/v1` traffic uses the
+platform's default per-key budgets.
 
 #### Scenario: Burst over limit
 - **WHEN** a key exceeds its request budget within the window

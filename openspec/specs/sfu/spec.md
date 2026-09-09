@@ -42,10 +42,9 @@ username/password credentials SHALL NOT be used.
 - **THEN** each credential carries an expiry at least 6 hours in the future
   and a password that only holders of the shared secret could produce
 
-#### Scenario: Local development without a secret
-- **WHEN** no TURN auth secret is configured but a TURN URL is
-- **THEN** the TURN entry is delivered URL-only and the client can still
-  reach the unauthenticated development coturn
+#### Scenario: Missing TURN auth secret
+- **WHEN** `TURN_AUTH_SECRET` is absent, even if a TURN URL is configured
+- **THEN** no TURN entry is advertised and clients fall back to STUN-only
 
 ### Requirement: Producer lifecycle
 A peer SHALL publish media via `sfu:produce`

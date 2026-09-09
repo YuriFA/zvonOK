@@ -71,14 +71,20 @@ signalling, track-attachment, or capture code.
 - **THEN** the component renders the typed join error state and never silently shows an empty room
 
 ### Requirement: Host control actions
-The SDK SHALL expose host-control actions - mute a peer, mute all, lock and
-unlock the room - that emit the corresponding signalling events and resolve
-with the server result; authorization denials surface as typed errors. Actions
-are available to any consumer whose identity the server authorizes.
+The SDK SHALL expose host-control actions - kick a peer, mute a peer, mute
+all, lock and unlock the room - that emit the corresponding signalling
+events (kick is fire-and-forget; the others resolve with the server
+result); authorization denials surface as typed errors. Actions are
+available to any consumer whose identity the server authorizes.
 
 #### Scenario: Authorized host mutes a peer
 - **WHEN** an authorized participant invokes the mute action for another peer
 - **THEN** the server mutes that peer and the action resolves successfully
+
+#### Scenario: Host kicks a participant
+- **WHEN** an authorized host invokes the kick action for another participant
+- **THEN** the kicked participant is disconnected from the room and the
+  departure is reported as participant-left with reason kick
 
 #### Scenario: Non-host action denied
 - **WHEN** a non-authorized participant invokes a host-control action

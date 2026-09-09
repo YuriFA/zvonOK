@@ -7,14 +7,15 @@ Per-project server-to-server event delivery: project-owned room lifecycle reache
 ## Requirements
 
 ### Requirement: Webhook configuration
-A project SHALL have at most one webhook endpoint: a URL and a signing secret
-set via the developer module. Setting the endpoint SHALL generate a new secret
-and return it in the response; removing the endpoint SHALL stop all deliveries
-for the project immediately.
+A project SHALL have at most one webhook endpoint: a URL and a signing
+secret configured through the developer module's webhook configuration
+routes; the routes, https-only validation, and secret handling are
+specified by the developer capability. Removing the endpoint SHALL stop
+all deliveries for the project immediately.
 
 #### Scenario: Configure endpoint
-- **WHEN** an authenticated developer sets a webhook URL for their project
-- **THEN** the endpoint is stored together with a generated signing secret and the secret is returned once in the response
+- **WHEN** an authenticated developer sets or replaces the webhook URL for their project
+- **THEN** the project has exactly one configured endpoint and event deliveries target it
 
 #### Scenario: Remove endpoint
 - **WHEN** the developer removes the webhook configuration
