@@ -1,0 +1,7 @@
+/*
+ * The panel drives undo/redo through the room Yjs document (Y.UndoManager),
+ * so the editor's built-in per-client history controls are hidden.
+ */
+.excalidraw .undo-redo-buttons {
+  display: none !important;
+}

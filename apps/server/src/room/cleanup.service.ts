@@ -20,7 +20,7 @@ export class RoomCleanupService implements OnModuleDestroy {
     void this.cleanupOldRooms();
   }
 
-  private async cleanupOldRooms() {
+  async cleanupOldRooms() {
     const cutoffDate = new Date(Date.now() - ROOM_TTL_HOURS * 60 * 60 * 1000);
     const result = await this.prisma.room.deleteMany({
       where: {

@@ -54,7 +54,10 @@ decision.
 6. **HLS/RTMP egress** - live streaming out of rooms. Implemented in
    `add-hls-rtmp-egress` (2026-09-06).
 7. **Whiteboard** - integrate before building (Yjs/tldraw class), never from
-   scratch. Implemented in `add-whiteboard` (2026-09-06).
+   scratch. Implemented in `add-whiteboard` (2026-09-06); the "never build"
+   principle was later reversed for the thin Excalidraw-Yjs binding after
+   tldraw's license change - see ADR-0003 and change
+   `make-whiteboard-pluggable` (2026-09-08).
 8. **Billing/metering** - only if the business option activates.
 9. **Multi-node SFU** - multi-worker + Redis socket fan-out; revisited when
    single-node capacity is a real limit.

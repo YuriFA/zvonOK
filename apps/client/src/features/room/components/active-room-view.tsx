@@ -1,6 +1,6 @@
 import { computeLayout } from "@zvonok/video-layout";
 import { Lock, LockOpen, MessageSquare, MicOff, Users } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { ParticipantsList } from "@/components/room/participants-list";
@@ -14,14 +14,13 @@ import { RoomVideo } from "@/features/room/components/room-video";
 import { ScreenShareSpotlight } from "@/features/room/components/screen-share-spotlight";
 import { useKeyboardShortcuts } from "@/features/room/hooks/use-keyboard-shortcuts";
 import type { UseRoomSessionResult } from "@/features/room/hooks/use-room-session";
-import { WhiteboardPanel } from "@/features/whiteboard/components/whiteboard-panel";
-import { useWhiteboard } from "@/features/whiteboard/hooks/use-whiteboard";
+import { roomPanels } from "@/features/room/room-panels";
 import type { ScreenShareError } from "@/hooks/use-screen-share";
 import { useScreenShare } from "@/hooks/use-screen-share";
 
+import { useGuestRequests } from "../contexts/guest-requests.context";
 import { useRoomAudioContext } from "../contexts/room-audio.context";
 import { useActiveSpeakerId } from "../contexts/room-audio.store";
-import { useGuestRequests } from "../contexts/guest-requests.context";
 import type { Room } from "../types/room.types";
 import { AsidePanel, AsidePanelContainer, AsidePanelHeader } from "./aside-panel";
 import { RoomLeftControls } from "./room-left-controls";
@@ -183,14 +182,11 @@ export function ActiveRoomView({
     await toggleAudio();
   }, [toggleAudio]);
 
-  const [asideState, setAsideState] = useState<"participants" | "chat" | "board" | null>(null);
+  const [asideState, setAsideState] = useState<string | null>(null);
 
   const isOwner = currentUserId === room.ownerId;
 
-  const whiteboard = useWhiteboard({
-    roomSlug: room.slug,
-    enabled: asideState === "board",
-  });
+  const overlayPanel = roomPanels.find((panel) => panel.id === asideState) ?? null;
 
   const handleMuteAll = useCallback(async () => {
     try {
@@ -337,15 +333,14 @@ export function ActiveRoomView({
           )}
         </VideoGrid>
 
-        {asideState === "board" && (
-          <WhiteboardPanel
-            mode={whiteboard.mode}
-            status={whiteboard.status}
-            isOwner={isOwner}
-            onEditorMount={whiteboard.handleEditorMount}
-            onToggleMode={whiteboard.setBoardMode}
-            onClose={() => setAsideState(null)}
-          />
+        {overlayPanel && (
+          <Suspense fallback={null}>
+            <overlayPanel.component
+              roomSlug={room.slug}
+              isOwner={isOwner}
+              onClose={() => setAsideState(null)}
+            />
+          </Suspense>
         )}
 
         <AsidePanelContainer data-state={asideState ? "open" : "closed"}>
@@ -445,8 +440,9 @@ export function ActiveRoomView({
             setAsideState((v) => (v === "participants" ? null : "participants"))
           }
           isChatOpen={asideState === "chat"}
-          isBoardOpen={asideState === "board"}
-          onToggleBoard={() => setAsideState((v) => (v === "board" ? null : "board"))}
+          panels={roomPanels}
+          openPanelId={overlayPanel?.id ?? null}
+          onTogglePanel={(id) => setAsideState((v) => (v === id ? null : id))}
           onToggleChat={() => {
             setAsideState((v) => {
               const next = v === "chat" ? null : "chat";

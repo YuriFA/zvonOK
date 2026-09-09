@@ -1,0 +1,77 @@
+{
+  "name": "@zvonok/whiteboard-react",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    "./package.json": "./package.json",
+    "./binding": {
+      "types": "./src/binding/excalidraw-yjs-binding.ts",
+      "default": "./src/binding/excalidraw-yjs-binding.ts"
+    },
+    "./excalidraw-engine": {
+      "types": "./src/engine-excalidraw/engine.ts",
+      "default": "./src/engine-excalidraw/engine.ts"
+    },
+    "./panel": {
+      "types": "./src/panel/whiteboard-panel.tsx",
+      "default": "./src/panel/whiteboard-panel.tsx"
+    }
+  },
+  "publishConfig": {
+    "exports": {
+      "./package.json": "./package.json",
+      "./binding": {
+        "types": "./dist/binding/excalidraw-yjs-binding.d.ts",
+        "default": "./dist/binding/excalidraw-yjs-binding.js"
+      },
+      "./excalidraw-engine": {
+        "types": "./dist/engine-excalidraw/engine.d.ts",
+        "default": "./dist/engine-excalidraw/engine.js"
+      },
+      "./panel": {
+        "types": "./dist/panel/whiteboard-panel.d.ts",
+        "default": "./dist/panel/whiteboard-panel.js"
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rm -rf dist",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "lint:ts": "tsc --noEmit",
+    "prepack": "pnpm run build"
+  },
+  "dependencies": {
+    "@excalidraw/excalidraw": "^0.18.1",
+    "@zvonok/whiteboard-core": "workspace:*",
+    "lucide-react": "^0.544.0",
+    "socket.io-client": "^4.8.3",
+    "yjs": "^13.6.32"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
+    "jsdom": "^28.1.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "typescript": "~5.8.3",
+    "vitest": "^4.0.18"
+  },
+  "files": [
+    "dist"
+  ],
+  "license": "MIT",
+  "sideEffects": ["*.css"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YuriFA/zvonOK.git",
+    "directory": "packages/whiteboard-react"
+  }
+}

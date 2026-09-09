@@ -1,19 +1,29 @@
+/**
+ * Wire contract for the `/whiteboard` namespace.
+ *
+ * Mirrors packages/whiteboard-core/src/protocol.ts: the Nest build cannot
+ * consume workspace TS source, so the constants live on both sides. The
+ * whiteboard e2e suite pins the pair together - keep them in sync.
+ */
+
 export type WhiteboardDrawMode = 'owner' | 'open';
+
+export const WHITEBOARD_UPDATE_MAX_BYTES = 512 * 1024;
 
 export interface WhiteboardJoinPayload {
   roomSlug: string;
 }
 
-export interface WhiteboardOpPayload {
+export interface WhiteboardStatePayload {
   roomSlug: string;
-  /** Full serialized client store (JSON string), capped in size. */
-  snapshot: string;
+  /** Y.encodeStateAsUpdate of the room document. */
+  update: Uint8Array;
 }
 
-export interface WhiteboardSnapshot {
-  /** Serialized client store (JSON string), empty store when the board is blank. */
-  snapshot: string;
-  mode: WhiteboardDrawMode;
+export interface WhiteboardUpdatePayload {
+  roomSlug: string;
+  /** Incremental Yjs update from a participant. */
+  update: Uint8Array;
 }
 
 export interface WhiteboardModePayload {
@@ -21,4 +31,7 @@ export interface WhiteboardModePayload {
   mode: WhiteboardDrawMode;
 }
 
-export const WHITEBOARD_SNAPSHOT_MAX_BYTES = 4 * 1024 * 1024;
+export interface WhiteboardErrorPayload {
+  event: string;
+  message: string;
+}
