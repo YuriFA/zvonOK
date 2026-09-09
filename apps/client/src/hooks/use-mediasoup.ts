@@ -22,7 +22,6 @@ import { useIsMobile } from "./use-is-mobile";
 
 export interface UseMediasoupOptions {
   roomId?: string;
-  roomOwnerId?: string;
   roomSlug?: string;
   localVideoStream: MediaStream | null;
   localAudioStream: MediaStream | null;
@@ -73,7 +72,6 @@ function toRemotePeer(participant: ZvonokParticipant): RemotePeerMedia {
 
 export function useMediasoup({
   roomId,
-  roomOwnerId,
   roomSlug,
   localVideoStream,
   localAudioStream,
@@ -91,6 +89,9 @@ export function useMediasoup({
   const producedKindsRef = useRef<Set<"audio" | "video">>(new Set());
   const guestUserIdRef = useRef(`guest-${Math.random().toString(36).slice(2, 10)}`);
 
+  // Local UI identity (recording labels, trackers). The SFU derives the
+  // authoritative identity from the authenticated session; it is echoed
+  // back on join.
   const identity = {
     userId: user?.id ?? guestUserIdRef.current,
     username: displayName ?? "Guest",
@@ -125,11 +126,20 @@ export function useMediasoup({
       roomTracker.reset();
     });
 
+    // A server-refused join (expired session, wrong room) surfaces through
+    // the same leave flow as a kick.
+    const unsubscribeJoinError = sfuManager.onJoinError(() => {
+      joinedRef.current = false;
+      setWasKicked(true);
+      roomTracker.reset();
+    });
+
     sfuManager.connect();
 
     return () => {
       unsubscribeState();
       unsubscribeKicked();
+      unsubscribeJoinError();
       producedKinds.clear();
       joinedRef.current = false;
       setWasKicked(false);
@@ -155,9 +165,6 @@ export function useMediasoup({
     joinedRef.current = true;
     const joinPayload = {
       roomId,
-      userId: identity.userId,
-      username: identity.username,
-      ...(roomOwnerId ? { roomOwnerId } : {}),
       ...(roomSlug ? { roomSlug } : {}),
     };
 
@@ -165,16 +172,7 @@ export function useMediasoup({
       console.error("[SFU] Failed to join room:", error);
       joinedRef.current = false;
     });
-  }, [
-    enabled,
-    identity.userId,
-    identity.username,
-    roomId,
-    roomOwnerId,
-    roomSlug,
-    state.connectionState,
-    sfuManager,
-  ]);
+  }, [enabled, roomId, roomSlug, state.connectionState, sfuManager]);
 
   useEffect(() => {
     if (!state.isSendTransportCreated) {

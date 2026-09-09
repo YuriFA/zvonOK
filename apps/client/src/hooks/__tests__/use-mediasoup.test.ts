@@ -85,6 +85,7 @@ const sfuMock = vi.hoisted(() => {
     closeScreenProducer: vi.fn(),
     isScreenShareBlocked: vi.fn(() => false),
     onProduceError: vi.fn(() => () => {}),
+    onJoinError: vi.fn(() => () => {}),
     pauseProducer: vi.fn(),
     resumeProducer: vi.fn(),
     replaceTrack: vi.fn().mockResolvedValue(true),
@@ -285,8 +286,6 @@ describe("useMediasoup", () => {
     await waitFor(() => {
       expect(sfuMock.joinRoom).toHaveBeenCalledWith({
         roomId: "room-1",
-        userId: "user-1",
-        username: "alice",
       });
     });
 

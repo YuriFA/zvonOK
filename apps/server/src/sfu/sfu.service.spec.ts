@@ -12,6 +12,8 @@ import type {
   WebRtcTransport,
 } from 'mediasoup/types';
 import { NotFoundException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import type { TestingModule } from '@nestjs/testing';
 import { SfuService } from './sfu.service';
@@ -35,34 +37,60 @@ type SfuServiceState = {
 let service: SfuService;
 let workerManager: jest.Mocked<WorkerManager>;
 let roomTokenHelper: RoomTokenHelper;
-let prisma: { apiKey: { findUnique: jest.Mock } };
+let jwtService: { verify: jest.Mock };
+let config: { get: jest.Mock };
+let prisma: {
+  apiKey: { findUnique: jest.Mock };
+  room: { findUnique: jest.Mock };
+  user: { findUnique: jest.Mock };
+};
 let webhooks: {
   roomStarted: jest.Mock;
   participantJoined: jest.Mock;
   participantLeft: jest.Mock;
   roomEnded: jest.Mock;
 };
-
 const socket = {
   id: 'socket-1',
   emit: jest.fn(),
+  handshake: { auth: {}, headers: {} },
 } as unknown as Socket;
 const createSocket = (id: string) =>
   ({
     id,
     emit: jest.fn(),
     disconnect: jest.fn(),
+    handshake: { auth: { token: 'access-jwt' }, headers: {} },
   }) as unknown as Socket;
 
 beforeEach(async () => {
   roomTokenHelper = { verify: jest.fn() } as unknown as RoomTokenHelper;
-  prisma = { apiKey: { findUnique: jest.fn() } };
+  jwtService = { verify: jest.fn() };
+  config = {
+    get: jest.fn((key: string) =>
+      key === 'CLIENT_URL' ? 'http://localhost:5173' : undefined,
+    ),
+  };
+  prisma = {
+    apiKey: { findUnique: jest.fn() },
+    room: { findUnique: jest.fn() },
+    user: { findUnique: jest.fn() },
+  };
   webhooks = {
     roomStarted: jest.fn(),
     participantJoined: jest.fn(),
     participantLeft: jest.fn(),
     roomEnded: jest.fn(),
   };
+
+  // Default verified identity for handshake joins: user-1 (alice) joining a
+  // room she owns. Individual tests override these mocks as needed.
+  jwtService.verify.mockReturnValue({ id: 'user-1' });
+  prisma.user.findUnique.mockResolvedValue({ username: 'alice' });
+  prisma.room.findUnique.mockResolvedValue({
+    slug: 'abc123',
+    ownerId: 'user-1',
+  });
 
   const module: TestingModule = await Test.createTestingModule({
     providers: [
@@ -79,29 +107,29 @@ beforeEach(async () => {
       { provide: RoomTokenHelper, useValue: roomTokenHelper },
       { provide: PrismaService, useValue: prisma },
       { provide: WebhookDispatcher, useValue: webhooks },
+      { provide: JwtService, useValue: jwtService },
+      { provide: ConfigService, useValue: config },
     ],
   }).compile();
 
   service = module.get<SfuService>(SfuService);
   workerManager = module.get(WorkerManager);
   (socket.emit as jest.Mock).mockReset();
+  socket.handshake.auth = { token: 'access-jwt' };
 });
 
 it('joins a room and emits RTP capabilities', async () => {
   const routerRtpCapabilities = { codecs: [] } as unknown as RtpCapabilities;
   workerManager.createRouter.mockResolvedValue({} as Router<AppData>);
   workerManager.getRtpCapabilities.mockReturnValue(routerRtpCapabilities);
-
   await service.joinRoom(socket, {
     roomId: 'room-1',
-    userId: 'user-1',
-    username: 'alice',
-    roomOwnerId: 'user-1',
   });
 
   expect(workerManager.createRouter).toHaveBeenCalledWith('room-1');
   expect(socket.emit).toHaveBeenCalledWith('sfu:joined', {
     routerRtpCapabilities,
+    participant: { id: 'user-1', username: 'alice' },
   });
 });
 
@@ -128,9 +156,6 @@ it('creates a send transport and exposes its direction in the payload', async ()
 
   await service.joinRoom(socket, {
     roomId: 'room-1',
-    userId: 'user-1',
-    username: 'alice',
-    roomOwnerId: 'user-1',
   });
   (socket.emit as jest.Mock).mockReset();
 
@@ -260,8 +285,6 @@ it('announces existing producers when a recv transport is created', async () => 
 
   await service.joinRoom(socket, {
     roomId: 'room-1',
-    userId: 'user-1',
-    username: 'alice',
   });
 
   serviceState.rooms.set('room-1', new Set([socket.id, existingSocket.id]));
@@ -742,8 +765,6 @@ describe('room-token join', () => {
 
     await service.joinRoom(socket, {
       roomId: 'room-1',
-      userId: 'spoofed-user',
-      username: 'Spoofed',
       token: 'signed-token',
     });
 
@@ -763,8 +784,6 @@ describe('room-token join', () => {
 
     await service.joinRoom(socket, {
       roomId: 'room-1',
-      userId: 'user-1',
-      username: 'alice',
       token: 'garbage',
     });
 
@@ -783,8 +802,6 @@ describe('room-token join', () => {
 
     await service.joinRoom(socket, {
       roomId: 'room-1',
-      userId: 'user-1',
-      username: 'alice',
       token: 'signed-token',
     });
 
@@ -804,8 +821,6 @@ describe('room-token join', () => {
 
     await service.joinRoom(socket, {
       roomId: 'room-1',
-      userId: 'user-1',
-      username: 'alice',
       token: 'signed-token',
     });
 
@@ -823,8 +838,6 @@ describe('room-token join', () => {
 
     await service.joinRoom(socket, {
       roomId: 'room-1',
-      userId: 'user-1',
-      username: 'alice',
       token: 'signed-token',
     });
 
@@ -851,23 +864,146 @@ describe('room-token join', () => {
     const adminSocket = createSocket('socket-admin');
     await service.joinRoom(adminSocket, {
       roomId: 'room-1',
-      userId: 'ignored',
-      username: 'Ignored',
       token: 'signed-token',
     });
 
     const targetSocket = createSocket('socket-target');
     await service.joinRoom(targetSocket, {
       roomId: 'room-1',
-      userId: 'user-target',
-      username: 'target',
     });
 
-    await service.kickPeer(adminSocket, 'user-target');
+    // The plain join resolves to the default verified user (user-1).
+    await service.kickPeer(adminSocket, 'user-1');
 
     expect(targetSocket.emit).toHaveBeenCalledWith('sfu:kicked', {
       roomId: 'room-1',
     });
+  });
+});
+
+describe('handshake-verified join', () => {
+  const state = () =>
+    service as unknown as {
+      peers: Map<string, Peer>;
+      roomOwners: Map<string, string>;
+    };
+
+  it('derives a user join from the verified JWT and DB, not the payload', async () => {
+    workerManager.createRouter.mockResolvedValue({} as Router<AppData>);
+    workerManager.getRtpCapabilities.mockReturnValue(
+      {} as unknown as RtpCapabilities,
+    );
+
+    await service.joinRoom(socket, { roomId: 'room-1' });
+
+    const peer = state().peers.get(socket.id) as Peer;
+    expect(peer.userId).toBe('user-1');
+    expect(peer.username).toBe('alice');
+    expect(prisma.room.findUnique).toHaveBeenCalledWith({
+      where: { id: 'room-1' },
+      select: { slug: true, ownerId: true },
+    });
+    expect(socket.emit).toHaveBeenCalledWith('sfu:joined', expect.anything());
+  });
+
+  it('records ownership only when the verified user owns the room', async () => {
+    workerManager.createRouter.mockResolvedValue({} as Router<AppData>);
+    workerManager.getRtpCapabilities.mockReturnValue(
+      {} as unknown as RtpCapabilities,
+    );
+    jwtService.verify.mockReturnValue({ id: 'user-2' });
+    prisma.user.findUnique.mockResolvedValue({ username: 'mallory' });
+    prisma.room.findUnique.mockResolvedValue({
+      slug: 'abc123',
+      ownerId: 'user-1',
+    });
+
+    await service.joinRoom(socket, { roomId: 'room-1' });
+
+    expect(state().roomOwners.has('room-1')).toBe(false);
+  });
+
+  it('refuses a join with no verifiable credential', async () => {
+    socket.handshake.auth = {};
+
+    await service.joinRoom(socket, { roomId: 'room-1' });
+
+    expect(socket.emit).toHaveBeenCalledWith('sfu:join-error', {
+      code: 'SFU_JOIN_UNAUTHORIZED',
+      message: expect.any(String),
+    });
+    expect(state().peers.has(socket.id)).toBe(false);
+  });
+
+  it('refuses cookie identity from a non-allowlisted origin', async () => {
+    socket.handshake.auth = {};
+    socket.handshake.headers.cookie = 'access_token=good';
+    socket.handshake.headers.origin = 'https://evil.example';
+
+    await service.joinRoom(socket, { roomId: 'room-1' });
+
+    expect(socket.emit).toHaveBeenCalledWith('sfu:join-error', {
+      code: 'SFU_JOIN_UNAUTHORIZED',
+      message: expect.any(String),
+    });
+    expect(state().peers.has(socket.id)).toBe(false);
+  });
+
+  it('joins an approved guest from the guest cookie for the matching room', async () => {
+    workerManager.createRouter.mockResolvedValue({} as Router<AppData>);
+    workerManager.getRtpCapabilities.mockReturnValue(
+      {} as unknown as RtpCapabilities,
+    );
+    socket.handshake.auth = {};
+    socket.handshake.headers.cookie = 'zvonok_guest_abc123=guest-jwt';
+    socket.handshake.headers.origin = 'http://localhost:5173';
+    config.get.mockImplementation((key: string) =>
+      key === 'JWT_GUEST_SECRET'
+        ? 'guest-secret'
+        : key === 'CLIENT_URL'
+          ? 'http://localhost:5173'
+          : undefined,
+    );
+    jwtService.verify.mockReturnValue({
+      guestId: 'guest-1',
+      displayName: 'Gwen',
+      roomSlug: 'abc123',
+      scope: 'room',
+    });
+
+    await service.joinRoom(socket, { roomId: 'room-1' });
+
+    const peer = state().peers.get(socket.id) as Peer;
+    expect(peer.userId).toBe('guest-1');
+    expect(peer.username).toBe('Gwen');
+    expect(socket.emit).toHaveBeenCalledWith('sfu:joined', expect.anything());
+  });
+
+  it('refuses a guest whose token was issued for another room', async () => {
+    socket.handshake.auth = {};
+    socket.handshake.headers.cookie = 'zvonok_guest_abc123=guest-jwt';
+    socket.handshake.headers.origin = 'http://localhost:5173';
+    config.get.mockImplementation((key: string) =>
+      key === 'JWT_GUEST_SECRET' ? 'guest-secret' : undefined,
+    );
+    jwtService.verify.mockReturnValue({
+      guestId: 'guest-1',
+      displayName: 'Gwen',
+      roomSlug: 'abc123',
+      scope: 'room',
+    });
+    prisma.room.findUnique.mockResolvedValue({
+      slug: 'other-room',
+      ownerId: null,
+    });
+
+    await service.joinRoom(socket, { roomId: 'room-1' });
+
+    expect(socket.emit).toHaveBeenCalledWith('sfu:join-error', {
+      code: 'SFU_JOIN_FORBIDDEN',
+      message: expect.any(String),
+    });
+    expect(state().peers.has(socket.id)).toBe(false);
   });
 });
 
@@ -936,8 +1072,6 @@ describe('host controls', () => {
     prisma.apiKey.findUnique.mockResolvedValue({ revokedAt: null });
     return service.joinRoom(socket, {
       roomId: 'room-1',
-      userId: 'ignored',
-      username: 'Ignored',
       token: 'signed-token',
     });
   }
@@ -1084,22 +1218,17 @@ describe('host controls', () => {
     const joiner = createSocket('socket-joiner');
     await service.joinRoom(joiner, {
       roomId: 'room-1',
-      userId: 'user-9',
-      username: 'late',
     });
     expect(joiner.emit).toHaveBeenCalledWith('sfu:join-error', {
       code: 'ROOM_LOCKED',
       message: expect.any(String),
     });
-    expect(state().peers.has('socket-joiner')).toBe(false);
 
     // The gate sits before token verification, so the token path is refused
     // without even looking at the token.
     const tokenJoiner = createSocket('socket-token-joiner');
     await service.joinRoom(tokenJoiner, {
       roomId: 'room-1',
-      userId: 'x',
-      username: 'x',
       token: 'signed-token',
     });
     expect(tokenJoiner.emit).toHaveBeenCalledWith('sfu:join-error', {
@@ -1153,8 +1282,6 @@ describe('host controls', () => {
     const joiner = createSocket('socket-joiner');
     await service.joinRoom(joiner, {
       roomId: 'room-1',
-      userId: 'u',
-      username: 'u',
     });
     expect(joiner.emit).toHaveBeenCalledWith('sfu:joined', expect.anything());
     expect(joiner.emit).not.toHaveBeenCalledWith(
@@ -1217,7 +1344,7 @@ describe('webhook emissions', () => {
     return peer;
   }
 
-  function joinViaPayload(
+  function joinViaUser(
     sock: Socket,
     userId: string,
     overrides: Partial<SfuJoinPayload> = {},
@@ -1226,17 +1353,21 @@ describe('webhook emissions', () => {
     workerManager.getRtpCapabilities.mockReturnValue(
       {} as unknown as RtpCapabilities,
     );
+    jwtService.verify.mockReturnValue({ id: userId });
+    prisma.user.findUnique.mockResolvedValue({ username: userId });
+    prisma.room.findUnique.mockResolvedValue({
+      slug: 'room-1-slug',
+      ownerId: null,
+    });
     return service.joinRoom(sock, {
       roomId: 'room-1',
-      userId,
-      username: userId,
       roomSlug: 'room-1-slug',
       ...overrides,
     });
   }
 
   it('emits room.started and participant.joined when the first peer joins', async () => {
-    await joinViaPayload(socket, 'user-1');
+    await joinViaUser(socket, 'user-1');
 
     expect(webhooks.roomStarted).toHaveBeenCalledWith('room-1', 'room-1-slug');
     expect(webhooks.participantJoined).toHaveBeenCalledWith(
@@ -1248,8 +1379,8 @@ describe('webhook emissions', () => {
 
   it('emits only participant.joined for subsequent peers', async () => {
     const second = createSocket('socket-2');
-    await joinViaPayload(socket, 'user-1');
-    await joinViaPayload(second, 'user-2');
+    await joinViaUser(socket, 'user-1');
+    await joinViaUser(second, 'user-2');
 
     expect(webhooks.roomStarted).toHaveBeenCalledTimes(1);
     expect(webhooks.participantJoined).toHaveBeenCalledTimes(2);
@@ -1275,7 +1406,7 @@ describe('webhook emissions', () => {
     });
     prisma.apiKey.findUnique.mockResolvedValue({ revokedAt: null });
 
-    await joinViaPayload(socket, 'ignored', { token: 'signed-token' });
+    await joinViaUser(socket, 'ignored', { token: 'signed-token' });
 
     expect(webhooks.participantJoined).toHaveBeenCalledWith(
       'room-1',

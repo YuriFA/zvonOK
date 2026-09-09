@@ -137,6 +137,10 @@ export function createMockSfuManager(config: MockSfuManagerConfig = {}): ISfuMan
       return () => roomEndedCallbacks.delete(callback);
     },
 
+    onJoinError(): () => void {
+      return () => {};
+    },
+
     // ISfuProducerManager
     async produce(track: MediaStreamTrack): Promise<Producer | null> {
       produceCalls.push(track);

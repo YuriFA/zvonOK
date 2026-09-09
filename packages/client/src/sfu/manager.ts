@@ -49,7 +49,8 @@ import type {
   SfuScreenShareStoppedCallback,
   SfuGuestJoinRequestPayload,
 } from "./types.js";
-import { SfuProduceError } from "./types.js";
+import { SfuProduceError, SfuJoinError } from "./types.js";
+import type { SfuJoinErrorPayload } from "./types.js";
 
 /**
  * Simulcast encoding layers sent to the SFU for video producers.
@@ -117,6 +118,7 @@ export class SfuManager implements ISfuManager {
   private roomEndedCallbacks = new Set<(payload: SfuRoomEndedPayload) => void>();
   private producerStateCallbacks = new Set<SfuProducerStateCallback>();
   private produceErrorCallbacks = new Set<(code: SfuProduceErrorCode) => void>();
+  private joinErrorCallbacks = new Set<(error: SfuJoinError) => void>();
   private screenShareStoppedCallbacks = new Set<SfuScreenShareStoppedCallback>();
   private guestJoinRequestCallbacks = new Set<(payload: SfuGuestJoinRequestPayload) => void>();
 
@@ -145,6 +147,7 @@ export class SfuManager implements ISfuManager {
       onTransportConnected: (p) => this.handleTransportConnected(p),
       onProducerCreated: (p) => this.handleProducerCreated(p),
       onProduceError: (p) => this.handleProduceError(p),
+      onJoinError: (p) => this.handleJoinError(p),
       onPeerJoined: (p) => this.handlePeerJoined(p),
       onExistingPeers: (p) => this.handleExistingPeers(p),
       onNewProducer: (p) => this.handleNewProducer(p),
@@ -196,7 +199,6 @@ export class SfuManager implements ISfuManager {
     if (!socket) {
       throw new Error("Socket not connected");
     }
-    this.localUserId = payload.userId;
     // The room token is authoritative: its `sub` claim is the room id the
     // server minted it for. Callers frequently only know the room slug, and
     // sending a slug as roomId fails verification with
@@ -372,6 +374,13 @@ export class SfuManager implements ISfuManager {
   onProduceError(callback: (code: SfuProduceErrorCode) => void): () => void {
     this.produceErrorCallbacks.add(callback);
     return () => this.produceErrorCallbacks.delete(callback);
+  }
+
+  /** Subscribe to server-refused joins (invalid token, unauthenticated
+   * session, forbidden room). Returns an unsubscribe function. */
+  onJoinError(callback: (error: SfuJoinError) => void): () => void {
+    this.joinErrorCallbacks.add(callback);
+    return () => this.joinErrorCallbacks.delete(callback);
   }
 
   private getScreenProducer(): Producer | undefined {
@@ -575,6 +584,9 @@ export class SfuManager implements ISfuManager {
 
   private async handleJoined(payload: SfuJoinedPayload): Promise<void> {
     console.log("[SFU] Joined room, loading device...");
+    // The server echoes back the verified identity; payload identity is
+    // never trusted.
+    this.localUserId = payload.participant?.id ?? null;
     await this.loadDevice(payload.routerRtpCapabilities);
   }
 
@@ -758,6 +770,14 @@ export class SfuManager implements ISfuManager {
 
     for (const cb of this.produceErrorCallbacks) {
       cb(payload.code);
+    }
+  }
+
+  private handleJoinError(payload: SfuJoinErrorPayload): void {
+    console.error("[SFU] Join error:", payload.code, payload.message);
+    const error = new SfuJoinError(payload.code, payload.message);
+    for (const cb of this.joinErrorCallbacks) {
+      cb(error);
     }
   }
 

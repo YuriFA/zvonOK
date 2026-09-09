@@ -533,11 +533,10 @@ describe("SfuManager", () => {
       await testContext.emitSocketEvent("connect");
       await testContext.emitSocketEvent("sfu:joined", {
         routerRtpCapabilities: { codecs: [] },
+        participant: { id: "user-1", username: "alice" },
       });
 
-      // Join as user-1 so manager knows local user id.
-      testContext.mockSocket.emit.mockClear();
-      manager.joinRoom({ roomId: "room-1", userId: "user-1", username: "alice" }).catch(() => {});
+      // The manager knows the local user id from the server-verified join.
 
       await testContext.emitSocketEvent("sfu:transport-created", {
         ...transportPayload,

@@ -93,15 +93,13 @@ describe("useZvonokConnection", () => {
     expect(result.current.manager).toBe(lastSfu().manager);
   });
 
-  it("joins with the room slug and token identity", async () => {
+  it("joins with the room slug and token only, no client identity", async () => {
     const { result } = renderConnection();
     await joinFully(result);
 
     expect(lastSfu().manager.joinRoom).toHaveBeenCalledWith({
       roomId: "room-1",
       roomSlug: "room-1",
-      userId: "participant-9",
-      username: "Participant",
       token: TOKEN,
     });
   });

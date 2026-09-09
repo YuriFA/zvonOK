@@ -75,7 +75,8 @@ describe("SfuEventRouter", () => {
     expect(events).toContain("sfu:screen-share-started");
     expect(events).toContain("sfu:screen-share-stopped");
     expect(events).toContain("sfu:guest-join-request");
-    expect(events).toHaveLength(20);
+    expect(events).toContain("sfu:join-error");
+    expect(events).toHaveLength(21);
   });
 
   it("routes connect event to onConnected", () => {

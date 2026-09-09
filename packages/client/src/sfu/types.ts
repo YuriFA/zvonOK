@@ -23,22 +23,51 @@ export class SfuProduceError extends Error {
   }
 }
 
-// Join payload sent to server
+export type SfuJoinErrorCode =
+  | "ROOM_TOKEN_INVALID"
+  | "ROOM_TOKEN_EXPIRED"
+  | "ROOM_TOKEN_ROOM_MISMATCH"
+  | "ROOM_LOCKED"
+  | "SFU_JOIN_UNAUTHORIZED"
+  | "SFU_JOIN_FORBIDDEN";
+
+export interface SfuJoinErrorPayload {
+  code: SfuJoinErrorCode;
+  message: string;
+}
+
+export class SfuJoinError extends Error {
+  readonly code: SfuJoinErrorCode;
+  constructor(code: SfuJoinErrorCode, message: string) {
+    super(message);
+    this.name = "SfuJoinError";
+    this.code = code;
+  }
+}
+
+// Join payload sent to server. Identity is never carried in the payload:
+// the server derives it from a room token (platform) or the authenticated
+// session cookies (app UI).
 export interface SfuJoinPayload {
   roomId: string;
-  userId: string;
-  username: string;
-  roomOwnerId?: string;
   roomSlug?: string;
   /** Room token (project rooms). When present, the server derives identity
-   * from the verified token claims instead of the payload fields. */
+   * from the verified token claims. */
   token?: string;
+}
+
+/** Server-verified identity of the local participant, delivered on join. */
+export interface SfuParticipantIdentity {
+  id: string;
+  username: string;
 }
 
 // Joined response from server
 export interface SfuJoinedPayload {
   routerRtpCapabilities: RtpCapabilities;
+  participant: SfuParticipantIdentity;
 }
+
 
 // Transport direction
 export type SfuTransportDirection = "send" | "recv";

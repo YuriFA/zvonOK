@@ -10,7 +10,7 @@ import { WhiteboardService } from './whiteboard.service';
 import { RoomService } from 'src/room/room.service';
 import { SfuService } from 'src/sfu/sfu.service';
 import { JwtService } from '@nestjs/jwt';
-import { GuestService } from 'src/room/guest.service';
+import { ConfigService } from '@nestjs/config';
 import { RoomSocketIdentity } from 'src/auth/helpers/room-socket-auth.helper';
 import type { WhiteboardDrawMode } from './whiteboard.types';
 
@@ -113,7 +113,7 @@ describe('WhiteboardGateway', () => {
       roomService as unknown as RoomService,
       sfu as unknown as SfuService,
       jwtService as unknown as JwtService,
-      {} as GuestService,
+      { get: jest.fn() } as unknown as ConfigService,
     );
     gateway.server = roomBroadcast as unknown as Server;
     client = makeSocket();
