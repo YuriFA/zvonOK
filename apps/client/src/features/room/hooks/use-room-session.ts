@@ -63,7 +63,6 @@ export function useRoomSession({
     hostControls,
   } = useRoomSfu({
     roomId: room.id,
-    roomOwnerId: room.ownerId,
     roomSlug: room.slug,
     localVideoStream,
     localAudioStream,

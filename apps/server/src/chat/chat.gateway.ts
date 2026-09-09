@@ -14,7 +14,7 @@ import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
 import { ChatService } from './chat.service';
 import { SendMessageDto } from './dto/send-message.dto';
-import { GuestService } from '../room/guest.service';
+import { ConfigService } from '@nestjs/config';
 import {
   resolveRoomSocketIdentity,
   RoomSocketIdentity,
@@ -40,7 +40,7 @@ export class ChatGateway
   constructor(
     private readonly chatService: ChatService,
     private readonly jwtService: JwtService,
-    private readonly guestService: GuestService,
+    private readonly configService: ConfigService,
     private readonly roomService: RoomService,
   ) {}
 
@@ -163,7 +163,7 @@ export class ChatGateway
     return resolveRoomSocketIdentity(
       client,
       this.jwtService,
-      this.guestService,
+      this.configService,
     );
   }
 }

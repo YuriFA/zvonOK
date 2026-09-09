@@ -27,6 +27,8 @@ export interface Peer {
   producers: Map<string, Producer>;
   consumers: Map<string, Consumer>;
   permissions?: PeerPermissions;
+  /** Set only when a verified identity matches the DB room owner. */
+  ownsRoom?: boolean;
 }
 
 export interface Room {
@@ -37,9 +39,6 @@ export interface Room {
 
 export interface SfuJoinPayload {
   roomId: string;
-  userId: string;
-  username: string;
-  roomOwnerId?: string;
   roomSlug?: string;
   token?: string;
 }
@@ -48,7 +47,9 @@ export type SfuJoinErrorCode =
   | 'ROOM_TOKEN_INVALID'
   | 'ROOM_TOKEN_EXPIRED'
   | 'ROOM_TOKEN_ROOM_MISMATCH'
-  | 'ROOM_LOCKED';
+  | 'ROOM_LOCKED'
+  | 'SFU_JOIN_UNAUTHORIZED'
+  | 'SFU_JOIN_FORBIDDEN';
 
 export interface SfuJoinErrorPayload {
   code: SfuJoinErrorCode;
@@ -57,6 +58,8 @@ export interface SfuJoinErrorPayload {
 
 export interface SfuJoinedPayload {
   routerRtpCapabilities: RtpCapabilities;
+  /** The server-verified identity of this participant. */
+  participant: { id: string; username: string };
 }
 
 export type SfuTransportDirection = 'send' | 'recv';

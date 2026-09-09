@@ -20,6 +20,7 @@ import type {
   SfuScreenShareStoppedPayload,
   SfuConsumerClosedPayload,
   SfuGuestJoinRequestPayload,
+  SfuJoinErrorPayload,
 } from "./types.js";
 import type { SfuExistingPeersPayload } from "./types.js";
 
@@ -34,6 +35,7 @@ export interface SfuEventHandlers {
   onTransportConnected(payload: { transportId: string }): void;
   onProducerCreated(payload: SfuProducerCreatedPayload): void;
   onProduceError(payload: SfuProduceErrorPayload): void;
+  onJoinError(payload: SfuJoinErrorPayload): void;
   onPeerJoined(payload: SfuPeerJoinedPayload): void;
   onExistingPeers(payload: SfuExistingPeersPayload[]): void;
   onNewProducer(payload: SfuNewProducerPayload): void;
@@ -93,6 +95,9 @@ export class SfuEventRouter {
     );
     register("sfu:produce-error", (payload: unknown) =>
       this.handlers.onProduceError(payload as SfuProduceErrorPayload),
+    );
+    register("sfu:join-error", (payload: unknown) =>
+      this.handlers.onJoinError(payload as SfuJoinErrorPayload),
     );
     register("sfu:peer-joined", (payload: unknown) =>
       this.handlers.onPeerJoined(payload as SfuPeerJoinedPayload),

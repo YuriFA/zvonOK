@@ -42,26 +42,6 @@ export interface UseZvonokConnectionResult {
   hasProducer(kind: "audio" | "video"): boolean;
 }
 
-/**
- * Extracts a display identity from the room token payload. Presentation only:
- * the server derives the authoritative identity from the verified claims.
- */
-function identityFromToken(token: string): { userId: string; username: string } {
-  const fallback = `guest-${Math.random().toString(36).slice(2, 10)}`;
-  try {
-    const segment = token.split(".")[1];
-    if (!segment) {
-      return { userId: fallback, username: "Participant" };
-    }
-    const base64 = segment.replace(/-/g, "+").replace(/_/g, "/");
-    const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
-    const payload = JSON.parse(atob(padded)) as { participantId?: string };
-    return { userId: payload.participantId ?? fallback, username: "Participant" };
-  } catch {
-    return { userId: fallback, username: "Participant" };
-  }
-}
-
 function toZvonokError(error: unknown, fallbackCode: string): ZvonokError {
   if (error instanceof ZvonokError) {
     return error;
@@ -195,12 +175,11 @@ export function useZvonokConnection({ roomSlug, token }: UseZvonokConnectionOpti
 
       // Subscribe to the ack before awaiting the connection so no ack or
       // denial can slip through unnoticed.
-      const { userId, username } = identityFromToken(token);
       const ack = createJoinAckWaiter(
         manager.getSocket() as Socket,
         JOIN_TIMEOUT_MS,
         () => {
-          void manager.joinRoom({ roomId: roomSlug, roomSlug, userId, username, token });
+          void manager.joinRoom({ roomId: roomSlug, roomSlug, token });
         },
       );
 

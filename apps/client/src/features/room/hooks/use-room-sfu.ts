@@ -17,7 +17,6 @@ import { useMediasoup, type RemotePeerMedia } from "@/hooks/use-mediasoup";
 
 export interface UseRoomSfuOptions {
   roomId: string;
-  roomOwnerId: string;
   roomSlug: string;
   localVideoStream: MediaStream | null;
   localAudioStream: MediaStream | null;
@@ -40,7 +39,6 @@ export interface UseRoomSfuResult {
 
 export function useRoomSfu({
   roomId,
-  roomOwnerId,
   roomSlug,
   localVideoStream,
   localAudioStream,
@@ -70,7 +68,6 @@ export function useRoomSfu({
     hostControls,
   } = useMediasoup({
     roomId,
-    roomOwnerId,
     roomSlug,
     localVideoStream,
     localAudioStream,

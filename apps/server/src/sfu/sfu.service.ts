@@ -1,6 +1,8 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import type { OnModuleDestroy } from '@nestjs/common';
 import type { Socket } from 'socket.io';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { WorkerManager } from './worker-manager';
 import type {
   Peer,
@@ -24,6 +26,7 @@ import type {
 } from 'mediasoup/types';
 import { config, getIceServers } from './config/mediasoup.config';
 import { RoomTokenHelper } from '../platform/room-token.helper';
+import { resolveRoomSocketIdentity } from '../auth/helpers/room-socket-auth.helper';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { WebhookDispatcher } from '../webhooks/webhook-dispatcher.service';
 import type { WebhookLeaveReason } from '../webhooks/webhook-dispatcher.service';
@@ -75,6 +78,8 @@ export class SfuService implements OnModuleDestroy {
     private readonly roomTokenHelper: RoomTokenHelper,
     private readonly prisma: PrismaService,
     private readonly webhooks: WebhookDispatcher,
+    private readonly jwtService: JwtService,
+    private readonly config: ConfigService,
   ) {}
 
   async onModuleDestroy(): Promise<void> {
@@ -301,26 +306,14 @@ export class SfuService implements OnModuleDestroy {
       this.emitJoinError(socket, 'ROOM_LOCKED', 'Room is locked by the host');
       return;
     }
-    const { roomId, userId, username, roomOwnerId, roomSlug } = payload;
+    const { roomId, roomSlug } = payload;
     const peerId = socket.id;
 
-    let peer: Peer;
-
-    if (payload.token) {
-      const tokenPeer = await this.resolveTokenPeer(socket, payload);
-      if (!tokenPeer) {
-        return;
-      }
-      peer = tokenPeer;
-    } else {
-      peer = {
-        id: peerId,
-        userId,
-        username,
-        socket,
-        producers: new Map(),
-        consumers: new Map(),
-      };
+    const peer = payload.token
+      ? await this.resolveTokenPeer(socket, payload)
+      : await this.resolveHandshakePeer(socket, payload);
+    if (!peer) {
+      return;
     }
     this.peers.set(peerId, peer);
 
@@ -335,8 +328,8 @@ export class SfuService implements OnModuleDestroy {
 
     const firstPeer = roomPeers.size === 0;
     roomPeers.add(peerId);
-    if (roomOwnerId && !payload.token) {
-      this.roomOwners.set(roomId, roomOwnerId);
+    if (peer.ownsRoom) {
+      this.roomOwners.set(roomId, peer.userId);
     }
     if (roomSlug) {
       this.slugToRoomId.set(roomSlug, roomId);
@@ -365,7 +358,10 @@ export class SfuService implements OnModuleDestroy {
     await this.workerManager.createRouter(roomId);
 
     const routerRtpCapabilities = this.workerManager.getRtpCapabilities(roomId);
-    socket.emit('sfu:joined', { routerRtpCapabilities });
+    socket.emit('sfu:joined', {
+      routerRtpCapabilities,
+      participant: { id: peer.userId, username: peer.username },
+    });
 
     // Webhook emission is fire-and-forget and must never delay or break the
     // join path; ordering (room.started before participant.joined) is kept by
@@ -434,6 +430,89 @@ export class SfuService implements OnModuleDestroy {
       producers: new Map(),
       consumers: new Map(),
       permissions: { publish: claims.publish, admin: claims.admin },
+    };
+  }
+
+  /**
+   * Resolves a join without a room token: derives the participant identity
+   * from verified handshake credentials - a registered-user access JWT or an
+   * approved-guest JWT - and grounds ownership in the room row. Client
+   * payload identity fields are never trusted. Returns null (after emitting
+   * a coded join error) when no credential verifies.
+   */
+  private async resolveHandshakePeer(
+    socket: Socket,
+    payload: SfuJoinPayload,
+  ): Promise<Peer | null> {
+    // Cookie identity is honored only from the app UI origin; the
+    // room-token path stays origin-free for third-party SDK embeds.
+    const clientUrl =
+      this.config.get<string>('CLIENT_URL') || 'http://localhost:5173';
+    const identity = resolveRoomSocketIdentity(
+      socket,
+      this.jwtService,
+      this.config,
+      { allowedOrigins: [clientUrl] },
+    );
+    if (!identity) {
+      this.emitJoinError(
+        socket,
+        'SFU_JOIN_UNAUTHORIZED',
+        'Join requires an authenticated session or a room token',
+      );
+      return null;
+    }
+
+    const room = await this.prisma.room.findUnique({
+      where: { id: payload.roomId },
+      select: { slug: true, ownerId: true },
+    });
+    if (!room) {
+      this.emitJoinError(socket, 'SFU_JOIN_FORBIDDEN', 'Room not found');
+      return null;
+    }
+
+    if (identity.type === 'guest') {
+      if (identity.roomSlug !== room.slug) {
+        this.emitJoinError(
+          socket,
+          'SFU_JOIN_FORBIDDEN',
+          'Guest token was issued for a different room',
+        );
+        return null;
+      }
+      this.logger.log(
+        `Guest peer ${identity.guestId} joining room ${payload.roomId}`,
+      );
+      return {
+        id: socket.id,
+        userId: identity.guestId,
+        username: identity.displayName,
+        socket,
+        producers: new Map(),
+        consumers: new Map(),
+      };
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: identity.userId },
+      select: { username: true },
+    });
+    if (!user) {
+      this.emitJoinError(socket, 'SFU_JOIN_UNAUTHORIZED', 'Account not found');
+      return null;
+    }
+    this.logger.log(
+      `User peer ${identity.userId} joining room ${payload.roomId}`,
+    );
+    return {
+      id: socket.id,
+      userId: identity.userId,
+      username: user.username,
+      socket,
+      producers: new Map(),
+      consumers: new Map(),
+      ownsRoom: room.ownerId === identity.userId,
     };
   }
 

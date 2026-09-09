@@ -9,6 +9,7 @@ import {
 } from '@nestjs/websockets';
 import { JwtService } from '@nestjs/jwt';
 import { SkipThrottle } from '@nestjs/throttler';
+import { ConfigService } from '@nestjs/config';
 import { Server, Socket } from 'socket.io';
 import * as Y from 'yjs';
 
@@ -16,7 +17,6 @@ import {
   resolveRoomSocketIdentity,
   RoomSocketIdentity,
 } from 'src/auth/helpers/room-socket-auth.helper';
-import { GuestService } from 'src/room/guest.service';
 import { RoomService } from 'src/room/room.service';
 import { SfuService } from 'src/sfu/sfu.service';
 import { WhiteboardService } from './whiteboard.service';
@@ -51,14 +51,14 @@ export class WhiteboardGateway implements OnGatewayConnection {
     private readonly roomService: RoomService,
     private readonly sfu: SfuService,
     private readonly jwtService: JwtService,
-    private readonly guestService: GuestService,
+    private readonly configService: ConfigService,
   ) {}
 
   handleConnection(client: Socket): void {
     const identity = resolveRoomSocketIdentity(
       client,
       this.jwtService,
-      this.guestService,
+      this.configService,
     );
     if (!identity) {
       this.logger.warn(

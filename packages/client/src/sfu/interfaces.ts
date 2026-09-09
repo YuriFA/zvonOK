@@ -21,6 +21,7 @@ import type {
   SfuProducerStateCallback,
   SimulcastSpatialLayer,
   SfuProduceErrorCode,
+  SfuJoinError,
   SfuScreenShareStoppedCallback,
 } from "./types.js";
 
@@ -54,6 +55,8 @@ interface ISfuRoomMembership {
   onKicked(callback: (payload: SfuKickedPayload) => void): () => void;
   /** Subscribe to room-ended events */
   onRoomEnded(callback: (payload: SfuRoomEndedPayload) => void): () => void;
+  /** Subscribe to server-refused joins */
+  onJoinError(callback: (error: SfuJoinError) => void): () => void;
 }
 
 /**

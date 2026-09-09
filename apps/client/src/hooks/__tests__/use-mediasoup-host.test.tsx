@@ -55,6 +55,7 @@ const sfuMock = vi.hoisted(() => {
     closeScreenProducer: vi.fn(),
     isScreenShareBlocked: vi.fn(() => false),
     onProduceError: vi.fn(() => () => {}),
+    onJoinError: vi.fn(() => () => {}),
     pauseProducer: vi.fn(),
     resumeProducer: vi.fn(),
     replaceTrack: vi.fn().mockResolvedValue(true),
