@@ -142,7 +142,6 @@ export class DeveloperController {
         'Content-Range',
         `bytes ${download.range.start}-${download.range.end}/${download.size}`,
       );
-      res.status(HttpStatus.OK);
     }
     res.setHeader('Accept-Ranges', 'bytes');
     res.setHeader('Content-Type', download.contentType);
