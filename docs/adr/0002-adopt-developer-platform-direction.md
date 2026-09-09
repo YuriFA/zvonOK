@@ -48,8 +48,7 @@ Direction **A**, with the current app as the platform's first consumer
   tenancy, `/v1` API, room tokens), followed by a separate change for
   `@zvonok/react` + host-controls + npm publish + quickstart. See
   `docs/platform-roadmap.md` for the staged plan and the stage-2 queue.
-- Evaluation checkpoint at the end of month 2 decides whether/how stage 2 runs.
 - Deferred risks accepted knowingly: the app join path still trusts
   client-supplied identity (the room-token path is the first verified identity
   source; migrating the app onto tokens is future hardening), SFU remains
-  single-node, TURN credentials remain static.
+  single-node.

@@ -28,13 +28,19 @@ Decide: continue to stage 2 as queued / reprioritize / stop at platform
 substrate. Criteria: success bar met, how much stage 1 actually cost, what the
 dogfooded SDK taught us about the API surface.
 
-Status as of 2026-09-07: the stage 2 queue is fully implemented and the live
+Status as of 2026-09-08: the stage 2 queue is fully implemented and the live
 deployment was retested by the owner (ephemeral TURN credentials, the produce
-race fix, and call recording all verified working). The success bar remains
-externally unverified while npm publish is deferred, so the checkpoint
-decision is pending that verification or an explicit decision to skip it.
-See `docs/checkpoint-2026-09-07.md` for the one-page review feeding this
-decision.
+race fix, and call recording all verified working); the developer dashboard
+UI, meeting history/analytics, and the recording canvas/layout polish shipped
+after the checkpoint review.
+
+Checkpoint decision (2026-09-08): **Option A - close the loop.** Publish
+`@zvonok/*`, re-run the success bar from a clean external project, and the
+checkpoint passes as written. See `docs/checkpoint-2026-09-07.md` for the
+one-page review feeding this decision. After the re-run succeeds: retire the
+checkpoint file, drop the quickstart's local-install caveat, and update this
+line. Until then the app-identity hardening change waits behind the publish
+in the sequential one-change queue.
 
 ## Stage 2 candidate queue (ordered; each item = one OpenSpec change)
 
@@ -63,10 +69,8 @@ decision.
    single-node capacity is a real limit.
 
 ## Explicitly parked (not queued)
-
-AI voice agents, developer dashboard UI, email verification/reset,
-OAuth/SSO, DMs, message editing/attachments, E2E encryption,
-meeting history/analytics. (Recording canvas/layout polish from the
+AI voice agents, email verification/reset, OAuth/SSO, DMs, message
+editing/attachments, E2E encryption. (Recording canvas/layout polish from the
 2026-09-07 live retest shipped 2026-09-08: composited-layout fixes,
 the active-speaker ring, and the mic-toggle audio-race fix.)
 
