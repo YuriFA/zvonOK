@@ -6,7 +6,7 @@ A modern WebRTC video chat platform built as a pnpm monorepo with NestJS backend
 
 - **Group Video Calls** — mediasoup SFU for multi-participant rooms, ephemeral TURN credentials via coturn
 - **Developer Platform** — `/v1` REST API (rooms, tokens, egress, recordings) with API-key auth and per-key rate limits
-- **TypeScript SDKs** — `@zvonok/client` and `@zvonok/react` in `packages/` (npm publish pending); `@zvonok/video-layout` is the app's internal layout engine
+- **TypeScript SDKs** — `@zvonok/client` and `@zvonok/react` on npm (sources in `packages/`); `@zvonok/video-layout` is the app's internal layout engine
 - **Live Streaming Egress** — push the composited room program to RTMP endpoints or serve it as HLS; server-side recording with Range-supported downloads
 - **Webhooks** — signed `room.*` and `egress.*` events with delivery retries
 - **Whiteboard** — shared collaborative canvas in rooms

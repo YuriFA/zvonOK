@@ -20,11 +20,6 @@ npm init -y
 npm i @zvonok/react react react-dom vite @vitejs/plugin-react
 ```
 
-> `@zvonok/react` is not on the public npm registry yet (publish deferred).
-> Until then, install from a checkout of the zvonok repo: `npm link` the
-> workspace package, or `pnpm --filter @zvonok/react pack` and
-> `npm i ./zvonok-react-*.tgz` from the tarball.
-
 ## 2. Create a room and mint a token
 
 The platform API is key-authenticated. Create a room, then mint a short-lived
