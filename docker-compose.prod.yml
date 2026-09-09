@@ -8,7 +8,7 @@
 #
 # Required:
 #   - .env file with production values (see .env.production.example)
-#   - GHCR_REPO env var set to the GitHub repository (e.g., user/webrtc-chat)
+#   - GHCR_REPO env var set to the GitHub repository (e.g., user/zvonok)
 #   - Logged in to ghcr.io: echo $TOKEN | docker login ghcr.io -u USER --password-stdin
 
 services:
@@ -51,6 +51,15 @@ services:
       TURN_URL: ${TURN_URL:-}
       TURNS_URL: ${TURNS_URL:-}
       TURN_AUTH_SECRET: ${TURN_AUTH_SECRET:-}
+      # Developer platform: console sessions + /v1 room tokens
+      JWT_DEV_SECRET: ${JWT_DEV_SECRET}
+      JWT_ROOM_SECRET: ${JWT_ROOM_SECRET}
+      ROOM_TOKEN_TTL_MINUTES: ${ROOM_TOKEN_TTL_MINUTES:-60}
+      # Egress: RTP ingest range + durable HLS/recordings on the egress_data volume
+      EGRESS_MEDIA_PORT_MIN: ${EGRESS_MEDIA_PORT_MIN:-42000}
+      EGRESS_MEDIA_PORT_MAX: ${EGRESS_MEDIA_PORT_MAX:-42100}
+      EGRESS_HLS_DIR: ${EGRESS_HLS_DIR:-/data/egress-hls}
+      EGRESS_RECORDINGS_DIR: ${EGRESS_RECORDINGS_DIR:-/data/egress-recordings}
     depends_on:
       postgres:
         condition: service_healthy
@@ -65,6 +74,8 @@ services:
     ports:
       - "${RTC_MIN_PORT:-40000}-${RTC_MAX_PORT:-40099}:${RTC_MIN_PORT:-40000}-${RTC_MAX_PORT:-40099}/udp"
       - "${RTC_MIN_PORT:-40000}-${RTC_MAX_PORT:-40099}:${RTC_MIN_PORT:-40000}-${RTC_MAX_PORT:-40099}/tcp"
+    volumes:
+      - egress_data:/data
 
   # --- PostgreSQL database ---
   postgres:
@@ -178,3 +189,4 @@ volumes:
   postgres_data:
   caddy_data:
   caddy_config:
+  egress_data:
