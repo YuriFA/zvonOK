@@ -32,7 +32,7 @@ playwright/.cache/
 .env
 .env.lan
 .env.production
-.env.production.example
+!.env.production.example
 
 # Exported CA certificates for LAN demo
 certs/
